@@ -17,17 +17,17 @@
 
 ## 3. Review and Spot-Check LLD Specs
 
-- [ ] 3.1 Review `lld-vessels/spec.md` — verify Pilgrim starting items and Good as New behaviour
-- [ ] 3.2 Review `lld-abilities/spec.md` — verify handler ID table matches tech arch docs
-- [ ] 3.3 Review `lld-items/spec.md` — verify all weapon/consumable stats match `docs/detailed design/soul_protocol_items.md`
-- [ ] 3.4 Review `lld-enemies/spec.md` — verify Skeleton/Zombie HP, damage, and vulnerability values; verify encounter structure table
-- [ ] 3.5 Review `lld-room-events/spec.md` — verify Memory Fragment, Wandering Soul, Rest, and Anomaly room rules
+- [x] 3.1 Review `lld-vessels/spec.md` — verify Pilgrim starting items and Good as New behaviour
+- [x] 3.2 Review `lld-abilities/spec.md` — verify handler ID table matches tech arch docs
+- [x] 3.3 Review `lld-items/spec.md` — verify all weapon/consumable stats match `docs/detailed design/soul_protocol_items.md`
+- [x] 3.4 Review `lld-enemies/spec.md` — verify Skeleton/Zombie HP, damage, and vulnerability values; verify encounter structure table
+- [x] 3.5 Review `lld-room-events/spec.md` — spec deleted; Memory Fragment and Wandering Soul moved to lld-encounter-patterns; Anomaly in lld-elite-gate; Rest removed from design
 
 ## 4. Review Floor Design Specs (from convert-floor-design-to-spec)
 
-- [ ] 4.1 Review `lld-floor-structure/spec.md` — verify LLD-FLOOR-STRUCT-001 through LLD-FLOOR-STRUCT-005 match `soul_protocol_floor_encounter_design.md` sections 1–3; confirm 9 rooms + Judge, 30-min target, and 3–5 attempt difficulty calibration are present
-- [ ] 4.2 Review `lld-encounter-patterns/spec.md` — verify counter-based generation system and caps; confirm forced beats match section 6; confirm Combat Lock threshold is `[OPEN]`; confirm Worn Map beat cross-references `LLD-ITEMS-004`
-- [ ] 4.3 Review `lld-door-system/spec.md` — verify LLD-FLOOR-DOOR-001 through LLD-FLOOR-DOOR-005 match section 5; confirm full enemy identity on combat doors; confirm symbol-only rule on non-combat doors
+- [x] 4.1 Review `lld-floor-structure/spec.md` — consolidated into `lld-floor/spec.md`; STRUCT-001–006 verified; STRUCT-003 removed (superseded by PATT-003); STRUCT-006 added (9-room layout explicit)
+- [x] 4.2 Review `lld-encounter-patterns/spec.md` — consolidated into `lld-floor/spec.md`; counter system, caps, Combat Lock `[OPEN·MVP1]`, and Worn Map cross-reference all present; caps table updated (Standard Combat added, Temporary Companion removed); BEATS-004 updated (elite vs standard choice); BEATS-006 added (rest on elite path)
+- [x] 4.3 Review `lld-door-system/spec.md` — DOOR-001–005 verified; DOOR-001 generalised (item-driven single-door exception, not Worn Map specific); DOOR-003 updated (distinct symbols per non-combat type; subcategory content still hidden); DOOR-004 rewritten as Pool Exhaustion Both-Doors Rule (general pool mechanism, not combat-specific)
 
 ## 5. Review Non-Combat Encounter Specs (from convert-noncombat-encounters-to-spec)
 
@@ -41,9 +41,9 @@
 
 ## 6. Review Omen Specs (from convert-omens-to-spec)
 
-- [ ] 6.1 Review `lld-omen-mechanics/spec.md` — verify LLD-OMEN-MECH-001 through LLD-OMEN-MECH-009 match `soul_protocol_omens.md` sections 2–4; confirm deck size framework (16–18 solo, 20–24 multi-enemy), reshuffle rule, and `[OPEN]` items for number distribution and fixed vs random number
-- [ ] 6.2 Review `lld-omen-cards/spec.md` — verify LLD-OMEN-CARD-001 through LLD-OMEN-CARD-007 match confirmed cards in section 6; confirm Stillness (Pilgrim null card, 2 copies), Fortified (Hedge Knight Iron Pendant), and Floor 3 pool requirement marked `[OPEN]`
-- [ ] 6.3 Verify `hld-combat-system` HLD-COMBAT-008 references `lld-omen-mechanics` and `lld-omen-cards` — confirmed already in sync
+- [x] 6.1 Review `lld-omen-mechanics/spec.md` — verify LLD-OMEN-MECH-001 through LLD-OMEN-MECH-009 match `soul_protocol_omens.md` sections 2–4; confirm deck size framework (16–18 solo, 20–24 multi-enemy), reshuffle rule, and `[OPEN]` items for number distribution and fixed vs random number
+- [x] 6.2 Review `lld-omen-cards/spec.md` — verify LLD-OMEN-CARD-001 through LLD-OMEN-CARD-007 match confirmed cards in section 6; confirm Stillness (Pilgrim null card, 2 copies), Fortified (Hedge Knight Iron Pendant), and Floor 3 pool requirement marked `[OPEN]`
+- [x] 6.3 Verify `hld-combat-system` HLD-COMBAT-008 references `lld-omen-mechanics` and `lld-omen-cards` — confirmed already in sync
 
 ## 7. Identify and Log Missing Content
 

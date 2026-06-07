@@ -54,7 +54,7 @@ A fresh omen deck SHALL be assembled at the start of each combat from four sourc
 
 #### Scenario: Enemy death removes their cards
 - **WHEN** an enemy dies mid-combat
-- **THEN** their contributed omen cards are removed from the deck at the next shuffle (or immediately — `[OPEN]` exact timing)
+- **THEN** their contributed omen cards are removed from the deck at the next shuffle (or immediately — `[OPEN·MVP1]` exact timing)
 
 ---
 
@@ -68,7 +68,7 @@ Deck size varies by combat composition. Target ranges:
 
 At ~6 cards drawn per fight (2 omen cycles × 3 cards), any given card in a 20-card deck has ~30% chance of appearing. In a 16-card deck, ~37%.
 
-`[OPEN]` Exact deck sizes to be confirmed once floor pool and enemy contributions are fully designed. Target range: 16–24 cards per combat.
+`[OPEN·MVP1]` Exact deck sizes to be confirmed once floor pool and enemy contributions are fully designed. Target range: 16–24 cards per combat.
 
 #### Scenario: Multi-enemy deck density
 - **WHEN** two enemies are present in combat
@@ -107,17 +107,17 @@ Two sources of the same vulnerability type on one target SHALL NOT stack. The ca
 ---
 
 ### Requirement: [LLD-OMEN-MECH-008] Card Number Distribution
-`[OPEN]` The distribution of 1s, 2s, and 3s within the deck is unresolved. Distribution affects average cycle length and status effect value across a run. To be set during omen deck design.
+`[OPEN·MVP1]` The distribution of 1s, 2s, and 3s within the deck is unresolved. Distribution affects average cycle length and status effect value across a run. To be set during omen deck design.
 
-#### Scenario: [OPEN] Number distribution design
+#### Scenario: [OPEN·MVP1] Number distribution design
 - **WHEN** the deck is designed
 - **THEN** the ratio of 1/2/3 timer values across all card sources must be confirmed and documented here
 
 ---
 
 ### Requirement: [LLD-OMEN-MECH-009] Card Number — Fixed or Randomised
-`[OPEN]` Whether omen cards have a fixed printed number or whether the number is randomised per draw is unresolved. Current design assumption: number is fixed (printed on the card).
+`[OPEN·MVP1]` Whether omen cards have a fixed printed number or whether the number is randomised per draw is unresolved. Current design assumption: number is fixed (printed on the card).
 
-#### Scenario: [OPEN] Fixed vs random number
+#### Scenario: [OPEN·MVP1] Fixed vs random number
 - **WHEN** this is resolved
 - **THEN** the mechanic is updated here and in the CombatState data model

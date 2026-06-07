@@ -54,6 +54,6 @@ Every meaningful game event SHALL have a visual representation. Audio is supplem
 ### Requirement: [LLD-PLATFORM-005] Desktop-First Development
 Initial development SHALL target desktop. Mobile is kept as a future platform option but does not constrain MVP development velocity. No Steam release is planned initially; distribution via direct download or web export.
 
-#### Scenario: [OPEN] Web export timeline
+#### Scenario: [OPEN·MVP4] Web export timeline
 - **WHEN** web export is targeted
 - **THEN** PersistenceService may need a localStorage/IndexedDB backend; this decision (T-10) must be resolved before web export work begins

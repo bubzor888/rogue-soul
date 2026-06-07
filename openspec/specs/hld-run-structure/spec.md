@@ -31,7 +31,7 @@ Each room type SHALL have a distinct symbol visible on its door before the playe
 - **WHEN** a combat door symbol is displayed
 - **THEN** the player can identify the specific enemy or encounter type before entering
 
-#### Scenario: [OPEN] Symbol visual language
+#### Scenario: [OPEN·MVP2] Symbol visual language
 - **WHEN** symbols are implemented
 - **THEN** exact visual design to be decided in a UI/art direction session
 

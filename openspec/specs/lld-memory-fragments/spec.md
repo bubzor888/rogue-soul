@@ -11,7 +11,7 @@ The Memory Fragment room SHALL have a single consistent door symbol regardless o
 ### Requirement: [LLD-MF-002] Outcome Category Draw
 The outcome category SHALL be drawn randomly on entry. The player does not know which category they are entering. Pool weighting: **40% Category A / 40% Category B / 20% Category C**.
 
-`[OPEN]` Category B (companion gateway) weighting to be tuned if the Worn Map companion encounter makes companion offers too frequent on the floor.
+`[OPEN·MVP1]` Category B (companion gateway) weighting to be tuned if the Worn Map companion encounter makes companion offers too frequent on the floor.
 
 #### Scenario: Random category on entry
 - **WHEN** a player enters a Memory Fragment room
@@ -46,7 +46,7 @@ If the player already has a temporary companion, they MUST choose between keepin
 
 Category B fragments may also hint at locked vessels — surfacing memories of lives the soul has not yet unlocked. These hints do not name or explain the unplayed vessel; they make them feel real and present.
 
-`[OPEN]` Temporary companion pool for Floor 3 (identities, passives, omen cards) to be defined in a companion design session.
+`[OPEN·MVP1]` Temporary companion pool for Floor 3 (identities, passives, omen cards) to be defined in a companion design session.
 
 #### Scenario: Companion offered with no current companion
 - **WHEN** a Category B fragment occurs and the player has no temporary companion
@@ -84,8 +84,8 @@ The choice MUST never be obvious. Option 2 must be genuinely tempting — if the
 ---
 
 ### Requirement: [LLD-MF-006] Memory Fragment Scenario Pool
-`[OPEN]` 8–10 distinct mechanical scenarios for Floor 3, distributed across Categories A and C (recommended: 4 A / 2 C as first pass; remaining slots filled by Category B companion gateway). Narrative content (flavour text, locked vessel hints) deferred to floor-specific writing sessions.
+`[OPEN·MVP1]` 8–10 distinct mechanical scenarios for Floor 3, distributed across Categories A and C (recommended: 4 A / 2 C as first pass; remaining slots filled by Category B companion gateway). Narrative content (flavour text, locked vessel hints) deferred to floor-specific writing sessions.
 
-#### Scenario: [OPEN] Scenario pool design
+#### Scenario: [OPEN·MVP1] Scenario pool design
 - **WHEN** Memory Fragment scenarios are written for Floor 3
 - **THEN** each scenario specifies: category, both options, exact costs/rewards, which locked vessel (if any) it hints at

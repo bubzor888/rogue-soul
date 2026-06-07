@@ -15,11 +15,20 @@ Items SHALL belong to one of three functional categories determining their actio
 ---
 
 ### Requirement: [LLD-ITEMS-002] Durability Decrement
-Durability items SHALL decrement by 1 charge per use — not per combat. A weapon used twice in one combat loses 2 charges.
+Durability items SHALL decrement charges according to their category:
 
-#### Scenario: Per-use decrement
+- **Attack (Durability)**: loses 1 charge each time it is used in an attack action.
+- **Support (Durability)**: loses 1 charge per encounter (once on room entry, regardless of turns).
+
+Both break at zero charges if `breaks_at_zero: true`.
+
+#### Scenario: Attack item per-use decrement
 - **WHEN** a weapon with 6 charges is used 3 times across 2 combats
 - **THEN** it has 3 charges remaining, regardless of how many combats occurred
+
+#### Scenario: Support item per-encounter decrement
+- **WHEN** a support durability item with 3 charges is carried through 3 rooms
+- **THEN** it has 0 charges remaining and breaks, regardless of whether it was activated in those rooms
 
 ---
 
@@ -44,19 +53,19 @@ All item damage values SHALL be set relative to the following reference:
 ### Requirement: [LLD-ITEMS-004] Floor 3 Starting Items — The Pilgrim
 The Pilgrim SHALL start every run with these three items (defined per `LLD-VESSELS-001`):
 
-**Walking Staff** — Attack (Durability), Physical, damage: 6, charges: 6. Effect chain: `deal_physical_damage { base_damage: 6, attack_type: MELEE }`.
+**Walking Staff** — Attack (Durability), Physical, damage: 6, charges: 6. Effect chain: `deal_damage { base_damage: 6, damage_type: physical }`.
 
-**Spoiled Potion** — Consumable, Poison. Effect chain: `apply_status { status_id: "poisoned" }`.
+**Spoiled Potion** — Consumable. Effect chain: `apply_status { status_id: "poisoned" }`. Applies Poisoned (see `HLD-COMBAT-006` for escalating damage mechanic; starting value X = 2).
 
-**Worn Map** — Non-combat item. Counts down across encounters (counter: 3, decrements every encounter type). After 3 encounters, replaces the next room slot with a temporary companion encounter. Removed from inventory after triggering.
+**Worn Map** — Support (Durability), charges: 3, breaks_at_zero: true. Decrements 1 charge per encounter. Break effect: forces the next room to be a temporary companion encounter (Memory Fragment). Removed from inventory after triggering.
 
 #### Scenario: Walking Staff damage
-- **WHEN** the Pilgrim uses the Walking Staff against a front-row enemy
+- **WHEN** the Pilgrim uses the Walking Staff against an enemy
 - **THEN** the enemy takes 6 physical damage (unmodified)
 
 #### Scenario: Worn Map trigger
-- **WHEN** the Worn Map counter reaches 0
-- **THEN** the next room is replaced with a companion encounter and the Worn Map is removed from inventory
+- **WHEN** the Worn Map's charges reach 0 (after 3 encounters)
+- **THEN** the next room is replaced with a temporary companion encounter and the Worn Map is removed from inventory
 
 ---
 
@@ -111,14 +120,14 @@ The following consumables SHALL be in the normal drop pool for Floor 3:
 
 | Item | Effect |
 |---|---|
-| Fire Bomb | Applies Burning to one enemy (see HLD-COMBAT-006 for tick values) |
-| Ointment | Clears Burning or Poisoned from one target |
-| Combustible Oil | If target not Burning → Vulnerable (Fire) ×1.5; if target already Burning → flat fire damage burst (`[OPEN]` value: first pass 6) |
-| Hardening Resin | Applies Hardened to player (absorbs 3 damage/tick) |
+| Fire Bomb | Applies Burning (5 fire damage/tick; see `HLD-COMBAT-006`) and co-applies Vulnerable (Fire) (see `HLD-COMBAT-007`) to one enemy |
+| Ointment | Clears Burning or Poisoned from one target (see `LLD-ITEMS-001` for cleanse category rules) |
+| Combustible Oil | Applies Vulnerable (Fire) ×1.5 to one enemy (see `HLD-COMBAT-007`); if target already Burning → flat fire damage burst instead (`[OPEN·MVP1]` value: first pass 6) |
+| Hardening Resin | Applies Hardened to player (X = 3 damage absorbed/tick; see `HLD-COMBAT-006` for full effect) |
 
 #### Scenario: Fire Bomb typical damage
 - **WHEN** a player uses Fire Bomb and the timer card is 2 (typical)
-- **THEN** the target takes 10 fire damage total (5/tick × 2 ticks) and is Vulnerable (Fire) ×1.5
+- **THEN** the target takes 10 fire damage total (5/tick × 2 ticks) and has Vulnerable (Fire) applied (co-applied with Burning per `HLD-COMBAT-007`)
 
 #### Scenario: Combustible Oil branching
 - **WHEN** a player uses Combustible Oil against a non-Burning enemy
@@ -135,10 +144,10 @@ The following consumables SHALL be in the elite drop pool for Floor 3:
 
 | Item | Effect |
 |---|---|
-| Poultice | Applies Mending to player (heals 3 HP/tick) |
-| Brittle Charm | Applies Vulnerable (Physical) ×1.5 to one enemy |
-| Frost Shard | Applies Chilled to one enemy |
-| Fulminating Powder | Applies Shocked to one enemy |
+| Poultice | Applies Mending to player (X = 3 HP healed/tick; see `HLD-COMBAT-006` for full effect) |
+| Brittle Charm | Applies Vulnerable (Physical) ×1.5 to one enemy (see `HLD-COMBAT-007`) |
+| Frost Shard | Applies Chilled to one enemy (see `HLD-COMBAT-006` for damage reduction and Vulnerable (Ice) effect) |
+| Fulminating Powder | Applies Shocked to one enemy (see `HLD-COMBAT-006` for stun timing) |
 
 #### Scenario: Brittle Charm physical amplification
 - **WHEN** a player applies Brittle Charm to an enemy and then uses a physical weapon
@@ -147,3 +156,53 @@ The following consumables SHALL be in the elite drop pool for Floor 3:
 #### Scenario: Fulminating Powder stun value
 - **WHEN** Fulminating Powder is applied and the timer card drawn is 1 (shortest)
 - **THEN** the stun occurs quickly — low timer cards are more valuable when Shocked is active (see HLD-COMBAT-006)
+
+---
+
+### Requirement: [LLD-ITEMS-009] Starting Items — The Drifter
+The Drifter SHALL start every run with these three items (defined per `LLD-VESSELS-002`):
+
+**Pocket of Sand** — Consumable, single use. Effect: Escape the current combat immediately with no rewards. Cannot be used in elite or boss encounters.
+
+**Loaf of Bread** — Consumable, single use, floor-bound (removed at floor transition if unused). Effect: Restores HP to the vessel. `[OPEN·MVP3]` heal amount to be set during playtesting relative to typical incoming damage per encounter.
+
+**Lucky Paw** — Support (Durability), charges: 2, breaks_at_zero: true. Decrements 1 charge per encounter (per `LLD-ITEMS-002`). Effect: At the start of each combat while charges remain, applies the **Evasive** buff — a `[OPEN·MVP3]` % chance to dodge incoming physical attacks for that combat. Does not apply to elemental or magical damage types.
+
+#### Scenario: Pocket of Sand — escape
+- **WHEN** the player uses Pocket of Sand in a standard combat
+- **THEN** the combat ends immediately; no post-combat rewards are awarded and the item is consumed
+
+#### Scenario: Pocket of Sand — boss restriction
+- **WHEN** the player attempts to use Pocket of Sand in an elite or boss encounter
+- **THEN** the item cannot be activated
+
+#### Scenario: Loaf of Bread — floor-bound
+- **WHEN** the Drifter transitions from floor 2 to floor 3 with an unused Loaf of Bread
+- **THEN** the Loaf of Bread is removed from inventory
+
+#### Scenario: Lucky Paw — evasion applies at combat start
+- **WHEN** a combat begins and the Lucky Paw has at least 1 charge remaining
+- **THEN** the Evasive buff is applied before the first action; a physical attack has a chance to be dodged
+
+---
+
+### Requirement: [LLD-ITEMS-010] Starting Items — The Hedge Knight
+The Hedge Knight SHALL start every run with these three items (defined per `LLD-VESSELS-003`):
+
+**Battered Sword** — Attack (Durability), Physical. Stats: see `LLD-ITEMS-005` for base damage (7) and charge range (8–10). `[OPEN·MVP3]` exact starting charge count to be confirmed during playtesting.
+
+**Iron Pendant** — Support (Durability), charges: 2, breaks_at_zero: true. Decrements 1 charge per encounter (per `LLD-ITEMS-002`). Effect: Replace the player's currently active fate omen with **Fortified** (take half damage from all attacks this omen cycle). The replaced omen is discarded. Fortified remains active for the rest of the current omen cycle. The Fortified omen is never placed in the fate deck — it only exists through pendant use. `[OPEN·MVP3]` exact damage reduction fraction and edge cases to be confirmed during playtesting.
+
+**Cheap Flask** — Consumable, single use. Effect: Applies a combat buff to the vessel for the current encounter. `[OPEN·MVP3]` specific buff effect to be defined once the status effect system is fully designed.
+
+#### Scenario: Iron Pendant — omen replacement
+- **WHEN** the player activates the Iron Pendant
+- **THEN** the currently active fate omen on the player's side is replaced by Fortified and the original omen is discarded
+
+#### Scenario: Iron Pendant — Fortified not in deck
+- **WHEN** the fate deck is assembled for any combat
+- **THEN** the Fortified omen card is never included; it can only appear via Iron Pendant activation
+
+#### Scenario: Battered Sword — normal drop equivalent
+- **WHEN** the Hedge Knight uses the Battered Sword
+- **THEN** it deals physical damage matching the normal-tier drop weapon standard (see `LLD-ITEMS-005`)

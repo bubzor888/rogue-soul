@@ -31,7 +31,7 @@ The following trade types SHALL be available:
 ### Requirement: [LLD-WS-003] HP-for-Item Always Present
 The HP-for-item trade SHALL always be present as one of the 2–3 offers in every Wandering Soul encounter. A depleted player always has the option to spend health for something useful.
 
-`[OPEN]` HP cost values for all HP-based trades to be set once vessel HP pools are established.
+`[OPEN·MVP2]` HP cost values for all HP-based trades to be set once vessel HP pools are established.
 
 #### Scenario: HP-for-item guaranteed
 - **WHEN** a Wandering Soul encounter is generated
@@ -42,7 +42,7 @@ The HP-for-item trade SHALL always be present as one of the 2–3 offers in ever
 ### Requirement: [LLD-WS-004] Item-for-HP as Primary Healing Path
 The Item-for-HP trade SHALL be the primary non-combat healing path. The HP restoration is meaningful (not a token top-up). The cost is real — the item is gone and the build is weaker for it.
 
-`[OPEN]` HP restoration values to be set once vessel HP pools are confirmed. Design intent: enough to matter to a damaged player, not enough to make selling items a default strategy.
+`[OPEN·MVP2]` HP restoration values to be set once vessel HP pools are confirmed. Design intent: enough to matter to a damaged player, not enough to make selling items a default strategy.
 
 #### Scenario: Meaningful HP restoration
 - **WHEN** the player accepts an item-for-HP trade while at low HP
@@ -62,7 +62,7 @@ There is no currency in the game. All Wandering Soul trades are direct exchanges
 ### Requirement: [LLD-WS-006] Trade Tier Fairness
 Item-for-item trades SHALL pair items of the same or adjacent tier. A strong item is offered for a strong item; a weak item for a weak item. The player should never look at a trade and feel they are being robbed.
 
-`[OPEN]` Item tier ranking system (recommended: three tiers) — a background value classification used to constrain trade pairing. Implementation detail for the technical side.
+`[OPEN·MVP2]` Item tier ranking system (recommended: three tiers) — a background value classification used to constrain trade pairing. Implementation detail for the technical side.
 
 #### Scenario: Same-tier pairing
 - **WHEN** an item-for-item trade is generated

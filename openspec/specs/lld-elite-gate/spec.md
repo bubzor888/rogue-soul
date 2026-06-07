@@ -14,7 +14,7 @@ Completing the elite combat SHALL provide:
 - One standard consumable drop
 - A **fixed, significant HP restoration** after the fight — the same amount on every elite encounter across runs
 
-`[OPEN]` Fixed HP restoration amount — to be tuned once vessel HP pools and typical elite combat damage values are established. Design intent: restores roughly what a competent run of the elite costs, leaving the player near their pre-fight HP.
+`[OPEN·MVP2]` Fixed HP restoration amount — to be tuned once vessel HP pools and typical elite combat damage values are established. Design intent: restores roughly what a competent run of the elite costs, leaving the player near their pre-fight HP.
 
 #### Scenario: Post-elite HP restoration
 - **WHEN** the player completes the elite combat
@@ -45,8 +45,8 @@ The fixed HP restoration after the elite fight is the ONLY guaranteed post-fight
 ---
 
 ### Requirement: [LLD-EG-005] Elite vs Standard Enemy Distinction
-`[OPEN]` Whether the standard (Anomaly) door at the Elite Gate is always a different enemy type from the elite door — or whether it can be the same enemy at a lower tier — is unresolved. Current lean: yes, always distinct, so the choice presents two clearly different propositions.
+`[OPEN·MVP2]` Whether the standard (Anomaly) door at the Elite Gate is always a different enemy type from the elite door — or whether it can be the same enemy at a lower tier — is unresolved. Current lean: yes, always distinct, so the choice presents two clearly different propositions.
 
-#### Scenario: [OPEN] Door enemy distinction
+#### Scenario: [OPEN·MVP2] Door enemy distinction
 - **WHEN** the Elite Gate is generated
 - **THEN** a decision must be made whether the two doors always show distinct enemy types

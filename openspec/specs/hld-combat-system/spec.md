@@ -49,21 +49,21 @@ All damage SHALL have a type. The confirmed types are Physical, Fire, Lightning,
 
 | Type | Notes |
 |---|---|
-| Physical | Weapons, default strike. No intrinsic DoT. Vulnerability via items only. |
-| Fire | Elemental. Intrinsic vulnerability: Burning status grants Vulnerable (Fire) ×1.5. |
-| Lightning | Elemental. Intrinsic vulnerability: Shocked status grants Vulnerable (Lightning) ×1.5. |
-| Ice | Elemental. Intrinsic vulnerability: Chilled status grants Vulnerable (Ice) ×1.5. |
+| Physical | Weapons, default strike. No intrinsic DoT. Vulnerable (Physical) applied via items only. |
+| Fire | Elemental. Vulnerable (Fire) applied by Burning status or directly by items. |
+| Lightning | Elemental. Vulnerable (Lightning) applied by Shocked status or directly by items. |
+| Ice | Elemental. Vulnerable (Ice) applied by Chilled status or directly by items. |
 | Poison | Elemental. **No vulnerability** — escalating DoT is strong enough alone. |
 
 #### Scenario: Elemental vulnerability
-- **WHEN** a unit has the Burning status and receives fire damage
-- **THEN** that fire damage is multiplied by ×1.5
+- **WHEN** a unit has Vulnerable (Fire) and receives fire damage
+- **THEN** that fire damage is multiplied by ×1.5 (see `HLD-COMBAT-007` for full Vulnerable rules)
 
 #### Scenario: Poison no vulnerability
 - **WHEN** a unit has the Poisoned status and receives poison damage
 - **THEN** no vulnerability multiplier applies
 
-#### Scenario: [OPEN] Additional damage types
+#### Scenario: [OPEN·MVP4] Additional damage types
 - **WHEN** tier 3 vessels (Battle Wizard, Shaman) and later floors are designed
 - **THEN** additional elemental damage types may be added
 
@@ -74,18 +74,28 @@ Status effects SHALL be applied as individual omens on a specific target. They c
 
 **Balancing assumption:** Assume 2 ticks as the typical case when setting all per-tick values.
 
-| Status | Type | Primary effect |
-|---|---|---|
-| Burning | Per-turn / Offensive | Flat fire damage per tick; grants Vulnerable (Fire) |
-| Shocked | Omen-triggered / Offensive | Grants Vulnerable (Lightning); stuns at omen shift |
-| Chilled | Per-turn / Offensive+Defensive | Creeping damage reduction per tick (10%/20%/30%); grants Vulnerable (Ice) |
-| Poisoned | Per-turn / Offensive | Escalating poison damage (triples each tick); no vulnerability |
-| Mending | Per-turn / Defensive | Heals X HP per tick |
-| Hardened | Per-turn / Defensive | Absorbs up to X incoming damage per tick; resets each tick |
+| Status | Type | Primary effect | Co-applies |
+|---|---|---|---|
+| Burning | Per-turn / Offensive | Flat fire damage per tick | Vulnerable (Fire) |
+| Shocked | Omen-triggered / Offensive | Stuns at omen shift | Vulnerable (Lightning) |
+| Chilled | Per-turn / Offensive+Defensive | Creeping damage reduction per tick (10%/20%/30%) | Vulnerable (Ice) |
+| Poisoned | Per-turn / Offensive | Escalating poison damage (triples each tick); no vulnerability | — |
+| Mending | Per-turn / Defensive | Heals X HP per tick | — |
+| Hardened | Per-turn / Defensive | Absorbs up to X incoming damage per tick; resets each tick | — |
+| Vulnerable (Fire) | Offensive | Amplifies all fire damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) | — |
+| Vulnerable (Lightning) | Offensive | Amplifies all lightning damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) | — |
+| Vulnerable (Ice) | Offensive | Amplifies all ice damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) | — |
+| Vulnerable (Physical) | Offensive | Amplifies all physical damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) | — |
+
+When an elemental status (Burning, Shocked, Chilled) is applied, the corresponding Vulnerable status is **also applied** as a separate status application with its own timer card.
 
 #### Scenario: Burning tick damage
 - **WHEN** a unit has the Burning status and an omen tick occurs
-- **THEN** the unit takes fire damage and is Vulnerable (Fire) ×1.5
+- **THEN** the unit takes fire damage
+
+#### Scenario: Burning co-applies Vulnerable
+- **WHEN** Burning is applied to a unit
+- **THEN** Vulnerable (Fire) is also applied as a separate status with its own timer card
 
 #### Scenario: Shocked stun timing
 - **WHEN** a unit has the Shocked status and the omen shift occurs
@@ -106,11 +116,23 @@ Status effects SHALL be applied as individual omens on a specific target. They c
 ---
 
 ### Requirement: [HLD-COMBAT-007] Vulnerability
-Vulnerability SHALL amplify all damage of a specific type dealt to the affected target by ×1.5. Two sources of the same vulnerability type on one target do not stack — still ×1.5, not ×2.25.
+Vulnerable SHALL be a status effect that amplifies all damage of a specific type dealt to the affected target by ×1.5. It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
+
+Vulnerable can be applied by:
+- Elemental statuses as a co-application (Burning → Vulnerable (Fire), Shocked → Vulnerable (Lightning), Chilled → Vulnerable (Ice))
+- Items directly (e.g., Combustible Oil → Vulnerable (Fire), Brittle Charm → Vulnerable (Physical))
+
+Two sources of the same Vulnerable type on one target do not stack — still ×1.5, not ×2.25.
+
+`[OPEN·MVP1]` Co-application timing: when an elemental status co-applies a Vulnerable status, it is TBD whether they share the same timer card draw or draw independently. To be resolved during implementation.
 
 #### Scenario: No vulnerability stacking
-- **WHEN** a unit has Vulnerable (Fire) from both Burning status and Combustible Oil
+- **WHEN** a unit has Vulnerable (Fire) from both Burning and Combustible Oil
 - **THEN** fire damage is multiplied by ×1.5 once, not ×2.25
+
+#### Scenario: Vulnerable clears independently
+- **WHEN** Burning expires on a unit that still has Vulnerable (Fire)
+- **THEN** Vulnerable (Fire) remains active until its own timer expires
 
 ---
 
