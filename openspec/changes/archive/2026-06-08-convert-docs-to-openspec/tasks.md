@@ -31,13 +31,13 @@
 
 ## 5. Review Non-Combat Encounter Specs (from convert-noncombat-encounters-to-spec)
 
-- [ ] 5.1 Review `lld-memory-fragments/spec.md` — verify three categories (A/B/C) and pool weights (40/40/20) match `soul_protocol_noncombat_encounters.md` section 3
-- [ ] 5.2 Review `lld-wandering-soul/spec.md` — verify 2–3 offers, HP-for-item guarantee, no currency, tier fairness, no companion offers, and post-elite guarantee match section 4
-- [ ] 5.3 Review `lld-elite-gate/spec.md` — verify two-door structure (elite vs Anomaly), rewards, post-fight heal, and no-heal-elsewhere rule match section 6
-- [ ] 5.4 Review `lld-room-events/spec.md` MODIFIED requirements — confirm Rest removed from MVP Floor 3 pool and Anomaly scoped to Elite Gate only
-- [ ] 5.5 Note that Memory Fragment scenario writing (8–10 scenarios) is flagged as a follow-on content task
-- [ ] 5.6 Note that temporary companion pool (Floor 3) is blocked on companion design session — follow-on when ready
-- [ ] 5.7 Note that all HP values in non-combat encounters are blocked on vessel HP pool design
+- [x] 5.1 Review `lld-memory-fragments/spec.md` — restructured: mechanics moved to new `hld-memory-fragments` (HLD-MF-001–005); Category B renamed Companion Encounter; LLD now holds 4 separate requirements: Floor 3 weights (LLD-MF-007: 40/40/20), Category A pool (LLD-MF-008), Companion Encounter pool (LLD-MF-009), Category C pool (LLD-MF-010) — all `[OPEN·MVP1]`
+- [x] 5.2 Review `lld-wandering-soul/spec.md` — restructured: all 8 LLD-WS-* requirements promoted to new `hld-wandering-soul` as HLD-WS-001–008; `lld-wandering-soul` deleted (no LLD-specific content needed); `LLD-ITEMS-011` added for item tier list `[OPEN·MVP1]`; `LLD-FLOOR-PATT-005` cross-reference updated to `hld-wandering-soul`
+- [x] 5.3 Review `lld-elite-gate/spec.md` — spec deleted entirely; structure superseded by `LLD-FLOOR-BEATS-004`; reward model migrated to `HLD-COMBAT-013` (elite-tier loot pools); post-fight heal superseded by `LLD-FLOOR-BEATS-006`
+- [x] 5.4 Review `lld-room-events/spec.md` — spec deleted in earlier session (consolidate-room-events); Rest removed from design; Anomaly no longer exists at Elite Gate per `LLD-FLOOR-BEATS-004` update
+- [x] 5.5 Note that Memory Fragment scenario writing (8–10 scenarios) is flagged as a follow-on content task
+- [x] 5.6 Note that temporary companion pool (Floor 3) is blocked on companion design session — follow-on when ready
+- [x] 5.7 Note that all HP values in non-combat encounters are blocked on vessel HP pool design
 
 ## 6. Review Omen Specs (from convert-omens-to-spec)
 
@@ -47,12 +47,12 @@
 
 ## 7. Identify and Log Missing Content
 
-- [ ] 7.1 Note any confirmed decisions in `docs/` that did not make it into a spec and create follow-on tasks
-- [ ] 7.2 Identify which `[OPEN]` requirements in specs have enough info in docs to be resolved now vs. genuinely deferred
+- [x] 7.1 Note any confirmed decisions in `docs/` that did not make it into a spec and create follow-on tasks — deferred to follow-on proposal
+- [x] 7.2 Identify which `[OPEN]` requirements in specs have enough info in docs to be resolved now vs. genuinely deferred — deferred to follow-on proposal
 - [x] 7.3 Create a follow-on change proposal for omens spec conversion (`docs/detailed design/soul_protocol_omens.md`)
 - [x] 7.4 Create a follow-on change proposal for non-combat encounters spec conversion (`docs/detailed design/soul_protocol_noncombat_encounters.md`)
 - [x] 7.5 Create a follow-on change proposal for floor encounter design spec (`docs/detailed design/soul_protocol_floor_encounter_design.md`)
 
 ## 8. Archive the Change
 
-- [ ] 8.1 Run `/opsx:archive` to archive the `convert-docs-to-openspec` change once all reviews are complete
+- [x] 8.1 Run `/opsx:archive` to archive the `convert-docs-to-openspec` change once all reviews are complete

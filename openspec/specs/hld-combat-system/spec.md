@@ -1,3 +1,6 @@
+## Purpose
+Defines the core rules of the combat system — turn structure, action economy, damage types, status effects, vulnerability, the omen system, enemy intent, cleanse, default strike, and post-combat loot for both standard and elite encounters.
+## Requirements
 ### Requirement: [HLD-COMBAT-001] Turn-Based Only
 Combat SHALL be turn-based with no real-time or action elements. There is no need to tune action feel, hitboxes, or input latency.
 
@@ -137,7 +140,7 @@ Two sources of the same Vulnerable type on one target do not stack — still ×1
 ---
 
 ### Requirement: [HLD-COMBAT-008] Omen System
-All combat in Soul Protocol is governed by the omen system. Every combat turn three omen cards are drawn from a shared deck; the player chooses one card to apply to a side; one is applied randomly to the other side; the third sets the cycle duration. Full mechanics are defined in `lld-omen-mechanics`. Confirmed omen cards are defined in `lld-omen-cards`.
+All combat in Soul Protocol SHALL be governed by the omen system. Every combat turn three omen cards are drawn from a shared deck; the player chooses one card to apply to a side; one is applied randomly to the other side; the third sets the cycle duration. Full mechanics are defined in `lld-omen-mechanics`. Confirmed omen cards are defined in `lld-omen-cards`.
 
 The omen deck is assembled fresh per combat from four sources: vessel cards, item cards, floor cards, and enemy cards. Enemy cards are present only while those enemies are alive. See `LLD-OMEN-MECH-004`.
 
@@ -204,6 +207,19 @@ Every completed combat encounter SHALL present the player with a choice between 
 #### Scenario: Loot choice
 - **WHEN** a combat encounter is completed
 - **THEN** exactly two loot options are shown (one durability, one consumable) and the player selects one
+
+### Requirement: [HLD-COMBAT-013] Elite Combat Rewards
+Elite combats SHALL follow the same post-combat loot format as standard combats (see `HLD-COMBAT-012`) — the player chooses one of two fully revealed options — but the options are drawn from elite-tier pools rather than standard-tier pools. Standard combats draw from normal-tier pools; elite combats draw from elite-tier pools. The tier distinction is the primary additional reward for accepting the harder fight.
+
+`[OPEN·MVP1]` Elite-tier pool contents (specific items eligible as elite drops) to be defined in `lld-items`.
+
+#### Scenario: Elite loot uses elevated pools
+- **WHEN** the player completes an elite combat
+- **THEN** the two loot options are drawn from elite-tier pools, not the standard floor pools used after normal combats
+
+#### Scenario: Same choice format as standard loot
+- **WHEN** elite loot is presented
+- **THEN** exactly two options are shown (one elite-tier durability item, one elite-tier consumable) and the player selects one; the format is identical to `HLD-COMBAT-012`
 
 ---
 

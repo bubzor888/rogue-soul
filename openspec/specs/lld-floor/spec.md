@@ -132,13 +132,11 @@ Memory Fragment rooms SHALL present a narrative/lore event in which the soul rec
 ---
 
 ### Requirement: [LLD-FLOOR-PATT-005] Wandering Soul Room Type
-Wandering Soul rooms SHALL present a trading opportunity — a lost spirit that remembers what it had in life. The player may trade items from the floor's item pools. Full design: see `lld-wandering-soul`.
+Wandering Soul rooms SHALL present a trading opportunity — a lost spirit that remembers what it had in life. The player may trade items from the floor's item pools. Full design: see `hld-wandering-soul`.
 
 #### Scenario: Wandering Soul room is non-combat
 - **WHEN** the player enters a Wandering Soul room
 - **THEN** no combat occurs; the player is presented with trade options from the floor's item pools
-
----
 
 ### Requirement: [LLD-FLOOR-BEATS-001] Beat 1 — Opening (Rooms 1–2)
 The first two rooms SHALL have no counter constraints applied. Any room type may appear behind either door. Full player agency at the start of the run.
