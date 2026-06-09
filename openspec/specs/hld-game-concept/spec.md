@@ -1,6 +1,8 @@
-
+## Purpose
+Defines the core game concept — premise, setting, the soul's goal (Solace), run length target, and the roguelite meta-progression model.
+## Requirements
 ### Requirement: [HLD-CONCEPT-001] Core Premise
-The game SHALL be a roguelite in which an ancient soul inhabits the recently deceased (vessels) and descends through purgatory to recover fragments of its own memory. The soul's goal is understanding why it is trapped — not escaping, not finding a person, not fulfilling a mission.
+The game SHALL be a roguelite in which an ancient soul inhabits the recently deceased (vessels) and descends through purgatory to recover fragments of its own memory. The soul's goal is understanding why it is trapped — not escaping, not finding a person, not fulfilling a mission. Full narrative design: see `hld-narrative`.
 
 #### Scenario: Run framing
 - **WHEN** the player begins a run
@@ -9,8 +11,6 @@ The game SHALL be a roguelite in which an ancient soul inhabits the recently dec
 #### Scenario: Death loop coherence
 - **WHEN** the vessel dies
 - **THEN** the soul loses its grip on what it just remembered, but retains accumulated meta knowledge (Soul Codex, unlocked vessels)
-
----
 
 ### Requirement: [HLD-CONCEPT-002] Setting
 The game's setting SHALL be purgatory — a liminal space that takes the shape of things the dead remember. There are no gods or pantheon. The purgatory simply exists — ancient, indifferent, full of lost things.
@@ -45,3 +45,4 @@ The game SHALL be a roguelite — runs reset on death, but meta-progression pers
 #### Scenario: Run reset on death
 - **WHEN** the vessel dies
 - **THEN** run state (items, floor position, vessel HP) resets; meta state (Soul Codex, unlocked vessels) persists
+

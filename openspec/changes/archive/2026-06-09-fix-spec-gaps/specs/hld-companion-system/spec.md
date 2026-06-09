@@ -1,6 +1,5 @@
-## Purpose
-Defines the two-tier companion system — bound companions (persistent for the run, tied to specific vessels) and temporary companions (floor-scoped, sourced from non-combat events) — including the companion limit, replacement rules, and automatic action model.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: [HLD-COMPANION-001] Two-Tier Companion System
 The game SHALL support two companion types: Bound (persistent for the whole run, tied to specific vessel archetypes) and Temporary (found in Memory Fragment rooms, floor-scoped).
 
@@ -20,15 +19,3 @@ The game SHALL support two companion types: Bound (persistent for the whole run,
 #### Scenario: Companion acts automatically
 - **WHEN** the player ends their turn
 - **THEN** any active companions resolve their automatic actions without player input
-
-### Requirement: [HLD-COMPANION-004] Temporary Companion Limit
-The player SHALL have at most one temporary companion active at a time. If the player encounters a second temporary companion while one is already active, they MUST choose which to keep. The unchosen companion does not join.
-
-#### Scenario: Replacement choice
-- **WHEN** the player discovers a temporary companion and already has one active
-- **THEN** they are presented with a choice: keep the current companion or replace it with the new one
-
-#### Scenario: One at a time enforced
-- **WHEN** the player chooses a new temporary companion
-- **THEN** the previous temporary companion immediately departs
-

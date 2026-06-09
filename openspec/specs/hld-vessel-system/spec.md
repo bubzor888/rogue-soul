@@ -1,6 +1,8 @@
-
+## Purpose
+Defines the vessel system — vessels as the class system, vessel identity, unlock conditions, the seven-vessel hierarchy, and run length per tier.
+## Requirements
 ### Requirement: [HLD-VESSEL-001] Vessel as Class
-The vessel the soul inhabits each run IS the class system. Vessels are chosen before the run from the pool the soul has unlocked. Each vessel has a fixed set of base abilities that do not change during the run.
+The vessel the soul inhabits each run SHALL be the class system. Vessels are chosen before the run from the pool the soul has unlocked. Each vessel has a fixed set of base abilities that do not change during the run.
 
 #### Scenario: No in-run class building
 - **WHEN** the player is mid-run
@@ -10,10 +12,8 @@ The vessel the soul inhabits each run IS the class system. Vessels are chosen be
 - **WHEN** the player builds their loadout
 - **THEN** variability comes from the item inventory and companion — not from the vessel's fixed abilities
 
----
-
 ### Requirement: [HLD-VESSEL-002] Vessel Identity
-A vessel is a recently-deceased person, not a class archetype. Their circumstances at death define their capabilities. Each vessel has a name, lore, and a specific set of abilities reflecting who they were in life.
+A vessel SHALL be a recently-deceased person, not a class archetype. Their circumstances at death define their capabilities. Each vessel has a name, lore, and a specific set of abilities reflecting who they were in life.
 
 #### Scenario: Vessel is a person
 - **WHEN** a vessel is presented in the selection screen
@@ -88,3 +88,4 @@ The Ranger       →    The Drifter       →
 #### Scenario: Narrative connection across vessels
 - **WHEN** a player reads lore fragments across multiple vessels
 - **THEN** the fragments collectively reveal the soul's history — later vessels providing context that reframes earlier ones
+

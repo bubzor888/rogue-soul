@@ -59,7 +59,7 @@ The Pilgrim SHALL start every run with these three items (defined per `LLD-VESSE
 
 **Spoiled Potion** — Consumable. Effect chain: `apply_status { status_id: "poisoned" }`. Applies Poisoned (see `HLD-COMBAT-006` for escalating damage mechanic; starting value X = 2).
 
-**Worn Map** — Support (Durability), charges: 3, breaks_at_zero: true. Decrements 1 charge per encounter. Break effect: forces the next room to be a temporary companion encounter (Memory Fragment). Removed from inventory after triggering.
+**Worn Map** — Support (Durability), charges: 3, breaks_at_zero: true. Decrements 1 charge per encounter. Break effect: forces the next room to be a temporary companion encounter (Memory Fragment). Removed from inventory after triggering. Implements the encounter-countdown item system (see `HLD-ITEMS-003`).
 
 #### Scenario: Walking Staff damage
 - **WHEN** the Pilgrim uses the Walking Staff against an enemy
@@ -166,7 +166,7 @@ The Drifter SHALL start every run with these three items (defined per `LLD-VESSE
 
 **Pocket of Sand** — Consumable, single use. Effect: Escape the current combat immediately with no rewards. Cannot be used in elite or boss encounters.
 
-**Loaf of Bread** — Consumable, single use, floor-bound (removed at floor transition if unused). Effect: Restores HP to the vessel. `[OPEN·MVP3]` heal amount to be set during playtesting relative to typical incoming damage per encounter.
+**Loaf of Bread** — Consumable, single use, floor-bound (removed at floor transition if unused; see `HLD-ITEMS-002`). Effect: Restores HP to the vessel. `[OPEN·MVP3]` heal amount to be set during playtesting relative to typical incoming damage per encounter.
 
 **Lucky Paw** — Support (Durability), charges: 2, breaks_at_zero: true. Decrements 1 charge per encounter (per `LLD-ITEMS-002`). Effect: At the start of each combat while charges remain, applies the **Evasive** buff — a `[OPEN·MVP3]` % chance to dodge incoming physical attacks for that combat. Does not apply to elemental or magical damage types.
 
