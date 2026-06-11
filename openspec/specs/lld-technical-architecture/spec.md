@@ -573,6 +573,7 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `is_evade` | bool | true if this intent is the Evade action; damage_min, damage_max, and status_apply are ignored |
 | `max_consecutive` | int | Maximum times this intent may be selected consecutively; 0 = no limit |
 | `status_apply` | String | Status ID to apply on execution; empty string if none; same colon-encoding convention as OmenCardData.status_id applies (e.g. `"vulnerable:physical"` creates a Vulnerable StatusInstance with string_param `"physical"`) |
+| `status_magnitude` | int | Magnitude value for the StatusInstance created by `status_apply`. For Burning: fire damage per tick. For Poisoned: starting poison value. For Bleed: starting stack count. When the target already has an active instance of the status and the status is magnitude-additive (Burning, Poisoned, Bleed — see `HLD-COMBAT-018`), this value is added to the existing magnitude instead of creating a new StatusInstance. Defaults 0; ignored for statuses that do not use magnitude (e.g. Shocked, Vulnerable). |
 | `status_target` | String | `"player"` (default) \| `"self"` — determines whether status_apply targets the player or the enemy itself |
 | `summon_enemy_id` | String | When non-empty, spawns one enemy of this enemy_id when the intent resolves; the spawned enemy is added to CombatState with full HP and a unique instance_id; its Tier 1 omen card (first entry in EnemyData.omen_contributions) is injected into OmenDeckState.draw_pile immediately (see `HLD-OMEN-006`); empty string = no summon |
 
@@ -591,6 +592,7 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `card_id` | String | Unique identifier; matches filename convention |
 | `display_name` | String | Player-visible name |
 | `status_id` | String | Status ID applied to each eligible unit when the card fires; empty string for cards with no status effect (e.g. Stillness); colon-encoded parameterized statuses (e.g. `"type_convert:fire"`, `"vulnerable:lightning"`, `"emboldened:physical"`) are split on `:` by CombatResolver — left of `:` becomes StatusInstance.status_id, right becomes StatusInstance.string_param |
+| `status_magnitude` | int | Magnitude value for StatusInstances created from this card's `status_id`. For Burning: fire damage per tick (e.g. 5 for the Burning omen card). For magnitude-additive statuses (see `HLD-COMBAT-018`), if the target already has the status active, this value is added to existing magnitude rather than creating a new instance. Defaults 0; ignored for statuses that do not use magnitude. |
 | `requires_tag` | String | Empty string = apply to all units on the target side; non-empty = only apply to units whose `enemy_tags` contains this value (e.g. `"undead"`, `"beast"`); if steered to the player side and the player is not tagged, no effect is applied |
 | `handlers` | Array[HandlerConfig] | For cards with non-standard effects that cannot be expressed as a single status_id (e.g. Elemental Synergy, Sacred Ground); executed in addition to any status_id application |
 
@@ -651,6 +653,22 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 - **WHEN** CombatResolver applies an omen card with `status_id: "burning"`
 - **THEN** it creates a StatusInstance with `status_id: "burning"` and `string_param: ""`; no splitting occurs
 
+#### Scenario: IntentWeight status_magnitude used on first Burning application
+- **WHEN** a Fire Elemental's Kindle intent (status_apply: "burning", status_magnitude: 2) resolves against a player with no active Burning
+- **THEN** CombatResolver creates a new Burning StatusInstance with magnitude: 2
+
+#### Scenario: IntentWeight status_magnitude stacks on second Burning application
+- **WHEN** a Fire Elemental's Kindle intent (status_apply: "burning", status_magnitude: 2) resolves against a player who already has Burning with magnitude: 3
+- **THEN** CombatResolver increments the existing Burning StatusInstance's magnitude to 5; no new StatusInstance is created
+
+#### Scenario: OmenCardData status_magnitude applied to Burning omen card
+- **WHEN** the Burning omen card (status_id: "burning", status_magnitude: 5) fires on an enemy with no active Burning
+- **THEN** CombatResolver creates a Burning StatusInstance with magnitude: 5 on that enemy
+
+#### Scenario: status_magnitude defaults 0 for non-magnitude statuses
+- **WHEN** a Shocked omen card (status_magnitude: 0 by default) fires
+- **THEN** the Shocked StatusInstance is created with magnitude: 0; the magnitude field is irrelevant and has no effect on Shocked's behaviour
+
 ---
 
 ### Requirement: [LLD-ARCH-019] CombatResolver
@@ -707,6 +725,10 @@ resolve_enemy_turns(game_state: GameState) -> GameState
               (35% miss per hit via COMBAT stream); deal damage if hit lands.
            c. Apply status_apply if non-empty (to player if status_target: "player",
               to self if "self"); subject to HLD-COMBAT-015 for Chilled idempotency.
+              For magnitude-additive statuses (Burning, Poisoned, Bleed — see HLD-COMBAT-018):
+              if an active StatusInstance of that status already exists on the target, increment
+              its magnitude by status_magnitude instead of creating a new StatusInstance.
+              Otherwise create a new StatusInstance with magnitude = status_magnitude.
            d. If summon_enemy_id is non-empty: call resolve_enemy_summon(summon_enemy_id, game_state).
     Sets current_intent on EnemyState for display.
 
@@ -755,7 +777,11 @@ resolve_omen_cycle_start(game_state: GameState) -> GameState
       remaining_ticks = new cycle timer value.
     Step 5 — Apply on-draw statuses: for each of the two played cards in the new cycle,
       apply the card's status_id (if non-empty) to each eligible unit on the target side,
-      filtering by requires_tag. New StatusInstances get remaining_ticks = new cycle timer.
+      filtering by requires_tag. New StatusInstances get remaining_ticks = new cycle timer
+      and magnitude = OmenCardData.status_magnitude.
+      For magnitude-additive statuses (Burning, Poisoned, Bleed — see HLD-COMBAT-018): if the
+      target already has an active instance of that status, increment existing magnitude by
+      OmenCardData.status_magnitude instead of creating a new StatusInstance.
       Execute any handlers on OmenCardData for cards that have non-status effects.
       **Type Convert replacement:** when applying a `type_convert` StatusInstance to a unit
       that already has an active `type_convert` StatusInstance, remove the existing one first —
@@ -854,6 +880,18 @@ resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
 #### Scenario: Exposed deferred Vulnerable uses colon shorthand
 - **WHEN** resolve_omen_cycle_start step 4 applies the deferred Vulnerable for an Exposed unit
 - **THEN** CombatResolver creates a `"vulnerable:physical"` StatusInstance (split to status_id: "vulnerable", string_param: "physical") with remaining_ticks = new cycle timer
+
+#### Scenario: resolve_enemy_turns step 7c — Burning magnitude stacking
+- **WHEN** a Fire Elemental's Kindle intent (status_apply: "burning", status_magnitude: 2) resolves and the player already has Burning with magnitude 3
+- **THEN** CombatResolver increments the existing Burning StatusInstance's magnitude to 5; no new StatusInstance is created; remaining_ticks is unchanged
+
+#### Scenario: resolve_omen_cycle_start step 5 — Burning omen card magnitude
+- **WHEN** the Burning omen card (status_id: "burning", status_magnitude: 5) fires on an enemy that has no active Burning
+- **THEN** CombatResolver creates a new Burning StatusInstance on that enemy with magnitude: 5 and remaining_ticks = new cycle timer
+
+#### Scenario: resolve_omen_cycle_start step 5 — Burning omen card stacks with existing
+- **WHEN** the Burning omen card (status_magnitude: 5) fires on an enemy that already has Burning with magnitude 2
+- **THEN** CombatResolver increments the existing Burning StatusInstance's magnitude to 7; no new StatusInstance is created
 
 ### Requirement: [LLD-ARCH-020] AIPlayerAgent
 AIPlayerAgent SHALL be a `RefCounted` subclass in `src/application/`. It implements the Random strategy: at each decision point, it calls `ActionInjector.get_legal_actions()` and selects uniformly at random using a dedicated local `RandomNumberGenerator` seeded independently (NOT from RNGService — AI decisions must not contaminate game RNG streams).
