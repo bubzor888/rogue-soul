@@ -2,6 +2,8 @@
 Defines all items available in the game: their categories, durability rules, damage baselines, floor-specific drop pools, and starting loadouts per vessel.
 ## Requirements
 ### Requirement: [LLD-ITEMS-001] Item Categories
+> Canonical category rules defined in `HLD-ITEMS-004`. This requirement provides Floor 3 context and scenarios.
+
 Items SHALL belong to one of three functional categories determining their action bucket:
 
 | Category | Action bucket | Limiting factor |
@@ -17,6 +19,8 @@ Items SHALL belong to one of three functional categories determining their actio
 ---
 
 ### Requirement: [LLD-ITEMS-002] Durability Decrement
+> Canonical durability rules defined in `HLD-ITEMS-005`. This requirement provides Floor 3 context and scenarios.
+
 Durability items SHALL decrement charges according to their category:
 
 - **Attack (Durability)**: loses 1 charge each time it is used in an attack action.
@@ -122,14 +126,14 @@ The following consumables SHALL be in the normal drop pool for Floor 3:
 
 | Item | Effect |
 |---|---|
-| Fire Bomb | Applies Burning (5 fire damage/tick; see `HLD-COMBAT-006`) and co-applies Vulnerable (Fire) (see `HLD-COMBAT-007`) to one enemy |
+| Fire Bomb | Applies Burning (5 fire damage/tick; see `HLD-COMBAT-006`) to one enemy |
 | Ointment | Clears Burning or Poisoned from one target (see `LLD-ITEMS-001` for cleanse category rules) |
-| Combustible Oil | Applies Vulnerable (Fire) ×1.5 to one enemy (see `HLD-COMBAT-007`); if target already Burning → flat fire damage burst instead (`[OPEN·MVP1]` value: first pass 6) |
+| Combustible Oil | Applies Vulnerable (Fire) ×1.5 to one enemy (see `HLD-COMBAT-007`); if target already Burning → flat fire damage burst instead (6 fire damage) |
 | Hardening Resin | Applies Hardened to player (X = 3 damage absorbed/tick; see `HLD-COMBAT-006` for full effect) |
 
 #### Scenario: Fire Bomb typical damage
 - **WHEN** a player uses Fire Bomb and the timer card is 2 (typical)
-- **THEN** the target takes 10 fire damage total (5/tick × 2 ticks) and has Vulnerable (Fire) applied (co-applied with Burning per `HLD-COMBAT-007`)
+- **THEN** the target takes 10 fire damage total (5/tick × 2 ticks)
 
 #### Scenario: Combustible Oil branching
 - **WHEN** a player uses Combustible Oil against a non-Burning enemy
@@ -137,9 +141,7 @@ The following consumables SHALL be in the normal drop pool for Floor 3:
 
 #### Scenario: Combustible Oil vs Burning enemy
 - **WHEN** a player uses Combustible Oil against a Burning enemy
-- **THEN** the enemy takes flat fire damage burst (value TBD); no additional vulnerability stacking
-
----
+- **THEN** the enemy takes 6 flat fire damage; no additional vulnerability stacking
 
 ### Requirement: [LLD-ITEMS-008] Floor 3 Consumable Drop Pool — Elite Tier
 The following consumables SHALL be in the elite drop pool for Floor 3:

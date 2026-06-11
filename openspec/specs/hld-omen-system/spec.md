@@ -1,5 +1,7 @@
-
-### Requirement: [LLD-OMEN-MECH-001] Omen Cycle — Three-Card Draw
+## Purpose
+Defines the omen system mechanics — the three-card draw cycle, cycle timing via timer cards, deck assembly from four sources, deck reshuffle, and the distinction between overall (whole-side) and individual (single-unit) omens.
+## Requirements
+### Requirement: [HLD-OMEN-001] Omen Cycle — Three-Card Draw
 Each combat turn, exactly three omen cards SHALL be drawn from the deck and resolved as follows:
 1. The **player chooses one card** and decides which side to apply it to (player side or enemy side)
 2. **One card is randomly selected** from the remaining two and applied to the other side
@@ -17,9 +19,7 @@ Each combat turn, exactly three omen cards SHALL be drawn from the deck and reso
 - **WHEN** all three drawn cards are unfavourable to the player
 - **THEN** the player must still choose one for their side — there is no option to skip; the choice becomes which effect is least damaging to absorb
 
----
-
-### Requirement: [LLD-OMEN-MECH-002] Timer Card and Status Effect Interaction
+### Requirement: [HLD-OMEN-002] Timer Card and Status Effect Interaction
 For **per-turn** status effects (Burning, Poisoned, Chilled, Mending, Hardened — see `HLD-COMBAT-006`), a higher timer card (3) is generally desirable — more ticks means more total value. For **omen-triggered** effects (Shocked), a lower timer card (1) is desirable — faster payoff on the stun. This creates different strategic priorities depending on what is active.
 
 #### Scenario: High timer with Burning
@@ -32,7 +32,7 @@ For **per-turn** status effects (Burning, Poisoned, Chilled, Mending, Hardened �
 
 ---
 
-### Requirement: [LLD-OMEN-MECH-003] Deck Reshuffle
+### Requirement: [HLD-OMEN-003] Deck Reshuffle
 The omen deck SHALL reshuffle when depleted rather than exhausting. A fight that runs long will see cards repeat. The distribution of card numbers and effects in the deck determines long-fight behaviour.
 
 #### Scenario: Deck depletion in a long fight
@@ -41,7 +41,7 @@ The omen deck SHALL reshuffle when depleted rather than exhausting. A fight that
 
 ---
 
-### Requirement: [LLD-OMEN-MECH-004] Deck Assembly
+### Requirement: [HLD-OMEN-004] Deck Assembly from Four Sources
 A fresh omen deck SHALL be assembled at the start of each combat from four sources, all shuffled together:
 1. **Vessel cards** — contributed by the active vessel (present in every combat)
 2. **Item cards** — contributed by items the player currently carries
@@ -54,29 +54,11 @@ A fresh omen deck SHALL be assembled at the start of each combat from four sourc
 
 #### Scenario: Enemy death removes their cards
 - **WHEN** an enemy dies mid-combat
-- **THEN** their contributed omen cards are removed from the deck at the next shuffle (or immediately — `[OPEN·MVP1]` exact timing)
+- **THEN** their contributed omen cards are removed immediately from the draw pile and discard pile; any of their cards already drawn into the active OmenCycleState remain for that cycle only and are not replaced
 
 ---
 
-### Requirement: [LLD-OMEN-MECH-005] Deck Size Framework
-Deck size varies by combat composition. Target ranges:
-
-| Combat type | Estimated deck size |
-|---|---|
-| Solo enemy fight, Floor 3 | ~16–18 cards |
-| Multi-enemy fight, Floor 3 | ~20–24 cards |
-
-At ~6 cards drawn per fight (2 omen cycles × 3 cards), any given card in a 20-card deck has ~30% chance of appearing. In a 16-card deck, ~37%.
-
-`[OPEN·MVP1]` Exact deck sizes to be confirmed once floor pool and enemy contributions are fully designed. Target range: 16–24 cards per combat.
-
-#### Scenario: Multi-enemy deck density
-- **WHEN** two enemies are present in combat
-- **THEN** both enemies' omen cards are in the deck, making it more dense and harder to predict than a solo-enemy combat
-
----
-
-### Requirement: [LLD-OMEN-MECH-006] Overall Omens vs Individual Omens
+### Requirement: [HLD-OMEN-005] Overall Omens vs Individual Omens
 Two distinct omen types SHALL exist:
 
 | | Overall omen | Individual omen |
@@ -97,27 +79,32 @@ Both types clear at the omen reset. Individual omens applied mid-cycle clear at 
 
 ---
 
-### Requirement: [LLD-OMEN-MECH-007] Vulnerability Non-Stacking
-Two sources of the same vulnerability type on one target SHALL NOT stack. The cap is ×1.5 regardless of how many sources apply it. This applies across both overall and individual omen sources. See `HLD-COMBAT-007`.
+### Requirement: [HLD-OMEN-006] Two-Tier Enemy Omen Contribution Model
+Enemies contribute omen cards via two independent tiers. Each tier follows distinct copy-count and removal rules.
 
-#### Scenario: Overall + individual same vulnerability
-- **WHEN** a Burning overall omen (Vulnerable Fire ×1.5) and a Combustible Oil (Vulnerable Fire ×1.5) are both active on one enemy
-- **THEN** fire damage is multiplied by ×1.5 once — not ×2.25
+**Tier 1 — Family card (per-instance):** Each individual enemy instance adds 1 copy of its family-specific omen card to the combat deck. When an enemy dies, its family card copy is removed immediately from the draw pile and discard pile.
 
----
+**Tier 2 — Type card (per-type):** Each *enemy type* present in the encounter adds exactly 1 copy of a secondary omen card to the combat deck, regardless of how many individual enemies of that type are present. The type card is only removed when the **last living enemy of that type** dies.
 
-### Requirement: [LLD-OMEN-MECH-008] Card Number Distribution
-`[OPEN·MVP1]` The distribution of 1s, 2s, and 3s within the deck is unresolved. Distribution affects average cycle length and status effect value across a run. To be set during omen deck design.
+Not all enemy types have a type card. Totems and support entities are excluded from both tiers. Elemental enemies use their element-specific card (Burning, Chilled, Shocked) as their type card; this was already their second contribution before this model was formalised.
 
-#### Scenario: [OPEN·MVP1] Number distribution design
-- **WHEN** the deck is designed
-- **THEN** the ratio of 1/2/3 timer values across all card sources must be confirmed and documented here
+#### Scenario: Family card scales with enemy count
+- **WHEN** three Plague Rats are present in combat
+- **THEN** three copies of Thick Hide are added to the omen deck (one per rat)
 
----
+#### Scenario: Type card does not scale with enemy count
+- **WHEN** three Plague Rats are present in combat
+- **THEN** exactly one copy of Exposed is added to the omen deck, not three
 
-### Requirement: [LLD-OMEN-MECH-009] Card Number — Fixed or Randomised
-`[OPEN·MVP1]` Whether omen cards have a fixed printed number or whether the number is randomised per draw is unresolved. Current design assumption: number is fixed (printed on the card).
+#### Scenario: Type card removed on last of type
+- **WHEN** the last surviving Plague Rat dies
+- **THEN** the single Exposed type card is removed from the draw pile and discard pile immediately
 
-#### Scenario: [OPEN·MVP1] Fixed vs random number
-- **WHEN** this is resolved
-- **THEN** the mechanic is updated here and in the CombatState data model
+#### Scenario: Type card persists while any of that type survive
+- **WHEN** two of three Plague Rats have died but one remains alive
+- **THEN** the Exposed type card remains in the omen deck
+
+#### Scenario: Mixed-type encounter with shared type card
+- **WHEN** a Skeleton and a Zombie are both present in combat
+- **THEN** two copies of Emboldened (Physical) are in the deck — one from the Skeleton type and one from the Zombie type, each removed independently when the last of its type dies
+

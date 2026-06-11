@@ -55,3 +55,40 @@ Items MAY carry an encounter-countdown flag with a starting counter value. An en
 - **WHEN** the player holds an encounter-countdown item
 - **THEN** the current counter value is displayed on the item in inventory
 
+---
+
+### Requirement: [HLD-ITEMS-004] Item Categories and Action Buckets
+Items SHALL belong to one of three functional categories determining their action bucket:
+
+| Category | Action bucket | Limiting factor |
+|---|---|---|
+| Attack (Durability) | Attack — occupies the attack action | Charge count; breaks at zero |
+| Support (Durability) | Support — free action, does not consume attack | Charge count; breaks at zero |
+| Consumable | Consumable — free action, does not consume attack | Single use (max_charges: 1, breaks_at_zero: true) |
+
+A player may use one Support or Consumable item without spending their attack action. Using an Attack item constitutes the player's attack for that turn.
+
+#### Scenario: Support item does not consume attack
+- **WHEN** a player uses a Support item on their turn
+- **THEN** they can still use an Attack item or ability in the same turn
+
+#### Scenario: Attack item is the turn's attack
+- **WHEN** a player uses an Attack item
+- **THEN** that item's damage resolves as the attack action; no separate ability attack can be made that turn
+
+### Requirement: [HLD-ITEMS-005] Durability Decrement Rules
+Durability items SHALL decrement charges according to their category:
+
+- **Attack (Durability)**: loses 1 charge each time it is used in an attack action
+- **Support (Durability)**: loses 1 charge per encounter (once on room entry, regardless of turns taken or whether the item was activated)
+
+Both break at zero charges if `breaks_at_zero: true`.
+
+#### Scenario: Attack item per-use decrement
+- **WHEN** a weapon with 6 charges is used 3 times across 2 combats
+- **THEN** it has 3 charges remaining, regardless of how many combats occurred
+
+#### Scenario: Support item per-encounter decrement
+- **WHEN** a support durability item with 3 charges is carried through 3 rooms
+- **THEN** it has 0 charges remaining and breaks, regardless of whether it was activated in those rooms
+

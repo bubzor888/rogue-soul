@@ -22,42 +22,95 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 
 ### Requirement: [LLD-ENEMIES-004] Floor 3 Enemy — Skeleton
 **Family:** Undead. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
-**HP:** 12. **Attack:** 5 physical damage per turn. **Vulnerability:** Fire (×1.5 fire damage, see `HLD-COMBAT-007`).
+**HP:** 12. **Vulnerability:** Fire (×1.5 fire damage, see `HLD-COMBAT-007`).
 
 `[OPEN·MVP2]` Door symbol for Skeleton combat encounters to be designed in a UI/art direction session.
 
-**Omen contributions:** `LLD-OMEN-CARD-004` (Emboldened Physical) ×1, `LLD-OMEN-CARD-011` (Grave Knit) ×1.
+**Intents (see `HLD-COMBAT-009`, `HLD-COMBAT-016`):**
 
-**Kill references:**
-- Throw Rock (3 dmg): 4 turns
-- Walking Staff (6 dmg): 2 turns
-- Fire Bomb at 2 ticks (10 fire × 1.5 = 15): 1 turn — one-shot
+| Intent ID | Weight | Damage | Max consecutive | Effect |
+|---|---|---|---|---|
+| `strike` | 70% | 4–6 physical | 2 | Deals damage |
+| `chill_touch` | 30% | — | 2 | Applies Chilled to the player (see `HLD-COMBAT-015`) |
+
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-011` (Grave Knit) ×1 per Skeleton
+- **Type card:** `LLD-OMEN-CARD-004` (Emboldened Physical) ×1 (total, regardless of Skeleton count)
+
+**Kill references** (assumes Strike every turn; actual turns vary as Chill Touch deals no damage):
+- Throw Rock (3 dmg): 4–5 turns
+- Walking Staff (6 dmg): 2–3 turns
+- Fire Bomb at 2 ticks (10 fire × 1.5 = 15): 1 turn — one-shot regardless of intent
 
 #### Scenario: Skeleton fire one-shot
 - **WHEN** the player applies Fire Bomb to a Skeleton and the timer is 2 ticks (typical)
 - **THEN** the Skeleton takes 15 fire damage total and dies (HP: 12)
 
-#### Scenario: Skeleton physical pressure
-- **WHEN** a Skeleton attacks undefended each turn
-- **THEN** the player takes 5 physical damage per turn; a 4-turn kill with Throw Rock results in 20 damage taken
+#### Scenario: Skeleton Strike
+- **WHEN** the Skeleton's intent resolves to Strike
+- **THEN** the Skeleton deals 4–6 physical damage to the player
+
+#### Scenario: Skeleton Chill Touch — Chilled not yet active
+- **WHEN** the Skeleton's intent resolves to Chill Touch and the player does not have Chilled
+- **THEN** Chilled is applied to the player; no damage is dealt
+
+#### Scenario: Skeleton Chill Touch — Chilled already active
+- **WHEN** the Skeleton's intent resolves to Chill Touch and the player already has Chilled
+- **THEN** no change occurs; the intent still does not deal damage (see `HLD-COMBAT-015`)
 
 ---
 
 ### Requirement: [LLD-ENEMIES-005] Floor 3 Enemy — Zombie
 **Family:** Undead. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
-**HP:** 16. **Attack:** 4 physical damage per turn. **Vulnerability:** Physical (×1.5 with Brittle Charm only, per `HLD-COMBAT-005`).
+**HP:** 16. **Vulnerability:** Physical (×1.5 with Brittle Charm only, per `HLD-COMBAT-005`).
 
 `[OPEN·MVP2]` Door symbol for Zombie combat encounters to be designed in a UI/art direction session.
 
-**Omen contributions:** `LLD-OMEN-CARD-011` (Grave Knit) ×1. `[OPEN·MVP1]` Additional Zombie omen card to be defined.
+**Intents (see `HLD-COMBAT-009`, `HLD-COMBAT-014`, `HLD-COMBAT-016`):**
 
-**Kill references:**
-- Walking Staff (6 dmg): 3 turns
-- With Brittle Charm (6 × 1.5 = 9 dmg): 2 turns
+| Intent ID | Weight | Damage | Max consecutive | Effect |
+|---|---|---|---|---|
+| `swipe` | 40% | 2–4 physical | 2 | Deals damage |
+| `slam` | 40% | 5–7 physical (release only) | 1 | Charge→Release: charge turn telegraphs, no damage; release deals 5–7 physical |
+| `shamble` | 20% | — | 2 | No action |
+
+`[OPEN·MVP1]` Slam release damage range (5–7) to be validated in playtesting.
+
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-011` (Grave Knit) ×1 per Zombie
+- **Type card:** `LLD-OMEN-CARD-004` (Emboldened Physical) ×1 (total, regardless of Zombie count)
+
+**Kill references** (assumes all Swipe turns; actual turns vary):
+- Walking Staff (6 dmg): 3–8 turns
+- With Brittle Charm (6 × 1.5 = 9 dmg): 2–6 turns
+
+#### Scenario: Zombie Swipe
+- **WHEN** the Zombie's intent resolves to Swipe
+- **THEN** the Zombie deals 2–4 physical damage to the player
+
+#### Scenario: Zombie Slam — charge turn
+- **WHEN** the Zombie's intent resolves to Slam
+- **THEN** on this turn the Zombie telegraphs the incoming Slam but deals no damage; the player has one full turn of counterplay
+
+#### Scenario: Zombie Slam — release turn
+- **WHEN** the Zombie completed a Slam charge on the previous turn and is alive and un-stunned
+- **THEN** the Slam fires unconditionally and deals 5–7 physical damage
+
+#### Scenario: Zombie Slam — kill during charge
+- **WHEN** the player kills the Zombie during the Slam charge turn
+- **THEN** the release never fires; combat ends normally
+
+#### Scenario: Zombie Shamble
+- **WHEN** the Zombie's intent resolves to Shamble
+- **THEN** the Zombie takes no action; the player takes no damage from this enemy this turn
 
 #### Scenario: Zombie physical vulnerability activation
 - **WHEN** the player uses Brittle Charm on a Zombie and then attacks with a physical weapon
 - **THEN** the weapon's damage is multiplied by ×1.5
+
+#### Scenario: Zombie Slam cannot repeat immediately
+- **WHEN** the Zombie just completed a Slam (charge + release) and rolls its next intent
+- **THEN** if the roll produces Slam again it is re-rolled until a different intent is selected (max_consecutive: 1)
 
 ---
 
@@ -70,7 +123,9 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 
 **On death:** Each rat death applies or advances the Poisoned individual omen on the player (+2 to current Poisoned value; starts at 2 if none active).
 
-**Omen contributions:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per rat (3 total).
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per rat (3 total)
+- **Type card:** `LLD-OMEN-CARD-019` (Exposed) ×1 (total, regardless of rat count)
 
 #### Scenario: Pack group size
 - **WHEN** Plague Rats appear in a pre-elite encounter
@@ -89,7 +144,9 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 
 `[OPEN·MVP2]` Door symbol for Wolf combat encounters to be designed in a UI/art direction session.
 
-**Omen contributions:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per wolf.
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per wolf
+- **Type card:** `LLD-OMEN-CARD-019` (Exposed) ×1 (total, regardless of wolf count)
 
 #### Scenario: Pack damage threshold
 - **WHEN** 2 or more Wolves are alive
@@ -109,7 +166,9 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 
 **Sleeping — Round 1:** Bear does not act on round 1; wakes at start of round 2.
 
-**Omen contributions:** `LLD-OMEN-CARD-012` (Thick Hide) ×1.
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1
+- **Type card:** `LLD-OMEN-CARD-019` (Exposed) ×1
 
 #### Scenario: Bear solo encounter
 - **WHEN** a Bear encounter occurs
@@ -227,7 +286,9 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol and final name to be confirmed. "Low HP Fanatic" is the design reference name.
 
-**Omen contribution:** `LLD-OMEN-CARD-014` (Sacred Ground) ×1.
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-014` (Sacred Ground) ×1 per Low HP Fanatic
+- **Type card:** `LLD-OMEN-CARD-010` (Mending) ×1 (total, regardless of Low HP Fanatic count)
 
 #### Scenario: Low HP Fanatic kill speed
 - **WHEN** the player uses a Walking Staff (6 damage) against a Low HP Fanatic
@@ -241,7 +302,9 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol and final name to be confirmed. "High HP Fanatic" is the design reference name.
 
-**Omen contribution:** `LLD-OMEN-CARD-014` (Sacred Ground) ×1.
+**Omen contributions (see `HLD-OMEN-006`):**
+- **Family card:** `LLD-OMEN-CARD-014` (Sacred Ground) ×1 per High HP Fanatic
+- **Type card:** `LLD-OMEN-CARD-010` (Mending) ×1 (total, regardless of High HP Fanatic count)
 
 #### Scenario: High HP Fanatic with Absorption Totem
 - **WHEN** an Absorption Totem is active and the player attacks a High HP Fanatic with Walking Staff
