@@ -15,17 +15,21 @@ Whole-side Burning tick damage: **5 fire damage per tick**.
 - **WHEN** the Burning omen card is played to the enemy side and there are two enemies
 - **THEN** both enemies gain the Burning status for the cycle; no Vulnerable is co-applied
 
-### Requirement: [LLD-OMEN-CARD-002] Shocked (Whole-Side Overall Omen)
-The Shocked omen card SHALL apply the Shocked status to all units on the target side. At the omen shift, all units on that side skip their next action.
+### Requirement: [LLD-OMEN-CARD-002] Shocked (Per-Unit Omen)
+The Shocked omen card SHALL apply the Shocked status (`trigger: "shift"`) to each eligible unit on the target side as an individual StatusInstance. At the omen shift, each Shocked StatusInstance fires: the stun effect (`is_stunned = true`) is applied to that specific unit, then the StatusInstance clears.
 
-Mirrors Fulminating Powder (single-target). Low timer cards are valuable when Shocked is active — faster stun payoff across the whole side.
+Mirrors Fulminating Powder (single-target). Low timer cards are valuable when Shocked is active — faster stun payoff.
 
-**On enemy side:** all enemies stunned at the shift. Combine with Fulminating Powder for Vulnerable (Lightning) if desired.
-**On player side (forced):** player will be stunned at the shift. Cleared by Amethyst.
+**On enemy side:** each enemy gains its own Shocked StatusInstance; at the omen shift each stunned enemy skips its next action — their Action bucket is blocked. Combine with Fulminating Powder for Vulnerable (Lightning) if desired.
+**On player side (forced):** the player gains a Shocked StatusInstance; at the omen shift the player's Action bucket is blocked for their next turn. Support and Consumable buckets remain available. Cleared by Amethyst (clears the StatusInstance before the shift fires).
 
-#### Scenario: Whole-side Shocked stun
+#### Scenario: Shocked stun — per unit, Action bucket only
 - **WHEN** the Shocked omen card is played to the enemy side with two enemies present
-- **THEN** both enemies skip their next action at the omen shift; no Vulnerable is co-applied
+- **THEN** each enemy gains its own Shocked StatusInstance; at the omen shift each fires independently — both enemies have is_stunned = true and skip their next Action bucket use; no Vulnerable is co-applied
+
+#### Scenario: Shocked player — cleansable before shift
+- **WHEN** the player has a Shocked StatusInstance and uses Amethyst before the omen shift fires
+- **THEN** the Shocked StatusInstance is removed; is_stunned is never set; the player's Action bucket remains available
 
 ---
 
@@ -43,35 +47,41 @@ Whole-side Chilled flat damage reduction: **2 per hit on tick 1, 4 per hit on ti
 
 ---
 
-### Requirement: [LLD-OMEN-CARD-004] Emboldened (Physical) (Whole-Side Overall Omen)
-The Emboldened (Physical) omen card SHALL add a flat bonus to all physical damage dealt by units on the target side for the cycle duration. Expressed as a flat bonus (not percentage) because physical damage is the most common type and a percentage would be too broadly powerful.
+### Requirement: [LLD-OMEN-CARD-004] Emboldened (Physical) (Per-Unit Omen)
+The Emboldened (Physical) omen card SHALL apply an Emboldened StatusInstance with `string_param: "physical"` (via `status_id: "emboldened:physical"`) to each unit on the target side as an individual StatusInstance (see `HLD-COMBAT-006` for status definition). Each unit's outgoing physical damage gains the flat bonus while the status is active.
 
-**On enemy side:** player's physical weapons deal more damage per hit. Always relevant since physical is the default damage type.
+**On enemy side:** the player's physical weapons deal more damage per hit. Always relevant since physical is the default damage type.
 **On player side (forced):** enemies deal more physical damage per hit.
 
 Source: confirmed as a Skeleton omen contribution (`LLD-ENEMIES-004`).
 
-Flat physical damage bonus: **+2 per hit**.
+Flat physical damage bonus: **+2 per hit** (see `LLD-ARCH-019` damage resolution order step 2 for application).
 
-#### Scenario: Physical damage bonus
+#### Scenario: Physical damage bonus per unit
 - **WHEN** Emboldened (Physical) is active on the player side
-- **THEN** every physical damage hit by the player deals the confirmed flat bonus additional damage
+- **THEN** every physical damage hit by the player gains the +2 flat bonus; the status is tracked as an `emboldened` StatusInstance with `string_param: "physical"` and can be cleansed by an appropriate item
 
 ---
 
-### Requirement: [LLD-OMEN-CARD-005] Emboldened (Elemental) (Whole-Side Overall Omen)
-The Emboldened (Elemental) omen card SHALL add a percentage increase to all damage of a specific elemental type dealt by units on the target side. Expressed as a percentage (not flat) because elemental damage is more situational.
+### Requirement: [LLD-OMEN-CARD-005] Emboldened (Elemental) (Per-Unit Omen)
+The Emboldened (Elemental) omen card SHALL apply an Emboldened StatusInstance with the matching elemental `string_param` (via `status_id: "emboldened:<element>"`) to each unit on the target side as an individual StatusInstance (see `HLD-COMBAT-006` for status definition). Each unit's outgoing damage of the matching elemental type is multiplied by ×1.5 while the status is active.
 
 Separate cards exist for each confirmed element: Fire, Lightning, Ice.
 
-**On enemy side:** player's attacks of that element hit harder. High value when the matching elemental weapon is equipped.
+| Card ID | status_id | Element |
+|---|---|---|
+| `emboldened_fire` | `"emboldened:fire"` | Fire |
+| `emboldened_lightning` | `"emboldened:lightning"` | Lightning |
+| `emboldened_ice` | `"emboldened:ice"` | Ice |
+
+**On enemy side:** the player's attacks of that element hit harder. High value when the matching elemental weapon is equipped.
 **On player side (forced):** enemies deal increased damage of that type. Particularly dangerous if the player is already Vulnerable to that element.
 
-Elemental damage bonus multiplier: **×1.5** (same as Vulnerability — stacks multiplicatively with Vulnerable when the element matches, per `HLD-COMBAT-007`).
+Elemental damage bonus multiplier: **×1.5** (same as Vulnerability — stacks multiplicatively with Vulnerable when the element matches, per `HLD-COMBAT-007`). Applied at damage resolution step 4 (see `LLD-ARCH-019`).
 
 #### Scenario: Elemental bonus stacks with vulnerability
-- **WHEN** Emboldened (Fire) is active on the player side and an enemy has Vulnerable (Fire) applied via Combustible Oil
-- **THEN** the elemental bonus and the vulnerability multiplier both apply — the combined effect is intentional and represents the fire combo payoff
+- **WHEN** an `emboldened` StatusInstance with `string_param: "fire"` is active on the player side and an enemy has a `vulnerable` StatusInstance with `string_param: "fire"` applied via Combustible Oil
+- **THEN** the elemental bonus (×1.5 outgoing) and the vulnerability multiplier (×1.5 incoming) both apply — the combined effect is intentional and represents the fire combo payoff
 
 ---
 
@@ -182,46 +192,62 @@ Enemy omen card contributions are **not** listed here. Each enemy's omen contrib
 ---
 
 ### Requirement: [LLD-OMEN-CARD-011] Grave Knit (Enemy Card — Undead)
-The Grave Knit omen card SHALL heal all undead units on the target side for X HP per tick (per-turn omen, clears at omen reset). Does nothing when applied to the player — the player is not undead.
+The Grave Knit omen card SHALL apply a Mending StatusInstance to each unit on the target side whose `enemy_tags` contains `"undead"`. Units not tagged `"undead"` receive nothing. The Mending status heals X HP per tick for the cycle duration.
 
-**On enemy side:** undead enemies heal each tick — must be managed or absorbed.
-**On player side:** no effect — safe to absorb.
+`OmenCardData.requires_tag` for this card: `"undead"`.
+
+**On enemy side:** undead enemies each gain their own Mending StatusInstance and heal per tick — must be managed or absorbed. Non-undead enemies on the same side are unaffected.
+**On player side:** no effect — the player is not tagged `"undead"`. Safe to absorb.
 
 Which enemies contribute Grave Knit is defined in `lld-enemies` (see `LLD-ENEMIES-004`, `LLD-ENEMIES-005`).
 
 Grave Knit heal value: **5 HP per tick**.
 
-#### Scenario: Grave Knit heals undead on enemy side
-- **WHEN** Grave Knit is played to the enemy side and undead enemies are present
-- **THEN** each undead enemy on that side heals X HP per tick for the cycle duration
+#### Scenario: Grave Knit heals undead only — mixed side
+- **WHEN** Grave Knit is played to a side containing one Skeleton (tagged "undead") and one Plague Rat (tagged "beast")
+- **THEN** the Skeleton receives a Mending StatusInstance and heals each tick; the Plague Rat receives nothing
 
 #### Scenario: Grave Knit player side — safe
 - **WHEN** the player steers Grave Knit to their own side
-- **THEN** no healing occurs; the enemy side does not receive healing that cycle
+- **THEN** no StatusInstance is applied; the player is not tagged "undead"; the enemy side does not receive healing that cycle
 
 ---
 
 ### Requirement: [LLD-OMEN-CARD-012] Thick Hide (Enemy Card — Beast)
-The Thick Hide omen card SHALL reduce incoming damage to all beasts on the target side by 3 per hit (per-turn omen, clears at omen reset). Does nothing when applied to the player — the player has no Thick Hide property.
+The Thick Hide omen card SHALL apply a Thick Hide StatusInstance to each unit on the target side whose `enemy_tags` contains `"beast"`. Units not tagged `"beast"` receive nothing. The Thick Hide status reduces incoming damage by 3 per hit for the cycle duration.
 
-**On beast side:** each incoming hit to any beast is reduced by 3 — breaks weapon kill thresholds and dramatically extends fights.
-**On player side:** no effect — safe to absorb.
+`OmenCardData.requires_tag` for this card: `"beast"`.
 
-#### Scenario: Thick Hide absorption on beast side
-- **WHEN** Thick Hide is active on the beast side
-- **THEN** each incoming hit to any beast is reduced by 3 damage before applying HP reduction
+**On beast side:** each beast gains its own Thick Hide StatusInstance; each incoming hit to that beast is reduced by 3 — breaks weapon kill thresholds and dramatically extends fights.
+**On player side:** no effect — the player is not tagged `"beast"`. Safe to absorb.
+
+Thick Hide damage reduction per hit: **3**.
+
+#### Scenario: Thick Hide absorption on beast side — per unit
+- **WHEN** Thick Hide is active on a side containing two Wolves (both tagged "beast")
+- **THEN** each Wolf has its own Thick Hide StatusInstance; each incoming hit to each Wolf is reduced by 3 independently
 
 #### Scenario: Thick Hide player side — safe
 - **WHEN** the player steers Thick Hide to their own side
-- **THEN** no effect occurs; the beasts do not receive the buff
+- **THEN** no StatusInstance is applied; the beasts do not receive the defensive buff
 
 ---
 
 ### Requirement: [LLD-OMEN-CARD-013] Elemental Synergy (Enemy Card — Elemental)
-The Elemental Synergy omen card SHALL convert all attacks from the target side to the contributing elemental's damage type for the omen cycle.
+Three Elemental Synergy omen cards exist — one per element (Fire, Ice, Lightning). Each card applies a Type Convert StatusInstance (see `HLD-COMBAT-006`) to each unit on the target side for the omen cycle, converting that unit's outgoing damage to the contributing elemental's type.
 
-**On elemental side:** elementals already deal their type — no change. Safe for the player to play here.
-**On player side:** all player attacks convert to the elemental's type. The elemental resists that type (×0.5). Any opposing-element advantage (e.g. ice weapon vs. Fire Elemental) flips to a resistance penalty.
+**Card IDs and status_ids:**
+
+| Card ID | Display name | status_id | Contributed by |
+|---|---|---|---|
+| `elemental_synergy_fire` | Elemental Synergy (Fire) | `"type_convert:fire"` | Fire Elemental (`LLD-ENEMIES-014`) |
+| `elemental_synergy_ice` | Elemental Synergy (Ice) | `"type_convert:ice"` | Ice Elemental (`LLD-ENEMIES-015`) |
+| `elemental_synergy_lightning` | Elemental Synergy (Lightning) | `"type_convert:lightning"` | Lightning Elemental (`LLD-ENEMIES-016`) |
+
+Each card has `handlers: []` — the effect is fully expressed via `status_id`. No `requires_tag`.
+
+**On elemental side:** elementals already deal their type — Type Convert overrides to the same type, so no change. Safe for the player to play here.
+**On player side:** the player's unit receives a Type Convert StatusInstance; all their attacks become the elemental's damage type for the cycle. The elemental resists that type (×0.5). Any opposing-element advantage (e.g. ice weapon vs. Fire Elemental) flips to a resistance penalty.
 
 Elemental resistances and vulnerabilities:
 
@@ -231,9 +257,17 @@ Elemental resistances and vulnerabilities:
 | Ice Elemental | Ice ×0.5 | Fire ×1.5 |
 | Lightning Elemental | Lightning ×0.5 | None |
 
-#### Scenario: Elemental Synergy converts player attacks
-- **WHEN** Elemental Synergy is active on the player side
-- **THEN** all player attacks deal the elemental's damage type; if the player was using the opposing-element weapon for a ×1.5 advantage, that weapon now deals the resisted type at ×0.5
+#### Scenario: Elemental Synergy (Fire) converts player attacks
+- **WHEN** Elemental Synergy (Fire) is active on the player side
+- **THEN** the player receives a `type_convert` StatusInstance with `string_param: "fire"`; all player attacks deal fire damage; the Fire Elemental's fire resistance (×0.5) applies to all hits
+
+#### Scenario: Elemental Synergy (Ice) converts player attacks
+- **WHEN** Elemental Synergy (Ice) is active on the player side
+- **THEN** the player receives a `type_convert` StatusInstance with `string_param: "ice"`; a fire weapon's ice vulnerability advantage against the Ice Elemental disappears — damage deals ice type and hits the ×0.5 resistance instead
+
+#### Scenario: Elemental Synergy on elemental side — no effect
+- **WHEN** the player steers Elemental Synergy (Fire) to the enemy side containing a Fire Elemental
+- **THEN** the Fire Elemental receives a `type_convert` StatusInstance with `string_param: "fire"`; it already deals fire, so the conversion has no observable effect
 
 ---
 
@@ -284,7 +318,7 @@ This means the same card (e.g. Burning) can be a fast cycle (1) or a slow one (3
 ---
 
 ### Requirement: [LLD-OMEN-CARD-015] Vulnerable (Fire) (Whole-Side Overall Omen)
-The Vulnerable (Fire) omen card SHALL apply the Vulnerable (Fire) status to all units on the target side for the cycle duration. Every fire damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007` for Vulnerable rules including non-stacking and resistance cancellation).
+The Vulnerable (Fire) omen card SHALL apply a `"vulnerable:fire"` StatusInstance to all units on the target side for the cycle duration. Every fire damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007` for Vulnerable rules including non-stacking and resistance cancellation).
 
 **On enemy side:** all enemies become vulnerable to fire attacks. Pairs with any fire weapon (Ember Shard, Smoldering Brand) and fire consumables (Fire Bomb, Combustible Oil).
 **On player side (forced):** player takes increased fire damage. Particularly dangerous on floors with Fire Elementals.
@@ -293,16 +327,16 @@ Card timer value is assigned at combat start via the randomised distribution (se
 
 #### Scenario: Whole-side fire vulnerability
 - **WHEN** Vulnerable (Fire) is played to the enemy side with two enemies present
-- **THEN** both enemies gain Vulnerable (Fire) for the cycle duration; all fire damage against them is ×1.5
+- **THEN** both enemies gain a `"vulnerable:fire"` StatusInstance for the cycle duration; all fire damage against them is ×1.5
 
 #### Scenario: Non-stacking with item Vulnerable
-- **WHEN** Combustible Oil has already applied Vulnerable (Fire) to one enemy and then Vulnerable (Fire) omen card is played to the enemy side
+- **WHEN** Combustible Oil has already applied a `"vulnerable:fire"` StatusInstance to one enemy and then the Vulnerable (Fire) omen card is played to the enemy side
 - **THEN** that enemy's fire multiplier remains ×1.5 (not ×2.25) — Vulnerable does not stack (see `HLD-COMBAT-007`)
 
 ---
 
 ### Requirement: [LLD-OMEN-CARD-016] Vulnerable (Lightning) (Whole-Side Overall Omen)
-The Vulnerable (Lightning) omen card SHALL apply the Vulnerable (Lightning) status to all units on the target side for the cycle duration. Every lightning damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007`).
+The Vulnerable (Lightning) omen card SHALL apply a `"vulnerable:lightning"` StatusInstance to all units on the target side for the cycle duration. Every lightning damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007`).
 
 **On enemy side:** all enemies become vulnerable to lightning attacks. Pairs with Spark Rod, Arc Wand, Fulminating Powder.
 **On player side (forced):** player takes increased lightning damage.
@@ -311,16 +345,16 @@ Card timer value is assigned at combat start via the randomised distribution (se
 
 #### Scenario: Whole-side lightning vulnerability
 - **WHEN** Vulnerable (Lightning) is played to the enemy side
-- **THEN** all enemies on that side gain Vulnerable (Lightning) for the cycle; lightning damage against them is ×1.5
+- **THEN** all enemies on that side gain a `"vulnerable:lightning"` StatusInstance for the cycle; lightning damage against them is ×1.5
 
 #### Scenario: Lightning Elemental resistance cancellation
 - **WHEN** Vulnerable (Lightning) is played to the enemy side and a Lightning Elemental is present
-- **THEN** the Lightning Elemental has both Resistance (Lightning ×0.5) and Vulnerable (Lightning ×1.5) — they cancel out; it takes normal lightning damage (×1.0) per `HLD-COMBAT-007`
+- **THEN** the Lightning Elemental has both Resistance (Lightning ×0.5) and a `"vulnerable:lightning"` StatusInstance (×1.5) — they cancel out; it takes normal lightning damage (×1.0) per `HLD-COMBAT-007`
 
 ---
 
 ### Requirement: [LLD-OMEN-CARD-017] Vulnerable (Ice) (Whole-Side Overall Omen)
-The Vulnerable (Ice) omen card SHALL apply the Vulnerable (Ice) status to all units on the target side for the cycle duration. Every ice damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007`).
+The Vulnerable (Ice) omen card SHALL apply a `"vulnerable:ice"` StatusInstance to all units on the target side for the cycle duration. Every ice damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007`).
 
 **On enemy side:** all enemies become vulnerable to ice attacks. Pairs with Frost Sliver, Glacial Brand, Frost Shard.
 **On player side (forced):** player takes increased ice damage.
@@ -329,7 +363,7 @@ Card timer value is assigned at combat start via the randomised distribution (se
 
 #### Scenario: Whole-side ice vulnerability
 - **WHEN** Vulnerable (Ice) is played to the enemy side
-- **THEN** all enemies on that side gain Vulnerable (Ice) for the cycle; ice damage against them is ×1.5
+- **THEN** all enemies on that side gain a `"vulnerable:ice"` StatusInstance for the cycle; ice damage against them is ×1.5
 
 ---
 
@@ -351,25 +385,33 @@ Whole-side Mending heal value: **3 HP per tick** (matching the single-target Pou
 
 ---
 
-### Requirement: [LLD-OMEN-CARD-019] Exposed (Whole-Side Overall Omen)
-The Exposed omen card SHALL apply the Exposed status to all units on the target side. At the omen shift, all units on that side become Vulnerable (Physical) for the **next** omen cycle — the vulnerability takes effect at the start of the following cycle, not the current one.
+### Requirement: [LLD-OMEN-CARD-019] Exposed (Whole-Side Floor Card — Floor 3)
+The Exposed omen card SHALL apply the Exposed status (`trigger: "shift"`) to each eligible unit on the target side as an individual StatusInstance. At the omen shift, each Exposed StatusInstance fires: a `"vulnerable:physical"` StatusInstance is applied to that unit with `remaining_ticks` equal to the newly drawn cycle's timer value, then the Exposed StatusInstance clears.
 
-Exposed triggers at the omen shift like Shocked, but instead of stunning, it applies a delayed Vulnerable (Physical) debuff. Low timer cards increase urgency — faster shift means faster Vulnerable (Physical) payoff.
+The Exposed card is included in the Floor 3 ambient deck (see `LLD-OMEN-CARD-008`). It is not contributed by any specific enemy or vessel.
 
-**On enemy side:** enemies become Vulnerable (Physical) next cycle. Pair with a physical weapon in the following cycle for maximum impact.
-**On player side (forced):** player will be Vulnerable (Physical) next cycle — incoming physical attacks hit harder for a full cycle.
+Low timer cards are desirable when Exposed is active on the enemy side — the omen shift fires sooner, delivering Vulnerable (Physical) to enemies faster (see `HLD-OMEN-002`).
 
-Card timer value is assigned at combat start via the randomised distribution (see `LLD-OMEN-MECH-009`).
+**On enemy side:** each enemy gains an Exposed StatusInstance; at the omen shift each becomes Vulnerable (Physical) for the next full omen cycle. Pairs with any physical weapon — the window of amplified physical damage lasts exactly one cycle.
+**On player side (forced):** the player gains an Exposed StatusInstance; at the omen shift the player becomes Vulnerable (Physical) for the next omen cycle. Cleared by Ointment (removes the Exposed StatusInstance before the shift fires, preventing the Vulnerable application entirely).
 
-#### Scenario: Exposed triggers at shift
-- **WHEN** Exposed is active on the enemy side and the omen shift occurs
-- **THEN** all enemies on that side gain Vulnerable (Physical) ×1.5; that vulnerability is active for the entirety of the next omen cycle
+#### Scenario: Exposed fires at shift — Vulnerable duration matches new cycle
+- **WHEN** Exposed is active on the enemy side and the omen shift occurs, drawing a new cycle with timer value 2
+- **THEN** each enemy that had an Exposed StatusInstance receives a `"vulnerable:physical"` StatusInstance with `remaining_ticks = 2`; the Exposed StatusInstance is then cleared; the Vulnerable lasts exactly the next omen cycle
 
-#### Scenario: Exposed + physical weapon follow-up
-- **WHEN** Exposed is played to the enemy side on cycle N and the timer card is 1
-- **THEN** enemies gain Vulnerable (Physical) after 1 turn; in cycle N+1 all physical attacks against them deal ×1.5 damage
+#### Scenario: Exposed cleansed before shift — no Vulnerable
+- **WHEN** the player has an Exposed StatusInstance and uses Ointment before the omen shift fires
+- **THEN** the Exposed StatusInstance is removed; at the omen shift no `"vulnerable:physical"` StatusInstance is applied to the player
+
+#### Scenario: Exposed on enemy side pairs with physical weapon
+- **WHEN** Exposed fires on the enemy side and the player's equipped weapon deals physical damage
+- **THEN** the player's physical attacks hit enemies with a `"vulnerable:physical"` StatusInstance, applying ×1.5 for the full duration of the next omen cycle
+
+#### Scenario: Exposed — low timer strategic value
+- **WHEN** Exposed is active on the enemy side and the timer card is 1
+- **THEN** the omen shift fires after 1 turn; the `"vulnerable:physical"` StatusInstance is applied immediately at the next draw, giving the player access to the ×1.5 multiplier window after only one cycle
 
 #### Scenario: Exposed non-stacking with Brittle Charm
-- **WHEN** Exposed triggers on an enemy that already has Vulnerable (Physical) from Brittle Charm
-- **THEN** the physical multiplier remains ×1.5 — two sources of the same Vulnerable do not stack (see `HLD-COMBAT-007`)
+- **WHEN** Exposed triggers on an enemy that already has a `"vulnerable:physical"` StatusInstance from Brittle Charm
+- **THEN** the physical multiplier remains ×1.5 — two sources of the same Vulnerable type do not stack (see `HLD-COMBAT-007`)
 

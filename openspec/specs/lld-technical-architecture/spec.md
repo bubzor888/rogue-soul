@@ -1,4 +1,6 @@
-
+## Purpose
+Defines the technical architecture of Soul Protocol — layer structure, domain entities, resource schemas, core systems, and combat resolver interface.
+## Requirements
 ### Requirement: [LLD-ARCH-001] Four-Layer Architecture
 The codebase SHALL follow a strict four-layer dependency rule. Inner layers never depend on outer layers. The rule is enforced by project structure and code review discipline (not by language access modifiers).
 
@@ -411,13 +413,13 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 | `navigation_state` | NavigationState | Current navigation context |
 | `combat_state` | CombatState | Null when not in COMBAT phase |
 
-**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`
+**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`, `is_evading: bool` (true when the vessel chose Evade this turn; resets to false at the start of each player turn before any action is processed), `is_stunned: bool` (true when the vessel has been stunned by a Shocked shift trigger; blocks the Action bucket for the next player turn; resets to false at the start of resolve_player_action)
 
 **AbilityState fields:** `ability_id: String`, `remaining_charges: int`
 
 **ItemInstance fields:** `item_id: String`, `remaining_charges: int`
 
-**StatusInstance fields:** `status_id: String`, `remaining_ticks: int`, `magnitude: int` (used for statuses whose numeric value evolves over ticks: Chilled's accumulating flat damage reduction, Poisoned's current damage value, Bleed's current stack count; 0 for statuses that do not use it)
+**StatusInstance fields:** `status_id: String`, `remaining_ticks: int`, `magnitude: int` (used for statuses whose numeric value evolves over ticks: Chilled's accumulating flat damage reduction, Poisoned's current damage value, Bleed's current stack count; 0 for statuses that do not use it), `trigger: String` (`"tick"` = effect fires on each omen tick while remaining_ticks > 0; `"shift"` = effect fires once when remaining_ticks hits 0 at the omen shift; default `"tick"`), `string_param: String` (type qualifier for parameterized statuses; empty string if not applicable; e.g. `"fire"` when status_id is `"type_convert"`, `"vulnerable"`, or `"emboldened"`; CombatResolver reads this to determine which type the effect applies to; default `""`)
 
 **CompanionState fields:** `companion_id: String`, `ability_states: Array[AbilityState]` (for companion abilities with charges), `companion_timer: int` (generic countdown for companions with a budget, e.g. Shadow's 20 HP drain limit; copied from `CompanionData.initial_timer` on activation; -1 = not used by this companion; decremented by CombatResolver when the timer-consuming effect fires; companion departs when this reaches 0), `companion_context: Dictionary` (companion-specific runtime state not covered by standard fields, e.g. Shadow's `{ "current_target_instance_id": "wolf_0" }`; read and written by the companion's handler chain). No `hp` field — companions are not targetable in combat (see `HLD-COMPANION-001`).
 
@@ -427,7 +429,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 **CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles)
 
-**EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally)
+**EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally), `is_evading: bool` (true when this enemy chose Evade on its turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `is_stunned: bool` (true when this enemy has been stunned by a Shocked shift trigger; the enemy skips its action this turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns)
 
 **OmenDeckState fields:** `draw_pile: Array[Dictionary]`, `discard_pile: Array[Dictionary]`. Each entry is `{ "card_id": String, "timer_value": int }`. Timer values are assigned once when the deck is assembled at combat start (see `LLD-OMEN-MECH-009`) and do not change on reshuffle — the discard pile preserves the originally-assigned values.
 
@@ -447,7 +449,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 #### Scenario: StatusInstance magnitude tracks Chilled accumulation
 - **WHEN** a unit with Chilled status reaches tick 2
-- **THEN** the StatusInstance for Chilled has `magnitude` equal to the accumulated flat damage reduction (sum of tick 1 reduction + tick 2 reduction); CombatResolver reads this value when calculating outgoing damage
+- **THEN** the StatusInstance for Chilled has `magnitude` equal to the accumulated flat damage reduction; CombatResolver reads this value when calculating outgoing damage
 
 #### Scenario: StatusInstance magnitude tracks Poisoned value
 - **WHEN** a unit has the Poisoned status and an omen tick occurs
@@ -456,6 +458,22 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 #### Scenario: StatusInstance magnitude tracks Bleed stacks
 - **WHEN** a Bleed status is applied to a unit with 5 stacks
 - **THEN** the StatusInstance for Bleed has `magnitude` set to 5; after the first tick it is set to 2 (floor(5/2)); CombatResolver reads and writes this value each tick
+
+#### Scenario: Shift-triggered status does not fire per-tick
+- **WHEN** a unit has the Shocked status (trigger: "shift") and an omen tick occurs
+- **THEN** the Shocked effect does NOT fire; remaining_ticks decrements normally; the effect fires only when remaining_ticks reaches 0 at the omen shift
+
+#### Scenario: Shocked fires at shift — is_stunned set
+- **WHEN** a unit has the Shocked status and remaining_ticks reaches 0 at the omen shift
+- **THEN** is_stunned is set to true on that unit; the Shocked StatusInstance is then cleared
+
+#### Scenario: is_stunned blocks Action bucket only
+- **WHEN** vessel_state.is_stunned is true at the start of the player's turn
+- **THEN** get_legal_combat_actions excludes all Action bucket options; Support and Consumable options remain available
+
+#### Scenario: is_stunned resets at start of player action
+- **WHEN** resolve_player_action is called with vessel_state.is_stunned = true
+- **THEN** is_stunned is reset to false at the start of resolution; it does not carry over to the following turn
 
 #### Scenario: Intent streak resets on change
 - **WHEN** an enemy selects a different intent than last turn
@@ -469,10 +487,32 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 - **WHEN** an enemy begins a Charge→Release intent
 - **THEN** `is_charging` is set to true; on the next turn CombatResolver checks this flag before rolling a new intent
 
+#### Scenario: is_evading resets at start of player turn
+- **WHEN** a new player turn begins and resolve_player_action is called
+- **THEN** CombatResolver sets vessel_state.is_evading to false before any action is processed
+
+#### Scenario: Enemy is_evading resets at start of enemy resolution
+- **WHEN** resolve_enemy_turns begins processing a specific enemy
+- **THEN** that enemy's is_evading is set to false before intent selection
+
+#### Scenario: StatusInstance string_param for Vulnerable (Fire)
+- **WHEN** a Vulnerable StatusInstance is created for fire vulnerability
+- **THEN** the instance has `status_id: "vulnerable"` and `string_param: "fire"`; CombatResolver reads string_param to determine which damage type gets the ×1.5 multiplier at step 6
+
+#### Scenario: StatusInstance string_param for Type Convert (ice)
+- **WHEN** a Type Convert (ice) StatusInstance is created
+- **THEN** the instance has `status_id: "type_convert"` and `string_param: "ice"`; CombatResolver reads string_param at damage step 1 to override the attack's damage type
+
+#### Scenario: StatusInstance string_param for Emboldened (Physical)
+- **WHEN** an Emboldened StatusInstance is created from an Emboldened (Physical) omen card
+- **THEN** the instance has `status_id: "emboldened"` and `string_param: "physical"`; CombatResolver applies the flat bonus at step 2 when physical damage is dealt
+
 ---
 
 ### Requirement: [LLD-ARCH-018] Data Resource Schemas
 The following Resource subclasses SHALL define the schema for all `.tres` content files loaded by registries at startup (see `LLD-ARCH-006`). These are the data-side of the HLD/LLD boundary — the engine knows the schema; content files supply the values.
+
+**Colon-encoding convention for parameterized statuses:** When a `status_id` or `status_apply` string contains a colon (e.g. `"type_convert:fire"`, `"vulnerable:lightning"`, `"emboldened:physical"`), CombatResolver splits on `:` at StatusInstance creation time. The left portion becomes `StatusInstance.status_id`; the right portion becomes `StatusInstance.string_param`. Plain status IDs without `:` (e.g. `"burning"`, `"frenzied"`) are used as-is with `string_param` left as `""`.
 
 **AbilityData** (used for both vessel abilities AND items — items are abilities with `breaks_at_zero: true`):
 
@@ -515,29 +555,44 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `max_hp` | int | |
 | `damage_type` | String | Damage type ID shared by all damage intents of this enemy |
 | `resistances` | Array[String] | Damage type IDs this enemy resists (×0.5) |
-| `enemy_tags` | Array[String] | e.g. `["undead"]`, `["beast"]`, `["elemental_fire"]` — used by omen card effects |
+| `enemy_tags` | Array[String] | e.g. `["undead"]`, `["beast"]`, `["elemental_fire"]` — used by omen card tag filtering and omen card effects |
 | `omen_contributions` | Array[String] | Card IDs added to deck while this enemy is alive |
-| `intent_weights` | Array[IntentWeight] | Weighted random pool (evaluated if no conditional matches) |
+| `intent_weights` | Array[IntentWeight] | Weighted random pool (evaluated if no conditional matches, or restricted by a matching conditional's `intent_ids`) |
 | `intent_conditionals` | Array[IntentConditional] | Evaluated first; first match short-circuits the roll |
 
 **IntentWeight:**
 
 | Field | Type | Notes |
 |---|---|---|
-| `intent_id` | String | Unique identifier for this intent within the enemy (e.g. `"strike"`, `"chill_touch"`, `"slam"`) |
-| `weight` | int | Relative weight; higher = more likely; all weights in the table are summed to determine probability |
-| `damage_min` | int | Minimum damage on execution; 0 for non-damage intents |
-| `damage_max` | int | Maximum damage on execution; 0 for non-damage intents; MUST be ≥ damage_min |
-| `is_charge_release` | bool | true if this intent uses the Charge→Release two-turn pattern (see `HLD-COMBAT-014`) |
+| `intent_id` | String | Unique identifier for this intent within the enemy |
+| `weight` | int | Relative weight; higher = more likely |
+| `damage_min` | int | Minimum damage per hit on execution; 0 for non-damage intents |
+| `damage_max` | int | Maximum damage per hit on execution; MUST be ≥ damage_min |
+| `hit_count` | int | Number of independent damage rolls on execution; defaults to 1; each roll is independently subject to evasion miss; damage_min/damage_max apply per roll |
+| `is_charge_release` | bool | true if this intent uses the Charge→Release two-turn pattern |
+| `is_evade` | bool | true if this intent is the Evade action; damage_min, damage_max, and status_apply are ignored |
 | `max_consecutive` | int | Maximum times this intent may be selected consecutively; 0 = no limit |
-| `status_apply` | String | Status ID to apply on execution; empty string if none |
+| `status_apply` | String | Status ID to apply on execution; empty string if none; same colon-encoding convention as OmenCardData.status_id applies (e.g. `"vulnerable:physical"` creates a Vulnerable StatusInstance with string_param `"physical"`) |
+| `status_target` | String | `"player"` (default) \| `"self"` — determines whether status_apply targets the player or the enemy itself |
+| `summon_enemy_id` | String | When non-empty, spawns one enemy of this enemy_id when the intent resolves; the spawned enemy is added to CombatState with full HP and a unique instance_id; its Tier 1 omen card (first entry in EnemyData.omen_contributions) is injected into OmenDeckState.draw_pile immediately (see `HLD-OMEN-006`); empty string = no summon |
 
 **IntentConditional:**
 
 | Field | Type | Notes |
 |---|---|---|
-| `condition` | String | e.g. `"hp_below_percent:50"`, `"ally_count_above:1"`, `"turn_number:1"` |
-| `intent_id` | String | Intent selected when condition is true; must match an intent_id in intent_weights |
+| `condition` | String | e.g. `"hp_below_percent:50"`, `"ally_count_above:1"`, `"ally_count_equals:0"`, `"turn_number:1"` |
+| `intent_id` | String | When non-empty: intent selected directly when condition is true; no COMBAT stream roll; must match an intent_id in intent_weights; use either `intent_id` or `intent_ids`, not both |
+| `intent_ids` | Array[String] | When non-empty: restricts the weighted roll to only these intent IDs from intent_weights (using their relative weights); a COMBAT stream roll is still performed within this subset; use either `intent_id` or `intent_ids`, not both |
+
+**OmenCardData:**
+
+| Field | Type | Notes |
+|---|---|---|
+| `card_id` | String | Unique identifier; matches filename convention |
+| `display_name` | String | Player-visible name |
+| `status_id` | String | Status ID applied to each eligible unit when the card fires; empty string for cards with no status effect (e.g. Stillness); colon-encoded parameterized statuses (e.g. `"type_convert:fire"`, `"vulnerable:lightning"`, `"emboldened:physical"`) are split on `:` by CombatResolver — left of `:` becomes StatusInstance.status_id, right becomes StatusInstance.string_param |
+| `requires_tag` | String | Empty string = apply to all units on the target side; non-empty = only apply to units whose `enemy_tags` contains this value (e.g. `"undead"`, `"beast"`); if steered to the player side and the player is not tagged, no effect is applied |
+| `handlers` | Array[HandlerConfig] | For cards with non-standard effects that cannot be expressed as a single status_id (e.g. Elemental Synergy, Sacred Ground); executed in addition to any status_id application |
 
 **CompanionData:**
 
@@ -546,42 +601,60 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `companion_id` | String | |
 | `display_name` | String | |
 | `omen_contributions` | Array[String] | Card IDs added while companion is active |
-| `trigger` | String | Trigger type ID (see `HLD-COMPANION-003`): `"turn_end"` or `"vessel_death_intercept"` |
+| `trigger` | String | Trigger type ID: `"turn_end"` or `"vessel_death_intercept"` |
 | `handlers` | Array[HandlerConfig] | Executed via AbilityPipeline on trigger |
-| `granted_ability_id` | String | ability_id of the active ability granted to the vessel while this companion is active; empty string if none; loaded from AbilityRegistry at startup |
-| `initial_timer` | int | Starting value for `CompanionState.companion_timer`; 0 = this companion does not use the timer |
-| `departure_trigger` | String | Condition that causes departure: `"ability_used"` (granted ability was used), `"timer_exhausted"` (companion_timer reached 0), `"intercept_triggered"` (vessel_death_intercept fired), `"after_boss_only"` (no mid-floor condition) |
+| `granted_ability_id` | String | ability_id of the active ability granted to the vessel; empty string if none |
+| `initial_timer` | int | Starting value for `CompanionState.companion_timer`; 0 = not used |
+| `departure_trigger` | String | `"ability_used"` \| `"timer_exhausted"` \| `"intercept_triggered"` \| `"after_boss_only"` |
 
 #### Scenario: Item uses AbilityData schema
 - **WHEN** the Walking Staff item is defined as a `.tres` file
-- **THEN** it uses AbilityData with `action_bucket: "attack"`, `breaks_at_zero: true`, `max_charges: 6`, and one HandlerConfig entry `{ handler_id: "deal_damage", params: { base_damage: 6, damage_type: "physical" } }`
+- **THEN** it uses AbilityData with `action_bucket: "attack"`, `breaks_at_zero: true`, `max_charges: 6`, and one HandlerConfig entry
 
-#### Scenario: Enemy conditional intent overrides random
-- **WHEN** CombatResolver resolves an enemy's intent and an IntentConditional matches (e.g. HP < 50%)
-- **THEN** the matched intent_id is selected without rolling the COMBAT RNG stream; the weighted roll is skipped entirely
+#### Scenario: OmenCardData tag filter — undead only
+- **WHEN** the Grave Knit omen card (requires_tag: "undead") is applied to a side with one Skeleton and one Plague Rat
+- **THEN** the Skeleton receives a Mending StatusInstance; the Plague Rat receives nothing
+
+#### Scenario: OmenCardData tag filter — player side
+- **WHEN** any omen card with requires_tag: "undead" is steered to the player side
+- **THEN** no StatusInstance is created; the player is not tagged and receives no effect
+
+#### Scenario: Enemy conditional intent overrides random — forced
+- **WHEN** CombatResolver resolves an enemy's intent and an IntentConditional with a non-empty `intent_id` matches
+- **THEN** the matched intent_id is selected without rolling the COMBAT stream
+
+#### Scenario: Enemy conditional intent restricts pool — intent_ids
+- **WHEN** CombatResolver resolves an enemy's intent and an IntentConditional with a non-empty `intent_ids` array matches
+- **THEN** CombatResolver performs one weighted roll via the COMBAT stream, considering only the intents listed in `intent_ids` and their relative weights from `intent_weights`
 
 #### Scenario: Enemy weighted intent uses COMBAT stream
 - **WHEN** no IntentConditional matches for an enemy
-- **THEN** CombatResolver performs one weighted roll against the COMBAT RNG stream to select from intent_weights
+- **THEN** CombatResolver performs one weighted roll against the full COMBAT stream using all entries in intent_weights
 
-#### Scenario: Damage range defines per-intent variance
-- **WHEN** an enemy's intent with damage_min 2 and damage_max 4 executes
-- **THEN** CombatResolver rolls one value in [2, 4] inclusive using the COMBAT stream and applies that as base damage
+#### Scenario: Enemy Evade intent sets is_evading
+- **WHEN** an enemy's selected intent has is_evade: true
+- **THEN** CombatResolver sets that enemy's is_evading to true and does not process damage or status for that intent
 
-#### Scenario: Non-damage intent has zero damage fields
-- **WHEN** an enemy's intent has damage_min 0 and damage_max 0
-- **THEN** no damage is dealt; any status_apply field is processed if non-empty
+#### Scenario: hit_count > 1 produces multiple independent rolls
+- **WHEN** an enemy's intent has hit_count: 2 and damage_min: 3, damage_max: 5
+- **THEN** CombatResolver performs 2 separate COMBAT stream rolls of [3, 5] each; each roll is independently subject to evasion miss if the target is evading
 
-#### Scenario: Startup validation rejects unknown handler_id
-- **WHEN** the game starts and AbilityRegistry loads a HandlerConfig with an unregistered handler_id
-- **THEN** the game fails with a fatal error before the first frame (per `LLD-ARCH-005`)
+#### Scenario: summon_enemy_id spawns enemy with omen card
+- **WHEN** an enemy's intent resolves and summon_enemy_id is `"wolf"`
+- **THEN** a new Wolf EnemyState with full HP and a unique instance_id is added to CombatState.enemies; one Thick Hide card is injected into OmenDeckState.draw_pile immediately
+
+#### Scenario: Colon-encoded status_id split on create
+- **WHEN** CombatResolver applies an omen card with `status_id: "type_convert:fire"`
+- **THEN** it creates a StatusInstance with `status_id: "type_convert"` and `string_param: "fire"`; the colon is not preserved in the instance
+
+#### Scenario: Plain status_id unchanged
+- **WHEN** CombatResolver applies an omen card with `status_id: "burning"`
+- **THEN** it creates a StatusInstance with `status_id: "burning"` and `string_param: ""`; no splitting occurs
 
 ---
 
 ### Requirement: [LLD-ARCH-019] CombatResolver
-CombatResolver SHALL be a `RefCounted` subclass in `src/domain/`. It is the sole authority for all combat rule application — damage calculation, status effect resolution, enemy intent selection, omen tick processing, and legal action generation. No other class applies combat rules.
-
-CombatResolver receives `RNGService` as a constructor dependency. It MUST NOT access any autoload directly — all external dependencies are injected.
+CombatResolver SHALL be a `RefCounted` subclass in `src/domain/`. It is the sole authority for all combat rule application. CombatResolver receives `RNGService` as a constructor dependency. It MUST NOT access any autoload directly.
 
 **Interface:**
 
@@ -589,126 +662,198 @@ CombatResolver receives `RNGService` as a constructor dependency. It MUST NOT ac
 get_legal_combat_actions(game_state: GameState) -> Array[Dictionary]
     Returns all valid player actions for the current combat turn.
     Always returns at least one action (Default Strike is always legal).
-    If an active companion (bound or temporary) has a non-empty granted_ability_id, the
-    corresponding AbilityData is included as a legal action using its configured action_bucket.
+    Evade is always included as a legal Action bucket option.
+    If vessel_state.is_stunned is true: all Action bucket options are excluded from the
+    returned array; Support and Consumable options remain included.
+    If an active companion has a non-empty granted_ability_id, it is included using its
+    configured action_bucket.
     For Raven Mark specifically, only non-elite, non-boss living enemies are valid targets.
 
 resolve_player_action(action: Dictionary, game_state: GameState) -> GameState
     Applies one player action. Returns updated GameState.
-    Runs the handler chain via AbilityPipeline.
+    Resets vessel_state.is_evading and vessel_state.is_stunned to false at the start of
+    resolution (clears flags from the prior turn).
+    If the action is Evade: sets vessel_state.is_evading to true and returns immediately.
+    For all other actions: runs the handler chain via AbilityPipeline.
+    For attack actions against evading targets: per-hit miss roll (35% via COMBAT stream).
+    Charge preservation: if ALL hits missed, weapon item charges are not decremented.
     Applies vulnerability, resistance, and damage modifier rules from hld-combat-system.
-    If the resolved action used a companion's granted_ability_id and the companion's
-    departure_trigger is "ability_used", the companion departs as part of this resolution.
+    If the resolved action used a companion's granted_ability_id and departure_trigger is
+    "ability_used", the companion departs as part of this resolution.
 
 resolve_enemy_turns(game_state: GameState) -> GameState
     Resolves all living enemies' turns in order.
     For each enemy:
-      1. If enemy.is_charging is true: execute the release of the Charge→Release intent
-         (roll damage in [damage_min, damage_max] using COMBAT stream and/or apply status_apply);
-         set is_charging to false.
-      2. Otherwise: evaluate intent_conditionals first; if a condition matches, force that intent_id.
-         If no condition matches, roll the COMBAT stream against intent_weights.
-      3. Consecutive cap check (step 2 only): if the selected intent_id equals last_intent_id
-         AND intent_streak >= max_consecutive AND max_consecutive > 0, re-roll until a different
-         intent_id is selected.
+      0. Reset enemy.is_evading and enemy.is_stunned to false.
+         If enemy.is_stunned was true before reset: skip all remaining steps for this enemy
+         (the enemy takes no action this turn).
+      1. If enemy.is_charging is true: execute the Charge→Release release; set is_charging false.
+      2. Otherwise: evaluate intent_conditionals in order; first match short-circuits:
+           - If matched conditional has non-empty intent_id: select that intent directly
+             (no COMBAT stream roll).
+           - If matched conditional has non-empty intent_ids: roll COMBAT stream restricted
+             to only those intent IDs using their relative weights from intent_weights.
+         If no conditional matches: roll COMBAT stream against the full intent_weights pool.
+      3. Consecutive cap check (step 2 non-forced rolls only): re-roll if intent_id ==
+         last_intent_id and streak >= max_consecutive.
       4. Update last_intent_id and intent_streak on EnemyState.
-      5. If the selected intent has is_charge_release true: set is_charging to true; show charge
-         indicator; deal no damage this turn.
-      6. Otherwise execute the intent: roll damage in [damage_min, damage_max] using COMBAT stream
-         (if damage_max > 0); apply status_apply if non-empty (subject to HLD-COMBAT-015 for Chilled).
+      5. If selected intent has is_evade: true: set enemy.is_evading = true; skip to next enemy.
+      6. If selected intent has is_charge_release: true: set is_charging = true; deal no damage this turn.
+      7. Otherwise execute the intent:
+           a. If hit_count > 1: perform hit_count independent iterations of the following;
+              if hit_count == 1 (default): perform once.
+           b. Each iteration: roll damage in [damage_min, damage_max] via COMBAT stream
+              (if damage_max > 0); apply evasion miss check if vessel_state.is_evading is true
+              (35% miss per hit via COMBAT stream); deal damage if hit lands.
+           c. Apply status_apply if non-empty (to player if status_target: "player",
+              to self if "self"); subject to HLD-COMBAT-015 for Chilled idempotency.
+           d. If summon_enemy_id is non-empty: call resolve_enemy_summon(summon_enemy_id, game_state).
     Sets current_intent on EnemyState for display.
 
+resolve_enemy_summon(enemy_id: String, game_state: GameState) -> GameState
+    Spawns a new enemy of the given type mid-combat.
+    Looks up EnemyData for enemy_id. Creates a new EnemyState with max_hp from EnemyData,
+    assigns a unique instance_id (e.g. "wolf_1" if "wolf_0" already exists).
+    Adds the new EnemyState to CombatState.enemies.
+    Injects one copy of EnemyData.omen_contributions[0] (the Tier 1 family card) into
+    OmenDeckState.draw_pile immediately (see HLD-OMEN-006 Tier 1).
+    Returns updated GameState.
+
 resolve_companion_trigger(trigger_id: String, game_state: GameState) -> GameState
-    Fires the companion's handler chain if a companion is active and its trigger matches.
-    For "turn_end" companions with a timer: after the handler chain resolves, decrements
-    companion_timer by the amount consumed (capped at actual effect — e.g. if enemy had 1 HP,
-    only 1 is subtracted). If companion_timer reaches 0 and departure_trigger is
-    "timer_exhausted", the companion departs immediately.
+    Fires the companion's handler chain if active and trigger matches.
+    Decrements companion_timer when applicable; departs companion at 0.
 
 check_vessel_death_intercept(game_state: GameState) -> GameState
     Called synchronously when vessel HP reaches 0, BEFORE unit_died is emitted.
-    If an active companion has trigger == "vessel_death_intercept":
-      1. Run the companion's handler chain (e.g. restore vessel HP to 5)
-      2. Depart the companion (set temporary_companion or bound_companion to null)
-      3. Return updated GameState with vessel alive — unit_died is NOT emitted
-    If no such companion is active, returns game_state unchanged and unit_died proceeds normally.
+    If an active companion has trigger == "vessel_death_intercept": run handler chain,
+    depart companion, return updated GameState — unit_died is NOT emitted.
 
 resolve_omen_tick(game_state: GameState) -> GameState
-    Advances one omen tick: applies per-turn status effects (Burning, Chilled, Poisoned,
-    Mending, Hardened, Grave Knit), decrements remaining_ticks, clears expired statuses.
+    Advances one omen tick.
+    For each unit's active StatusInstances:
+      - trigger: "tick" statuses: fire their per-tick effect (Burning damage, Chilled reduction,
+        Poisoned escalation, Mending heal, Hardened absorption, Bleed decay).
+      - trigger: "shift" statuses: do NOT fire; remaining_ticks decrements only.
+    Decrements remaining_ticks on ALL active StatusInstances.
+    Clears only trigger: "tick" StatusInstances whose remaining_ticks has reached 0.
+    Shift-triggered StatusInstances at 0 are NOT cleared here — they are processed in
+    resolve_omen_cycle_start.
 
 resolve_omen_cycle_start(game_state: GameState) -> GameState
-    Draws 3 cards from OmenDeckState into OmenCycleState. Reshuffles discard into draw
-    pile first if draw pile has fewer than 3 cards.
+    Ends the current cycle and starts a new one.
+    Step 1 — Fire shift-triggered statuses: for each unit, for each StatusInstance with
+      trigger: "shift" and remaining_ticks == 0:
+        - Shocked: set is_stunned = true on that unit.
+        - Exposed: mark this unit as pending Vulnerable (Physical) application.
+    Step 2 — Clear expired statuses: remove all StatusInstances with remaining_ticks == 0
+      from all units (both tick-triggered and shift-triggered).
+    Step 3 — Draw new cycle: draw 3 cards from OmenDeckState into OmenCycleState.
+      Reshuffle discard into draw pile first if fewer than 3 cards remain.
+      Determine the new cycle's timer value from the leftover (timer) card.
+    Step 4 — Apply deferred Vulnerable: for each unit marked as pending Vulnerable (Physical)
+      from step 1, apply a `"vulnerable:physical"` StatusInstance with
+      remaining_ticks = new cycle timer value.
+    Step 5 — Apply on-draw statuses: for each of the two played cards in the new cycle,
+      apply the card's status_id (if non-empty) to each eligible unit on the target side,
+      filtering by requires_tag. New StatusInstances get remaining_ticks = new cycle timer.
+      Execute any handlers on OmenCardData for cards that have non-status effects.
+      **Type Convert replacement:** when applying a `type_convert` StatusInstance to a unit
+      that already has an active `type_convert` StatusInstance, remove the existing one first —
+      only one Type Convert may be active on a unit at a time. This replacement rule also
+      applies in resolve_player_action and resolve_enemy_turns when status_apply is processed.
 
 assemble_omen_deck(sources: Array[String], game_state: GameState) -> GameState
     Builds OmenDeckState from all contributing sources (vessel, enemies, items, companions).
-    Assigns timer values to every card using the COMBAT RNG stream per LLD-OMEN-MECH-008:
-    25% chance value 1, 50% chance value 2, 25% chance value 3. Stores each entry as
-    { card_id, timer_value } in the draw pile. Called once at combat start before any draws.
-    Enemy contributions follow the two-tier model (HLD-OMEN-006): family cards are added
-    once per enemy instance; type cards are added once per enemy type present. The deck entry
-    for a type card MUST carry a reference to its owning enemy type so removal on last-of-type
-    death can be performed correctly.
+    Assigns timer values via COMBAT stream per LLD-OMEN-MECH-008.
 
 resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
     Removes the dead enemy's family card copy from draw_pile and discard_pile immediately.
-    Also checks whether this was the last living enemy of its type; if so, removes that
-    type's type card from draw_pile and discard_pile as well (per HLD-OMEN-006).
-    Cards already drawn into OmenCycleState.drawn_cards are NOT removed — they complete
-    their current cycle.
+    Checks for last-of-type; removes type card if so (per HLD-OMEN-006).
+    Cards already drawn into OmenCycleState are NOT removed.
 ```
 
 **Damage resolution order** (applied in this sequence for every hit):
-1. Base damage: for player attacks, the flat value from HandlerConfig params; for enemy attacks, a value rolled in [damage_min, damage_max] using the COMBAT stream (see `HLD-COMBAT-016`)
-2. Passive modifiers (Last Stand ×1.5 if active)
-3. Buff modifiers (Charged ×2 if active, consumed after)
-4. Resistance (×0.5 if target resists damage type)
-5. Vulnerability (×1.5 if target is vulnerable to damage type)
-6. Resistance + Vulnerability cancel: if both apply to the same type → net ×1.0
-7. Clamp to minimum 1 (no hit ever deals 0 damage unless explicitly blocked)
+0. Evade miss check: if the target has is_evading = true, roll [0, 99] via COMBAT stream; if ≤ 34 (35% miss), skip all remaining steps
+1. Base damage and type: determine base damage value (player flat value from HandlerConfig; enemy rolled [damage_min, damage_max] via COMBAT stream) and initial damage type (from EnemyData.damage_type or HandlerConfig.params.damage_type). **Type conversion override:** if the attacker has an active `type_convert` StatusInstance, replace the damage type with `StatusInstance.string_param` before any further steps.
+2. Flat attacker bonuses: if attacker has an `emboldened` StatusInstance with `string_param: "physical"` and the resolved damage type is physical, add flat bonus (value defined in LLD)
+3. Passive modifiers: Last Stand ×1.5 if active
+4. Buff modifiers: Charged ×2 if active (consumed after); if attacker has an `emboldened` StatusInstance whose `string_param` matches the resolved damage type and `string_param` is not `"physical"`, apply ×1.5
+5. Resistance (×0.5 if target resists the resolved damage type)
+6. Vulnerability (×1.5 if target has an active `vulnerable` StatusInstance whose `string_param` matches the resolved damage type)
+7. Resistance + Vulnerability cancel: if both apply to the same type → net ×1.0
+8. Clamp to minimum 1
 
-#### Scenario: Legal actions always include Default Strike
+#### Scenario: Legal actions always include Default Strike and Evade
 - **WHEN** the vessel has zero item charges remaining and no ability charges
-- **THEN** `get_legal_combat_actions()` returns exactly one action: the Default Strike
+- **THEN** `get_legal_combat_actions()` returns exactly two actions: Default Strike and Evade
+
+#### Scenario: is_stunned excludes Action bucket from legal actions
+- **WHEN** vessel_state.is_stunned is true at the start of the player's turn
+- **THEN** `get_legal_combat_actions()` returns no Action bucket options; Support and Consumable options are still returned
+
+#### Scenario: Shocked enemy skips its turn
+- **WHEN** an enemy has is_stunned = true at the start of its resolution in resolve_enemy_turns
+- **THEN** is_stunned is reset to false and all intent selection and execution steps are skipped; the enemy takes no action
+
+#### Scenario: Exposed fires at shift — Vulnerable applied with new cycle timer
+- **WHEN** resolve_omen_cycle_start processes a unit with an Exposed StatusInstance at remaining_ticks == 0
+- **THEN** the Exposed status fires, marks the unit pending Vulnerable; after the new cycle draw determines a timer value of 2, Vulnerable (Physical) is applied with remaining_ticks = 2
+
+#### Scenario: Emboldened (Physical) adds flat bonus to base damage
+- **WHEN** the player has Emboldened (Physical) and attacks with a physical weapon dealing 6 base damage
+- **THEN** the flat bonus (defined in LLD) is added before any multipliers are applied
 
 #### Scenario: Damage resolution order — Last Stand + Charge + Vulnerability
 - **WHEN** the Hedge Knight (HP < 25%) uses Charge and attacks a Vulnerable (Physical) enemy with a 7-damage weapon
-- **THEN** damage = 7 × 1.5 (Last Stand) × 2.0 (Charge) × 1.5 (Vulnerable) = 31 (rounded down)
+- **THEN** step 0 passes (not evading); step 2 adds no flat bonus (no Emboldened); step 3 ×1.5 Last Stand; step 4 ×2.0 Charge; step 6 ×1.5 Vulnerable → 7 × 1.5 × 2.0 × 1.5 = 31 (rounded down)
 
 #### Scenario: Resistance cancels Vulnerability
-- **WHEN** CombatResolver resolves a fire attack against a Fire Elemental that also has Vulnerable (Fire) applied
-- **THEN** the resistance (×0.5) and vulnerability (×1.5) cancel; the attack deals base damage × 1.0
+- **WHEN** CombatResolver resolves a fire attack against a Fire Elemental with Vulnerable (Fire)
+- **THEN** resistance (×0.5) and vulnerability (×1.5) cancel; net ×1.0
 
-#### Scenario: Enemy intent conditional short-circuits roll
+#### Scenario: Enemy intent conditional short-circuits roll — turn_number forced
 - **WHEN** an enemy has a `"turn_number:1"` conditional mapped to `"sleeping"` and it is the first turn
 - **THEN** `current_intent` is set to `"sleeping"` with no COMBAT stream roll
 
-#### Scenario: Enemy consecutive re-roll
-- **WHEN** an enemy rolls an intent and intent_streak >= max_consecutive for that intent
-- **THEN** the COMBAT stream is rolled again; this repeats until a different intent_id is produced
+#### Scenario: intent_ids conditional — Wolf pack pool
+- **WHEN** a Wolf with the `ally_count_above:0` conditional has 1+ living allies
+- **THEN** CombatResolver rolls the COMBAT stream restricted to the [bite_pack, evade] subset; other intents in intent_weights are ineligible this turn
 
-#### Scenario: Charge→Release executes release unconditionally
-- **WHEN** `resolve_enemy_turns` processes an enemy with is_charging true
-- **THEN** the release damage is applied immediately without a new intent roll; is_charging is set to false
+#### Scenario: intent_ids conditional — Wolf alone pool
+- **WHEN** a Wolf with the `ally_count_equals:0` conditional is the last wolf alive
+- **THEN** CombatResolver rolls the COMBAT stream restricted to the [bite_lone, howl] subset; bite_pack and evade are ineligible this turn
 
-#### Scenario: Omen deck reshuffles when empty
-- **WHEN** `resolve_omen_cycle_start` is called and the draw pile has fewer than 3 cards
-- **THEN** the discard pile is shuffled into the draw pile first (using COMBAT stream), then 3 cards are drawn
+#### Scenario: resolve_enemy_summon — Wolf Howl
+- **WHEN** a Wolf's Howl intent resolves (summon_enemy_id: "wolf")
+- **THEN** resolve_enemy_summon creates a new Wolf EnemyState at 6 HP; adds it to CombatState.enemies; injects one Thick Hide card into OmenDeckState.draw_pile; returns updated GameState
 
-#### Scenario: Companion granted ability in legal actions
-- **WHEN** the vessel has an active companion with `granted_ability_id: "raven_mark"`
-- **THEN** `get_legal_combat_actions()` includes the Raven Mark ability action using the Support bucket; elite enemies and the boss are excluded from valid targets
+#### Scenario: Bear Swipe — two independent hits
+- **WHEN** the Bear's Swipe intent resolves (hit_count: 2, damage_min: 3, damage_max: 5)
+- **THEN** CombatResolver performs 2 separate [3, 5] COMBAT stream rolls; each is independently subject to evasion miss if the player is evading; damage from each landing hit is summed
 
-#### Scenario: vessel_death_intercept fires on any death source
-- **WHEN** a Burning tick reduces the vessel to 0 HP while The Life Mote is active
-- **THEN** `check_vessel_death_intercept` fires; vessel HP is set to 5; The Life Mote departs; `unit_died` is NOT emitted; combat continues
+#### Scenario: Type Convert overrides damage type before multipliers
+- **WHEN** a player with a `type_convert` StatusInstance (`string_param: "fire"`) attacks with a physical weapon dealing 6 base damage
+- **THEN** at step 1 the damage type is overridden to fire; the `emboldened:physical` flat bonus at step 2 does NOT apply (resolved type is now fire); steps 5 and 6 use fire for resistance and vulnerability checks
 
-#### Scenario: Shadow timer depletes and companion departs mid-fight
-- **WHEN** The Shadow's `companion_timer` reaches 0 during `resolve_companion_trigger`
-- **THEN** The Shadow departs immediately as part of that resolution; it does not wait for the fight to end
+#### Scenario: Type Convert and Vulnerable stack correctly
+- **WHEN** a player with Type Convert (fire) attacks a unit that has a `vulnerable` StatusInstance with `string_param: "fire"`
+- **THEN** damage type is overridden to fire at step 1; step 6 applies ×1.5 because the Vulnerable string_param matches the resolved type
 
----
+#### Scenario: Vulnerable string_param match — lightning
+- **WHEN** CombatResolver resolves step 6 for a lightning attack against a unit with a `vulnerable` StatusInstance with `string_param: "lightning"`
+- **THEN** ×1.5 multiplier applies; if string_param were `"fire"` or `"physical"`, no multiplier would apply for this lightning hit
+
+#### Scenario: Emboldened (Physical) flat bonus — step 2
+- **WHEN** the player has an `emboldened` StatusInstance with `string_param: "physical"` and attacks with a physical weapon dealing 6 base damage
+- **THEN** the flat bonus is added at step 2 before any multipliers
+
+#### Scenario: Emboldened (Fire) multiplier — step 4
+- **WHEN** the player has an `emboldened` StatusInstance with `string_param: "fire"` and attacks with a fire weapon
+- **THEN** step 4 applies ×1.5; step 2 does not apply (string_param is not "physical")
+
+#### Scenario: Exposed deferred Vulnerable uses colon shorthand
+- **WHEN** resolve_omen_cycle_start step 4 applies the deferred Vulnerable for an Exposed unit
+- **THEN** CombatResolver creates a `"vulnerable:physical"` StatusInstance (split to status_id: "vulnerable", string_param: "physical") with remaining_ticks = new cycle timer
 
 ### Requirement: [LLD-ARCH-020] AIPlayerAgent
 AIPlayerAgent SHALL be a `RefCounted` subclass in `src/application/`. It implements the Random strategy: at each decision point, it calls `ActionInjector.get_legal_actions()` and selects uniformly at random using a dedicated local `RandomNumberGenerator` seeded independently (NOT from RNGService — AI decisions must not contaminate game RNG streams).
@@ -739,3 +884,4 @@ The Random agent is the primary integration test for the full headless loop. It 
 #### Scenario: Random agent as integration test
 - **WHEN** a new seed is run twice with the Random agent
 - **THEN** both runs produce identical RunResult values — the same turns, same loot, same outcome — confirming full determinism
+

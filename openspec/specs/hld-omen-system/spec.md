@@ -20,7 +20,7 @@ Each combat turn, exactly three omen cards SHALL be drawn from the deck and reso
 - **THEN** the player must still choose one for their side — there is no option to skip; the choice becomes which effect is least damaging to absorb
 
 ### Requirement: [HLD-OMEN-002] Timer Card and Status Effect Interaction
-For **per-turn** status effects (Burning, Poisoned, Chilled, Mending, Hardened — see `HLD-COMBAT-006`), a higher timer card (3) is generally desirable — more ticks means more total value. For **omen-triggered** effects (Shocked), a lower timer card (1) is desirable — faster payoff on the stun. This creates different strategic priorities depending on what is active.
+For **per-tick** status effects (Burning, Poisoned, Chilled, Mending, Hardened — see `HLD-COMBAT-006`), a higher timer card (3) is generally desirable — more ticks means more total value. For **shift-triggered** effects (Shocked, Exposed), a lower timer card (1) is desirable — the shift fires sooner, delivering the stun or the Vulnerable (Physical) faster. This creates different strategic priorities depending on what is active.
 
 #### Scenario: High timer with Burning
 - **WHEN** Burning is active and the timer card is 3
@@ -29,6 +29,10 @@ For **per-turn** status effects (Burning, Poisoned, Chilled, Mending, Hardened �
 #### Scenario: Low timer with Shocked
 - **WHEN** Shocked is active and the timer card is 1
 - **THEN** the stun triggers after 1 turn — making low timer cards actively desirable when Shocked is active
+
+#### Scenario: Low timer with Exposed
+- **WHEN** Exposed is active on the enemy side and the timer card is 1
+- **THEN** the omen shift fires after 1 turn; Vulnerable (Physical) is applied to the affected units at the start of the next cycle — a short Exposed cycle delivers the vulnerability faster
 
 ---
 
@@ -58,33 +62,41 @@ A fresh omen deck SHALL be assembled at the start of each combat from four sourc
 
 ---
 
-### Requirement: [HLD-OMEN-005] Overall Omens vs Individual Omens
-Two distinct omen types SHALL exist:
+### Requirement: [HLD-OMEN-005] Omen Application Model
+When an omen card is applied to a side, each eligible unit on that side receives its own individual StatusInstance. There is no shared whole-side state — every unit tracks its own status independently. Killing a unit removes only that unit's StatusInstances. Cleansing a unit removes only that unit's StatusInstances.
 
-| | Overall omen | Individual omen |
-|---|---|---|
-| **Source** | Omen deck card | Consumable, ability, or enemy action |
-| **Target** | Whole side (all enemies, or the player) | One specific unit |
-| **Duration** | Current omen cycle | Until next omen reset |
+**Tag-conditional application:** Some omen cards specify a tag requirement. When such a card is applied, only units whose `enemy_tags` include the required tag receive a StatusInstance. Units that do not match receive nothing. If the card is steered to the player side and the player is not tagged, no effect is applied — this is always safe for the player with family-specific cards (e.g. Grave Knit, Thick Hide).
 
-Both types clear at the omen reset. Individual omens applied mid-cycle clear at the *next* reset — they do not persist into the following cycle.
+**Individual omens** from consumables, abilities, or enemy actions target one specific unit directly and follow the same StatusInstance model.
 
-#### Scenario: Overall omen applied to enemy side
-- **WHEN** a Burning omen card is played to the enemy side
-- **THEN** all enemies on that side gain the Burning status for the cycle duration
+**Duration:** All status effects — whether sourced from omen cards or from individual actions — clear at the omen reset (when `remaining_ticks` reaches 0). Individual omens applied mid-cycle clear at the *next* reset; they do not persist into the following cycle.
+
+#### Scenario: Omen card applies per-unit
+- **WHEN** a Burning omen card is played to the enemy side and two enemies are present
+- **THEN** each enemy receives its own Burning StatusInstance; killing one enemy removes only that enemy's StatusInstance; the other enemy's Burning is unaffected
+
+#### Scenario: Tag-conditional card skips non-matching units
+- **WHEN** Grave Knit is played to a side containing one Skeleton (tagged "undead") and one Plague Rat (tagged "beast")
+- **THEN** only the Skeleton receives a Mending StatusInstance; the Plague Rat receives nothing
+
+#### Scenario: Family card steered to player side — safe
+- **WHEN** the player steers Grave Knit to their own side
+- **THEN** no StatusInstance is applied (the player is not tagged "undead"); the enemy side does not receive healing that cycle
+
+#### Scenario: Cleanse is unit-local
+- **WHEN** the player uses a cleanse item targeting one enemy
+- **THEN** only that enemy's matching StatusInstances are removed; all other units retain their statuses unchanged
 
 #### Scenario: Individual omen does not affect whole side
 - **WHEN** a player uses Fire Bomb (individual omen) against one enemy
 - **THEN** only that specific enemy gains Burning — other enemies on the same side are unaffected
 
----
-
 ### Requirement: [HLD-OMEN-006] Two-Tier Enemy Omen Contribution Model
 Enemies contribute omen cards via two independent tiers. Each tier follows distinct copy-count and removal rules.
 
-**Tier 1 — Family card (per-instance):** Each individual enemy instance adds 1 copy of its family-specific omen card to the combat deck. When an enemy dies, its family card copy is removed immediately from the draw pile and discard pile.
+**Tier 1 — Family card (per-instance):** Each individual enemy instance adds 1 copy of its family-specific omen card to the combat deck. When an enemy dies, its family card copy is removed immediately from the draw pile and discard pile. When an enemy is added to combat mid-fight via a summon effect (e.g. Wolf Howl), its family card copy is injected into the draw pile immediately following the same rule — it is removed on death like any other enemy instance.
 
-**Tier 2 — Type card (per-type):** Each *enemy type* present in the encounter adds exactly 1 copy of a secondary omen card to the combat deck, regardless of how many individual enemies of that type are present. The type card is only removed when the **last living enemy of that type** dies.
+**Tier 2 — Type card (per-type):** Each *enemy type* present in the encounter adds exactly 1 copy of a secondary omen card to the combat deck, regardless of how many individual enemies of that type are present. The type card is only removed when the **last living enemy of that type** dies. A mid-combat summon of an existing type does not add a second type card — the type card already in the deck covers all instances of that type.
 
 Not all enemy types have a type card. Totems and support entities are excluded from both tiers. Elemental enemies use their element-specific card (Burning, Chilled, Shocked) as their type card; this was already their second contribution before this model was formalised.
 
@@ -107,4 +119,12 @@ Not all enemy types have a type card. Totems and support entities are excluded f
 #### Scenario: Mixed-type encounter with shared type card
 - **WHEN** a Skeleton and a Zombie are both present in combat
 - **THEN** two copies of Emboldened (Physical) are in the deck — one from the Skeleton type and one from the Zombie type, each removed independently when the last of its type dies
+
+#### Scenario: Mid-combat summon injects family card
+- **WHEN** a lone Wolf uses Howl and a new Wolf is summoned into combat
+- **THEN** one Thick Hide card is injected into the draw pile immediately; the type card (Exposed) is NOT added again — it was already present for the wolf type
+
+#### Scenario: Summoned enemy family card removed on death
+- **WHEN** a summoned Wolf dies
+- **THEN** its individual Thick Hide copy is removed from the draw pile and discard pile; if it was the last wolf, the Exposed type card is also removed
 

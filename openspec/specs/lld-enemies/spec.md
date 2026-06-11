@@ -1,4 +1,6 @@
-
+## Purpose
+Defines all Floor 3 enemies — their stats, intents, omen contributions, family tags, and encounter structure.
+## Requirements
 ### Requirement: [LLD-ENEMIES-001] Enemy Design Philosophy
 Every enemy SHALL simultaneously serve three purposes: (1) a combat threat with a learnable mechanic, (2) an omen deck contributor that shapes combat feel, and (3) the entry tier of a family that scales across floors. Not every enemy requires an elemental vulnerability — behavioural mechanics (pack dynamics, absorption, on-death effects) are equally valid design.
 
@@ -21,7 +23,7 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 ---
 
 ### Requirement: [LLD-ENEMIES-004] Floor 3 Enemy — Skeleton
-**Family:** Undead. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
+**Family:** Undead. **Tags:** `undead`. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
 **HP:** 12. **Vulnerability:** Fire (×1.5 fire damage, see `HLD-COMBAT-007`).
 
 `[OPEN·MVP2]` Door symbol for Skeleton combat encounters to be designed in a UI/art direction session.
@@ -61,7 +63,7 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 ---
 
 ### Requirement: [LLD-ENEMIES-005] Floor 3 Enemy — Zombie
-**Family:** Undead. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
+**Family:** Undead. **Tags:** `undead`. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
 **HP:** 16. **Vulnerability:** Physical (×1.5 with Brittle Charm only, per `HLD-COMBAT-005`).
 
 `[OPEN·MVP2]` Door symbol for Zombie combat encounters to be designed in a UI/art direction session.
@@ -115,13 +117,20 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 ---
 
 ### Requirement: [LLD-ENEMIES-006] Floor 3 Enemy — Plague Rat
-**Family:** Beast. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
-**HP:** 3 per rat. **Attack:** 1 physical damage per turn per rat (3 total). **Encounter:** Always 3 simultaneously in pre-elite.
+**Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
+**HP:** 3 per rat. **Encounter:** Always 3 simultaneously in pre-elite.
 **Immunity:** Poisoned. **No vulnerability.**
 
 `[OPEN·MVP2]` Door symbol for Plague Rat combat encounters to be designed in a UI/art direction session.
 
 **On death:** Each rat death applies or advances the Poisoned individual omen on the player (+2 to current Poisoned value; starts at 2 if none active).
+
+**Intents (see `HLD-COMBAT-009`, `HLD-COMBAT-016`):**
+
+| Intent ID | Weight | Damage | Max consecutive | Effect |
+|---|---|---|---|---|
+| `bite` | 70% | 1–3 physical | 2 | Deals damage |
+| `evade` | 30% | — | 2 | Evade (is_evade: true) |
 
 **Omen contributions (see `HLD-OMEN-006`):**
 - **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per rat (3 total)
@@ -135,36 +144,96 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 - **WHEN** the player kills a Plague Rat
 - **THEN** the Poisoned omen value increases by 2; if not yet active, a new Poisoned omen starts at value 2
 
+#### Scenario: Plague Rat bite
+- **WHEN** a Plague Rat's intent resolves to Bite
+- **THEN** the rat deals 1–3 physical damage to the player; with all 3 rats alive, total enemy-side damage this turn is 3–9 if all bite
+
+#### Scenario: Plague Rat evade
+- **WHEN** a Plague Rat's intent resolves to Evade
+- **THEN** the rat sets is_evading = true; any player attack targeting that rat this turn has a 35% miss chance
+
 ---
 
 ### Requirement: [LLD-ENEMIES-007] Floor 3 Enemy — Wolf
-**Family:** Beast. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
-**HP:** 6. **Attack:** 3 physical per turn (lone); 5 physical per turn (pack — 2+ wolves alive). **Encounter:** 2 Wolves pre-elite, 3 Wolves post-elite.
-**No vulnerability.**
+**Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
+**HP:** 6. **Attack:** 4–6 physical (pack: 2+ wolves alive); 2–4 physical (lone: last wolf alive). **Encounter:** 2 Wolves pre-elite, 3 Wolves post-elite. **No vulnerability.**
 
 `[OPEN·MVP2]` Door symbol for Wolf combat encounters to be designed in a UI/art direction session.
 
+**Intents (see `HLD-COMBAT-009`, `HLD-COMBAT-016`, `LLD-ARCH-018`):**
+
+| Intent ID | Weight | Damage | Max consecutive | Effect |
+|---|---|---|---|---|
+| `bite_pack` | 50% | 4–6 physical | — | Deals pack damage (available when 2+ wolves alive) |
+| `bite_lone` | 50% | 2–4 physical | — | Deals lone damage (available when last wolf alive) |
+| `evade` | 50% | — | — | Evade (is_evade: true; available when 2+ wolves alive) |
+| `howl` | 50% | — | 1 | Summons one Wolf (summon_enemy_id: `"wolf"`; available when last wolf alive) |
+
+**Intent conditionals:**
+
+| Condition | intent_ids (pool restriction) |
+|---|---|
+| `ally_count_above:0` | `["bite_pack", "evade"]` — 50/50 between these two |
+| `ally_count_equals:0` | `["bite_lone", "howl"]` — 50/50 between these two |
+
 **Omen contributions (see `HLD-OMEN-006`):**
-- **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per wolf
+- **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1 per wolf instance (including summoned wolves)
 - **Type card:** `LLD-OMEN-CARD-019` (Exposed) ×1 (total, regardless of wolf count)
 
 #### Scenario: Pack damage threshold
 - **WHEN** 2 or more Wolves are alive
-- **THEN** each Wolf deals 5 damage per turn; killing one wolf immediately reduces all surviving wolves to 3 damage per turn
+- **THEN** each Wolf rolls from the `[bite_pack, evade]` pool; attacking wolves deal 4–6 physical damage each
+
+#### Scenario: Pack damage drops when one wolf dies
+- **WHEN** the player kills one wolf, leaving a single wolf alive
+- **THEN** the surviving wolf now rolls from the `[bite_lone, howl]` pool; its attacks deal 2–4 physical damage
 
 #### Scenario: Wolf pack encounter size
 - **WHEN** Wolves appear pre-elite
 - **THEN** 2 Wolves are present; post-elite, 3 Wolves are present
 
+#### Scenario: Pack wolf evade
+- **WHEN** 2 or more Wolves are alive and a Wolf's intent resolves to Evade
+- **THEN** the wolf sets is_evading = true; the player's attack against that wolf this turn has a 35% miss chance
+
+#### Scenario: Last wolf howls — summon
+- **WHEN** exactly 1 Wolf is alive and its intent resolves to Howl
+- **THEN** a new Wolf (6 HP, fresh instance) is added to combat; one Thick Hide card is injected into the omen deck draw pile; the pack condition (ally_count_above:0) is now met for both wolves
+
+#### Scenario: Howl max_consecutive prevents back-to-back summons
+- **WHEN** a Wolf just used Howl and is the last wolf alive again on its next turn
+- **THEN** Howl is excluded from the pool due to max_consecutive: 1; the wolf is forced to select bite_lone this turn before Howl becomes available again
+
+#### Scenario: Summoned wolf removed on death
+- **WHEN** a summoned Wolf dies
+- **THEN** its Thick Hide family card copy is removed from the draw pile and discard pile immediately, per HLD-OMEN-006 Tier 1 rules
+
 ---
 
 ### Requirement: [LLD-ENEMIES-008] Floor 3 Enemy — Bear
-**Family:** Beast. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
-**HP:** 22. **Attack:** Two swipes of 4 physical damage each (8 total per turn). **Encounter:** 1 Bear — post-elite only. **No vulnerability.**
+**Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
+**HP:** 22. **Encounter:** 1 Bear — elite only. **No vulnerability.**
 
 `[OPEN·MVP2]` Door symbol for Bear combat encounters to be designed in a UI/art direction session.
 
-**Sleeping — Round 1:** Bear does not act on round 1; wakes at start of round 2.
+**Sleeping — Round 1:** Bear does not act on round 1. The `sleeping` intent is forced by an IntentConditional on `turn_number:1`.
+
+**Intents (see `HLD-COMBAT-009`, `HLD-COMBAT-016`, `LLD-ARCH-018`):**
+
+| Intent ID | Weight | Damage | hit_count | Max consecutive | Effect |
+|---|---|---|---|---|---|
+| `sleeping` | — | — | — | 1 | No action (forced turn 1 only via conditional) |
+| `bite` | 40% | 4–6 physical | 1 | — | Deals damage |
+| `swipe` | 40% | 3–5 physical | 2 | — | Two independent hits, each rolling 3–5 physical |
+| `frenzy` | 20% | — | — | 1 | Applies Frenzied to self (status_apply: `"frenzied"`, status_target: `"self"`) |
+
+`[OPEN·MVP1]` Swipe per-hit damage range (3–5) to be validated in playtesting.
+
+**Intent conditionals:**
+
+| Condition | intent_id (forced) |
+|---|---|
+| `turn_number:1` | `sleeping` |
 
 **Omen contributions (see `HLD-OMEN-006`):**
 - **Family card:** `LLD-OMEN-CARD-012` (Thick Hide) ×1
@@ -178,7 +247,25 @@ Enemies SHALL be grouped into families sharing a damage type, omen identity, and
 - **WHEN** combat begins against the Bear
 - **THEN** the player takes their first action freely; the Bear does not attack until round 2
 
----
+#### Scenario: Bear bite
+- **WHEN** the Bear's intent resolves to Bite
+- **THEN** the Bear deals 4–6 physical damage in a single hit
+
+#### Scenario: Bear swipe — two independent hits
+- **WHEN** the Bear's intent resolves to Swipe
+- **THEN** the Bear makes 2 separate damage rolls of 3–5 physical each; each roll is independently subject to the evasion miss chance if the player is evading; total damage is 6–10 if both land
+
+#### Scenario: Bear swipe — player evading
+- **WHEN** the Bear resolves Swipe and the player is evading
+- **THEN** each of the 2 hits independently rolls a 35% miss chance; it is possible for 0, 1, or 2 hits to land
+
+#### Scenario: Bear frenzy — self application
+- **WHEN** the Bear's intent resolves to Frenzy
+- **THEN** the Frenzied status (Vulnerable Physical + Emboldened Physical; see HLD-COMBAT-006) is applied to the Bear itself; no damage is dealt this turn
+
+#### Scenario: Bear frenzy — risk/reward
+- **WHEN** the Bear has Frenzied active and its next intent is Bite or Swipe
+- **THEN** the Bear's physical damage benefits from Emboldened (Physical) flat bonus; the Bear also takes ×1.5 physical damage from the player's physical attacks for the duration of the status
 
 ### Requirement: [LLD-ENEMIES-009] Floor 3 Encounter Structure
 Floor 3 encounter composition SHALL follow this structure:
@@ -188,7 +275,7 @@ Floor 3 encounter composition SHALL follow this structure:
 | Opening | 1–3 | 1 enemy | 2 Wolves or 3 Plague Rats |
 | Companion | 4 | Worn Map trigger — no combat | — |
 | Elite gate | 5 | Single elite enemy | — |
-| Post-elite | 6–9 | 2 enemies | 3 Wolves or 1 Bear |
+| Post-elite | 6–9 | 2 enemies | 3 Wolves |
 | Boss | — | The Judge | — |
 
 A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) before the Judge.
@@ -213,34 +300,34 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 ---
 
 ### Requirement: [LLD-ENEMIES-014] Floor 3 Enemy — Fire Elemental
-**Family:** Elemental. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy). Resistance/vulnerability table: see `LLD-OMEN-CARD-013`.
+**Family:** Elemental. **Tags:** `elemental`, `elemental_fire`. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Fire). Resistance/vulnerability table: see `LLD-OMEN-CARD-013`.
 **HP:** 14. **Attack:** 5 fire damage per turn. **Resistance:** Fire ×0.5. **Vulnerability:** Ice ×1.5.
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol to be designed in a UI/art direction session.
 
 **Encounter:** 1 Fire Elemental pre-elite; 2 Fire Elementals post-elite.
 
-**Omen contributions:** `LLD-OMEN-CARD-013` (Elemental Synergy) ×1, `LLD-OMEN-CARD-001` (Burning) ×1.
+**Omen contributions:** `elemental_synergy_fire` (Elemental Synergy — Fire) ×1, `LLD-OMEN-CARD-001` (Burning) ×1.
 
 #### Scenario: Fire Elemental ice vulnerability
 - **WHEN** the player attacks a Fire Elemental with an ice weapon while Chilled is active on the elemental
 - **THEN** the ice weapon deals ×1.5 damage
 
-#### Scenario: Elemental Synergy converts ice weapon to fire
-- **WHEN** Elemental Synergy is active on the player side against a Fire Elemental
-- **THEN** the player's ice weapon deals fire damage instead; the Fire Elemental's fire resistance (×0.5) applies
+#### Scenario: Elemental Synergy (Fire) converts ice weapon to fire
+- **WHEN** Elemental Synergy (Fire) is active on the player side against a Fire Elemental
+- **THEN** the player receives a Type Convert StatusInstance with string_param `"fire"`; the player's ice weapon deals fire damage instead; the Fire Elemental's fire resistance (×0.5) applies
 
 ---
 
 ### Requirement: [LLD-ENEMIES-015] Floor 3 Enemy — Ice Elemental
-**Family:** Elemental. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy).
+**Family:** Elemental. **Tags:** `elemental`, `elemental_ice`. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Ice).
 **HP:** 14. **Attack:** 4 ice damage per turn + applies Chilled to the player on each hit. **Resistance:** Ice ×0.5. **Vulnerability:** Fire ×1.5.
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol to be designed in a UI/art direction session.
 
 **Encounter:** 1 Ice Elemental pre-elite; 2 Ice Elementals post-elite.
 
-**Omen contributions:** `LLD-OMEN-CARD-013` (Elemental Synergy) ×1, `LLD-OMEN-CARD-003` (Chilled) ×1.
+**Omen contributions:** `elemental_synergy_ice` (Elemental Synergy — Ice) ×1, `LLD-OMEN-CARD-003` (Chilled) ×1.
 
 #### Scenario: Chilled application on hit
 - **WHEN** the Ice Elemental attacks the player
@@ -248,12 +335,12 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 
 #### Scenario: Self-created vulnerability
 - **WHEN** the Ice Elemental has Chilled the player and then attacks again
-- **THEN** the ice damage benefits from the player's Vulnerable (Ice) ×1.5
+- **THEN** the ice damage benefits from the player's Vulnerable (Ice) — a Vulnerable StatusInstance with string_param `"ice"` — at ×1.5
 
 ---
 
 ### Requirement: [LLD-ENEMIES-016] Floor 3 Enemy — Lightning Elemental
-**Family:** Elemental. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy).
+**Family:** Elemental. **Tags:** `elemental`, `elemental_lightning` (both phases — Sparks inherit the same tags). Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Lightning).
 **HP (Phase 1):** 18. **HP (Phase 2):** Two Sparks at 6 HP each.
 **Attack (Phase 1):** 6 lightning per turn. **Attack (Phase 2):** 2 × 2 lightning each (4 total).
 **Resistance:** Lightning ×0.5 (both phases). **Vulnerability:** None.
@@ -264,7 +351,7 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 
 **Two-phase:** Reaches 0 HP → splits into two Sparks (dead turn for enemy side). Sparks contribute no new omen cards.
 
-**Omen contributions (Phase 1 only):** `LLD-OMEN-CARD-013` (Elemental Synergy) ×1, `LLD-OMEN-CARD-002` (Shocked) ×1.
+**Omen contributions (Phase 1 only):** `elemental_synergy_lightning` (Elemental Synergy — Lightning) ×1, `LLD-OMEN-CARD-002` (Shocked) ×1.
 
 #### Scenario: Two-phase transition
 - **WHEN** the Lightning Elemental reaches 0 HP
@@ -281,7 +368,7 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 ---
 
 ### Requirement: [LLD-ENEMIES-017] Floor 3 Enemy — Low HP Fanatic
-**Family:** Fanatic. Fanatic omen card: see `LLD-OMEN-CARD-014` (Sacred Ground).
+**Family:** Fanatic. **Tags:** `fanatic`. Fanatic omen card: see `LLD-OMEN-CARD-014` (Sacred Ground).
 **HP:** 8. **Attack:** 4 physical per turn. **No vulnerability. No special mechanic.**
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol and final name to be confirmed. "Low HP Fanatic" is the design reference name.
@@ -297,7 +384,7 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 ---
 
 ### Requirement: [LLD-ENEMIES-018] Floor 3 Enemy — High HP Fanatic
-**Family:** Fanatic. Fanatic omen card: see `LLD-OMEN-CARD-014` (Sacred Ground).
+**Family:** Fanatic. **Tags:** `fanatic`. Fanatic omen card: see `LLD-OMEN-CARD-014` (Sacred Ground).
 **HP:** 12. **Attack:** 3 physical per turn. **No vulnerability. No special mechanic.**
 
 `[OPEN·MVP3]` `[OPEN·MVP2]` Door symbol and final name to be confirmed. "High HP Fanatic" is the design reference name.
@@ -313,7 +400,7 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 ---
 
 ### Requirement: [LLD-ENEMIES-019] Floor 3 Support Entity — Buff Totem
-**Family:** Fanatic. Totems do not contribute Sacred Ground (see `LLD-OMEN-CARD-014`).
+**Family:** Fanatic. **Tags:** `fanatic`. Totems do not contribute Sacred Ground (see `LLD-OMEN-CARD-014`).
 **HP:** 6. **Attack:** None. **No vulnerability.**
 **Aura (always-on):** All Fanatics on this side deal +2 damage per turn while alive. The Totem does not benefit from its own aura.
 
@@ -332,7 +419,7 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 ---
 
 ### Requirement: [LLD-ENEMIES-020] Floor 3 Support Entity — Absorption Totem
-**Family:** Fanatic. Totems do not contribute Sacred Ground (see `LLD-OMEN-CARD-014`).
+**Family:** Fanatic. **Tags:** `fanatic`. Totems do not contribute Sacred Ground (see `LLD-OMEN-CARD-014`).
 **HP:** 10. **Attack:** None. **No vulnerability.**
 **Aura (always-on):** All Fanatics on this side absorb 3 damage per hit while alive. The Totem does not benefit from its own aura.
 
@@ -347,3 +434,4 @@ A standard Floor 3 Pilgrim run yields 5 loot choices (4 standard + 1 elite) befo
 #### Scenario: Totem takes full damage
 - **WHEN** the player attacks the Absorption Totem directly
 - **THEN** the Totem takes full damage — the absorption aura does not protect the Totem itself
+

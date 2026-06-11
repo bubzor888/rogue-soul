@@ -11,39 +11,43 @@ Combat SHALL be turn-based with no real-time or action elements. There is no nee
 ---
 
 ### Requirement: [HLD-COMBAT-004] Action Economy
-Each player turn SHALL consist of three independent action buckets. Each bucket may be used once per turn. Support and Consumable buckets are optional. The Attack bucket is mandatory — it must always be resolved.
+Each player turn SHALL consist of three independent action buckets. Each bucket may be used once per turn. Support and Consumable buckets are optional. The Action bucket is mandatory — it must always be resolved.
 
 | Bucket | Source | Cost | Limit | Optional |
 |---|---|---|---|---|
-| **Attack** | Attack ability, attack item, or Default Strike | — | 1 per turn | No — must always resolve |
+| **Action** | Attack ability, attack item, Default Strike, or Evade | — | 1 per turn | No — must always resolve |
 | **Support** | Non-attack ability (charged) | Free | 1 per turn | Yes |
 | **Consumable** | Single-use non-attack item | Free | 1 per turn | Yes |
 
-**Attack bucket priority:** Attack ability → Attack item → Default Strike. The player uses whichever is available and preferred; all three options compete for the single Attack slot.
+**Action bucket options:** Attack ability, attack item, Default Strike, and Evade all compete for the single Action slot. When attacking, priority is: Attack ability → Attack item → Default Strike. Evade is always a legal alternative to any attack option.
 
 **Companion actions:** At the end of the player's turn, each active companion takes one automatic action from their ability set. The player spends no bucket uses on companion actions.
 
-**A fully-resourced turn** uses all three buckets: trigger a support ability, use a consumable, and make an attack.
+**A fully-resourced turn** uses all three buckets: trigger a support ability, use a consumable, and resolve an action (attack or evade).
 
-#### Scenario: One attack per turn
+#### Scenario: One action per turn
 - **WHEN** the player uses an attack item on their turn
-- **THEN** they cannot also use an attack ability in the same turn — both compete for the single Attack bucket
+- **THEN** they cannot also use an attack ability or Evade in the same turn — all three compete for the single Action bucket
 
-#### Scenario: Support does not consume attack
+#### Scenario: Support does not consume action
 - **WHEN** the player uses a non-attack ability (Support bucket)
-- **THEN** they can still use an attack ability or attack item in the same turn
+- **THEN** they can still resolve the Action bucket in the same turn
 
-#### Scenario: Consumable does not consume attack
+#### Scenario: Consumable does not consume action
 - **WHEN** the player uses a consumable item (Consumable bucket)
-- **THEN** they can still resolve the Attack bucket in the same turn
+- **THEN** they can still resolve the Action bucket in the same turn
 
-#### Scenario: Attack bucket is mandatory
+#### Scenario: Action bucket is mandatory
 - **WHEN** the player has no attack ability charges and no attack items
-- **THEN** the Default Strike is used to resolve the Attack bucket — the player always acts offensively
+- **THEN** the player must resolve the Action bucket with either Default Strike or Evade
 
 #### Scenario: Companion acts automatically
 - **WHEN** the player ends their turn
 - **THEN** each active companion resolves one automatic action from their ability set with no player input required
+
+#### Scenario: Support and Consumable available when evading
+- **WHEN** the player chooses Evade as their Action bucket resolution
+- **THEN** the Support and Consumable buckets remain available for use on the same turn
 
 ---
 
@@ -71,33 +75,42 @@ All damage SHALL have a type. The confirmed types are Physical, Fire, Lightning,
 - **THEN** additional elemental damage types may be added
 
 ### Requirement: [HLD-COMBAT-006] Status Effects
-Status effects SHALL be applied as individual omens on a specific target. They clear at the next omen reset. Duration is determined by the timer card drawn (1–3 turns). See `HLD-COMBAT-008` for omen mechanics.
+Status effects SHALL be applied as individual StatusInstances on a specific target. They clear at the next omen reset. Duration is determined by the timer card drawn (1–3 turns). See `HLD-COMBAT-008` for omen mechanics.
+
+**Status trigger types:** Statuses are either **per-tick** (`trigger: "tick"`) — effect fires on every omen tick while active — or **shift-triggered** (`trigger: "shift"`) — effect fires once at the omen shift when the status expires and does nothing on intermediate ticks.
+
+**Parameterized statuses:** Some statuses carry a type qualifier in `string_param` on the StatusInstance (see `LLD-ARCH-017`). The type determines which damage type the effect applies to; the `status_id` identifies the effect category.
 
 **Balancing assumption:** Assume 2 ticks as the typical case when setting all per-tick values.
 
-| Status | Type | Primary effect |
-|---|---|---|
-| Burning | Per-turn / Offensive | Flat fire damage per tick |
-| Shocked | Omen-triggered / Offensive | Stuns at omen shift |
-| Chilled | Per-turn / Offensive+Defensive | Creeping flat damage reduction per tick (amounts defined by omen card) |
-| Poisoned | Per-turn / Offensive | Escalating poison damage (triples each tick); no vulnerability |
-| Bleed | Per-turn / Offensive | Decaying physical damage per tick: deals damage equal to current stacks, then stacks halve (floor); clears when stacks reach 0 |
-| Mending | Per-turn / Defensive | Heals X HP per tick |
-| Hardened | Per-turn / Defensive | Absorbs up to X incoming damage per tick; resets each tick |
-| Vulnerable (Fire) | Offensive | Amplifies all fire damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) |
-| Vulnerable (Lightning) | Offensive | Amplifies all lightning damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) |
-| Vulnerable (Ice) | Offensive | Amplifies all ice damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) |
-| Vulnerable (Physical) | Offensive | Amplifies all physical damage dealt to target by ×1.5 (see `HLD-COMBAT-007`) |
+| Status | Trigger | Type | Primary effect |
+|---|---|---|---|
+| Burning | Per-tick | Offensive | Flat fire damage per tick |
+| Shocked | Shift-triggered | Offensive | At omen shift: sets is_stunned on the target — Action bucket blocked for their next turn; Support and Consumable buckets remain available |
+| Exposed | Shift-triggered | Offensive | At omen shift: applies a `"vulnerable:physical"` StatusInstance to the target with `remaining_ticks` equal to the next omen cycle's timer value |
+| Chilled | Per-tick | Offensive+Defensive | Creeping flat damage reduction per tick (amounts defined by omen card) |
+| Poisoned | Per-tick | Offensive | Escalating poison damage (triples each tick); no vulnerability |
+| Bleed | Per-tick | Offensive | Decaying physical damage per tick: deals damage equal to current stacks, then stacks halve (floor); clears when stacks reach 0 |
+| Mending | Per-tick | Defensive | Heals X HP per tick |
+| Hardened | Per-tick | Defensive | Absorbs up to X incoming damage per tick; resets each tick |
+| Vulnerable | Passive | Offensive | Amplifies all damage of the specified type dealt to target by ×1.5 (see `HLD-COMBAT-007`); type carried in `string_param` on the StatusInstance (e.g. `"fire"`, `"physical"`, `"ice"`, `"lightning"`) |
+| Type Convert | Passive | Offensive | Converts all outgoing damage from the unit to the type in `string_param`; only one instance active at a time — a new application replaces the existing one; clears at omen reset like all statuses |
+| Emboldened | Passive | Offensive | Type carried in `string_param`. **Physical:** adds flat bonus to target's outgoing physical damage per hit (value defined in LLD). **Elemental (fire/lightning/ice):** multiplies target's outgoing damage of that type by ×1.5. |
+| Frenzied | Passive | Offensive | Composite: unit simultaneously has `"vulnerable:physical"` effect (incoming ×1.5) and `"emboldened:physical"` effect (outgoing flat bonus); applied as one status |
 
-Elemental statuses (Burning, Shocked, Chilled) do **not** co-apply a Vulnerable status. Vulnerable must be applied separately via a dedicated item (see `HLD-COMBAT-007`).
+Elemental statuses (Burning, Chilled) do **not** co-apply a Vulnerable status. Vulnerable must be applied separately via a dedicated item (see `HLD-COMBAT-007`) or via the Exposed shift trigger.
 
 #### Scenario: Burning tick damage
 - **WHEN** a unit has the Burning status and an omen tick occurs
 - **THEN** the unit takes flat fire damage (amount defined in LLD)
 
-#### Scenario: Shocked stun timing
+#### Scenario: Shocked stun — Action bucket blocked only
 - **WHEN** a unit has the Shocked status and the omen shift occurs
-- **THEN** that unit skips their next action
+- **THEN** that unit's Action bucket is blocked for their next turn; Support and Consumable buckets remain available
+
+#### Scenario: Exposed fires at shift — Vulnerable deferred to next cycle
+- **WHEN** a unit has the Exposed status and the omen shift occurs
+- **THEN** a `"vulnerable:physical"` StatusInstance is applied to that unit with remaining_ticks equal to the next omen cycle's timer value; the Exposed status is then cleared
 
 #### Scenario: Chilled flat damage reduction
 - **WHEN** a unit has the Chilled status
@@ -127,7 +140,29 @@ Elemental statuses (Burning, Shocked, Chilled) do **not** co-apply a Vulnerable 
 - **WHEN** the omen cycle resets
 - **THEN** any active Bleed status on any unit is cleared, regardless of remaining stacks
 
----
+#### Scenario: Emboldened (Physical) flat damage bonus
+- **WHEN** a unit has an Emboldened StatusInstance with `string_param: "physical"` and makes a physical attack
+- **THEN** the attack deals additional flat physical damage (value defined in LLD) on top of base damage
+
+#### Scenario: Emboldened (Fire) multiplier
+- **WHEN** a unit has an Emboldened StatusInstance with `string_param: "fire"` and deals fire damage
+- **THEN** the fire damage is multiplied by ×1.5
+
+#### Scenario: Frenzied — both sides simultaneously
+- **WHEN** a unit has the Frenzied status and makes a physical attack
+- **THEN** the attack gains the `"emboldened:physical"` flat bonus; incoming physical attacks against that unit are amplified by ×1.5 via the `"vulnerable:physical"` effect
+
+#### Scenario: Frenzied — single status, single clear
+- **WHEN** a unit with the Frenzied status is cleansed of Frenzied
+- **THEN** both the `"vulnerable:physical"` and `"emboldened:physical"` effects are removed simultaneously; they do not need to be cleared separately
+
+#### Scenario: Type Convert — player side
+- **WHEN** a Type Convert StatusInstance with `string_param: "fire"` is active on the player
+- **THEN** all player attack damage is treated as fire damage; resistance and vulnerability checks at steps 5 and 6 use fire as the type
+
+#### Scenario: Type Convert replacement
+- **WHEN** the player already has Type Convert (fire) active and receives a Type Convert (ice) StatusInstance
+- **THEN** the fire StatusInstance is replaced; the player's attacks now deal ice damage
 
 ### Requirement: [HLD-COMBAT-007] Vulnerability
 Vulnerable SHALL be a status effect that amplifies all damage of a specific type dealt to the affected target by ×1.5. It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
@@ -312,6 +347,61 @@ This asymmetry is intentional: enemy variance creates urgency and read-the-room 
 #### Scenario: Player damage is always flat
 - **WHEN** the player uses any weapon or ability
 - **THEN** the damage value is the exact value defined in the item or ability data — no variance is applied
+
+---
+
+### Requirement: [HLD-COMBAT-017] Evade
+Evade SHALL be a legal Action bucket option for both the player and enemies. A unit that chooses Evade deals no damage that turn. All incoming hits against an evading unit have a 35% chance to miss for the remainder of that round. Evade lasts exactly one round and is tracked as a per-turn runtime flag, not as a status effect (see `LLD-ARCH-017`).
+
+**Miss resolution:** A miss roll is applied per incoming hit, not per attack. For multi-hit attacks, each individual hit rolls independently. On a miss: the hit deals no damage and applies no status effect. The attack did not connect.
+
+**Evade and Vulnerable:** The miss roll is resolved before vulnerability or any other damage modifier (see `LLD-ARCH-019` damage resolution order). Evade does not interact with or cancel the Vulnerable status.
+
+**Companion rules:** Companion actions that deal damage or apply status to an evading enemy are subject to the 35% miss roll. Companion actions that benefit the player (heals, intercepts, buffs) are not blocked by the player's own Evade state.
+
+**Weapon durability preservation:** When attacking an evading enemy, if ALL targeted enemies evaded and ALL miss rolls triggered, weapon item charges (action_bucket: "attack", breaks_at_zero: true) are NOT consumed that turn. If at least one hit connected (any targeted enemy was not evading, or any miss roll did not trigger), the weapon charge IS consumed. Consumable bucket items are always consumed regardless of whether the hit connected.
+
+**Unlimited use:** There is no per-run or per-combat limit on Evade. A unit may choose Evade every turn indefinitely; the sacrifice of the Action bucket is the natural constraint.
+
+#### Scenario: Evade blocks incoming hit
+- **WHEN** the player chooses Evade and an enemy makes a single attack
+- **THEN** CombatResolver rolls a 35% miss chance using the COMBAT stream; on a miss the attack deals no damage and applies no status
+
+#### Scenario: Multi-hit attack rolls per hit
+- **WHEN** the player is evading and an enemy uses a multi-hit attack (e.g. Double Swipe)
+- **THEN** each individual hit rolls the 35% miss chance independently; one hit may land while another misses
+
+#### Scenario: Miss blocks status
+- **WHEN** the player is evading and an enemy's attack that would apply Chilled misses
+- **THEN** the player takes no damage and does not gain the Chilled status
+
+#### Scenario: Evade does not cancel Vulnerable
+- **WHEN** the player is evading and also has Vulnerable (Physical) applied
+- **THEN** the miss roll is performed first; if the hit lands, the Vulnerable multiplier applies normally
+
+#### Scenario: Weapon charge preserved on full miss
+- **WHEN** the player attacks a single evading enemy and the miss roll triggers
+- **THEN** the weapon item's remaining_charges is not decremented
+
+#### Scenario: Weapon charge consumed if any hit lands
+- **WHEN** the player's weapon targets two enemies, one evading and one not
+- **THEN** the weapon charge IS consumed; at least one hit connected
+
+#### Scenario: Consumable always consumed
+- **WHEN** the player uses a consumable-bucket item and its target is evading
+- **THEN** the consumable item is spent regardless of whether the hit connected
+
+#### Scenario: Companion attack respects enemy Evade
+- **WHEN** an enemy is evading and a companion (e.g. the Shadow) attacks that enemy
+- **THEN** the companion's attack rolls the 35% miss chance like any other hit
+
+#### Scenario: Companion benefit unaffected by player Evade
+- **WHEN** the player is evading and a companion triggers a beneficial effect (e.g. Life Mote revive)
+- **THEN** the companion's beneficial effect resolves normally
+
+#### Scenario: Evade lasts one round
+- **WHEN** the player chose Evade on the previous turn and a new player turn begins
+- **THEN** is_evading resets to false; subsequent enemy attacks do not benefit from the prior Evade
 
 ---
 

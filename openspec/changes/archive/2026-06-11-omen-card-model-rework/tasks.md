@@ -1,0 +1,15 @@
+## 1. Spec Updates
+
+- [x] 1.1 Apply MODIFIED HLD-COMBAT-006 (status table with trigger types, Emboldened variants, Frenzied, Shocked/Exposed shift-triggered definitions)
+- [x] 1.2 Apply MODIFIED HLD-OMEN-002 (timer card strategy updated for shift-triggered statuses)
+- [x] 1.3 Apply MODIFIED HLD-OMEN-005 (per-unit StatusInstance model; remove whole-side global model; tag-conditional application)
+- [x] 1.4 Apply MODIFIED LLD-ARCH-017 (trigger field on StatusInstance; is_stunned on VesselState and EnemyState)
+- [x] 1.5 Apply MODIFIED LLD-ARCH-018 (OmenCardData schema with status_id, requires_tag, handlers)
+- [x] 1.6 Apply MODIFIED LLD-ARCH-019 (is_stunned in get_legal_combat_actions; shift-triggered resolution in resolve_omen_tick and resolve_omen_cycle_start; Emboldened in damage resolution order)
+- [x] 1.7 Apply MODIFIED LLD-OMEN-CARD-002 (Shocked → per-unit shift-triggered)
+- [x] 1.8 Apply MODIFIED LLD-OMEN-CARD-004 (Emboldened Physical → reference HLD-COMBAT-006)
+- [x] 1.9 Apply MODIFIED LLD-OMEN-CARD-005 (Emboldened Elemental → reference HLD-COMBAT-006)
+- [x] 1.10 Apply MODIFIED LLD-OMEN-CARD-011 (Grave Knit → requires_tag: "undead", per-unit)
+- [x] 1.11 Apply MODIFIED LLD-OMEN-CARD-012 (Thick Hide → requires_tag: "beast", per-unit)
+- [x] 1.12 Apply ADDED LLD-OMEN-CARD-019 (Exposed → full definition with shift-triggered Vulnerable)
+- [x] 1.13 Apply MODIFIED LLD-ENEMIES-004 through 020 (add Tags field to all enemies: undead/beast/elemental variants/fanatic)
