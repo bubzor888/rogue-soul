@@ -559,13 +559,14 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `omen_contributions` | Array[String] | Card IDs added to deck while this enemy is alive |
 | `intent_weights` | Array[IntentWeight] | Weighted random pool (evaluated if no conditional matches, or restricted by a matching conditional's `intent_ids`) |
 | `intent_conditionals` | Array[IntentConditional] | Evaluated first; first match short-circuits the roll |
+| `on_death_summons` | Array[String] | List of enemy IDs to spawn via `resolve_enemy_summon` when this enemy dies. Each ID in the array spawns one new enemy instance starting fresh (with `turns_alive: 1`). `resolve_enemy_death` SHALL process this array after the normal omen card removal logic. Empty array = no on-death spawn. Used by the Lightning Elemental to spawn two `lightning_spark` enemies on death. |
 
 **IntentWeight:**
 
 | Field | Type | Notes |
 |---|---|---|
 | `intent_id` | String | Unique identifier for this intent within the enemy |
-| `weight` | int | Relative weight; higher = more likely |
+| `weight` | int | Relative weight; higher = more likely; 0 = never randomly selected (only reachable via an IntentConditional forced match) |
 | `damage_min` | int | Minimum damage per hit on execution; 0 for non-damage intents |
 | `damage_max` | int | Maximum damage per hit on execution; MUST be ≥ damage_min |
 | `hit_count` | int | Number of independent damage rolls on execution; defaults to 1; each roll is independently subject to evasion miss; damage_min/damage_max apply per roll |
@@ -581,7 +582,7 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 
 | Field | Type | Notes |
 |---|---|---|
-| `condition` | String | e.g. `"hp_below_percent:50"`, `"ally_count_above:1"`, `"ally_count_equals:0"`, `"turn_number:1"` |
+| `condition` | String | Condition string evaluated by CombatResolver before intent selection. Supported forms: `"hp_below_percent:N"`, `"ally_count_above:N"`, `"ally_count_equals:N"`, `"turn_number:N"`. **`turn_number:N`** is evaluated against a per-enemy turn counter (`turns_alive: int` on EnemyState; starts at 1 when the enemy enters combat — whether at encounter start or mid-combat via summon — and increments at the start of each of that enemy's turns in `resolve_enemy_turns`). For enemies present from combat start, `turns_alive` equals `CombatState.turn_number`. For enemies spawned mid-combat (e.g. Sparks, summoned wolves), `turns_alive` is independent of the global turn counter, allowing `turn_number:1` to correctly select a dormant intent on the Spark's first action regardless of when it was spawned. |
 | `intent_id` | String | When non-empty: intent selected directly when condition is true; no COMBAT stream roll; must match an intent_id in intent_weights; use either `intent_id` or `intent_ids`, not both |
 | `intent_ids` | Array[String] | When non-empty: restricts the weighted roll to only these intent IDs from intent_weights (using their relative weights); a COMBAT stream roll is still performed within this subset; use either `intent_id` or `intent_ids`, not both |
 
@@ -668,6 +669,18 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 #### Scenario: status_magnitude defaults 0 for non-magnitude statuses
 - **WHEN** a Shocked omen card (status_magnitude: 0 by default) fires
 - **THEN** the Shocked StatusInstance is created with magnitude: 0; the magnitude field is irrelevant and has no effect on Shocked's behaviour
+
+#### Scenario: turn_number conditional — per-enemy for spawned Spark
+- **WHEN** a Lightning Spark is spawned on global combat turn 3 and CombatResolver evaluates its intents
+- **THEN** the Spark's `turns_alive` is 1; the `turn_number:1` conditional matches and `spark_dormant` is selected; the global `CombatState.turn_number` of 3 is irrelevant to this evaluation
+
+#### Scenario: turn_number conditional — equivalent for combat-start enemies
+- **WHEN** a Bear (present from combat start) evaluates its intents on global turn 1
+- **THEN** its `turns_alive` is 1 and `CombatState.turn_number` is 1; `turn_number:1` matches via either interpretation
+
+#### Scenario: on_death_summons — Lightning Elemental spawns Sparks
+- **WHEN** the Lightning Elemental dies and its EnemyData has `on_death_summons: ["lightning_spark", "lightning_spark"]`
+- **THEN** `resolve_enemy_death` calls `resolve_enemy_summon("lightning_spark", game_state)` twice; two new `lightning_spark` EnemyState instances with 6 HP, unique instance_ids, and `turns_alive: 1` are added to CombatState.enemies
 
 ---
 
