@@ -574,8 +574,8 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `is_evade` | bool | true if this intent is the Evade action; damage_min, damage_max, and status_apply are ignored |
 | `max_consecutive` | int | Maximum times this intent may be selected consecutively; 0 = no limit |
 | `status_apply` | String | Status ID to apply on execution; empty string if none; same colon-encoding convention as OmenCardData.status_id applies (e.g. `"vulnerable:physical"` creates a Vulnerable StatusInstance with string_param `"physical"`) |
-| `status_magnitude` | int | Magnitude value for the StatusInstance created by `status_apply`. For Burning: fire damage per tick. For Poisoned: starting poison value. For Bleed: starting stack count. When the target already has an active instance of the status and the status is magnitude-additive (Burning, Poisoned, Bleed — see `HLD-COMBAT-018`), this value is added to the existing magnitude instead of creating a new StatusInstance. Defaults 0; ignored for statuses that do not use magnitude (e.g. Shocked, Vulnerable). |
-| `status_target` | String | `"player"` (default) \| `"self"` — determines whether status_apply targets the player or the enemy itself |
+| `status_magnitude` | int | Magnitude value for the StatusInstance created by `status_apply`. For Burning: fire damage per tick. For Poisoned: starting poison value. For Bleed: starting stack count. For Hardened: absorb value per hit. For Emboldened (Physical): flat damage bonus. When the target already has an active instance of the status: magnitude-additive statuses (Burning, Poisoned, Bleed — see `HLD-COMBAT-018`) increment existing magnitude; max-wins statuses (Hardened, Emboldened — see `HLD-COMBAT-019`) keep the higher magnitude; idempotent statuses (Chilled — see `HLD-COMBAT-015`) are unchanged. Defaults 0; ignored for statuses that do not use magnitude (e.g. Shocked, Vulnerable). |
+| `status_target` | String | `"player"` (default) \| `"self"` \| `"allies"` — `"player"`: applies to the player; `"self"`: applies to the caster enemy; `"allies"`: applies to all living enemies on the enemy side except the caster (used by Totem buffing intents; see `LLD-ENEMIES-019`, `LLD-ENEMIES-020`) |
 | `summon_enemy_id` | String | When non-empty, spawns one enemy of this enemy_id when the intent resolves; the spawned enemy is added to CombatState with full HP and a unique instance_id; its Tier 1 omen card (first entry in EnemyData.omen_contributions) is injected into OmenDeckState.draw_pile immediately (see `HLD-OMEN-006`); empty string = no summon |
 
 **IntentConditional:**
@@ -681,6 +681,18 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 #### Scenario: on_death_summons — Lightning Elemental spawns Sparks
 - **WHEN** the Lightning Elemental dies and its EnemyData has `on_death_summons: ["lightning_spark", "lightning_spark"]`
 - **THEN** `resolve_enemy_death` calls `resolve_enemy_summon("lightning_spark", game_state)` twice; two new `lightning_spark` EnemyState instances with 6 HP, unique instance_ids, and `turns_alive: 1` are added to CombatState.enemies
+
+#### Scenario: status_target "allies" — applies to all enemies except caster
+- **WHEN** the Buff Totem's embolden_allies intent resolves (status_target: "allies")
+- **THEN** all living enemies on the enemy side except the Buff Totem itself receive the Emboldened (Physical) StatusInstance; the Totem does not receive the status
+
+#### Scenario: status_target "allies" — excludes dead enemies
+- **WHEN** the Absorption Totem's harden_allies intent resolves and one Fanatic has already died this turn
+- **THEN** Hardened is applied only to the living Fanatics; the dead enemy is skipped
+
+#### Scenario: status_magnitude max-wins for Emboldened on Totem re-apply
+- **WHEN** the Buff Totem applies Emboldened (Physical, magnitude 2) to a Fanatic that already has Emboldened (Physical) with magnitude 2
+- **THEN** no change occurs (equal magnitude — max-wins rule, see `HLD-COMBAT-019`); the existing StatusInstance is unchanged
 
 ---
 
