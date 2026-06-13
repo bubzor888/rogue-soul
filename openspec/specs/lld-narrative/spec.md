@@ -2,9 +2,9 @@
 Holds all instance-level narrative content — guardian dialogue per vessel, branch endings, vessel lore fragments, and floor-specific lore. All content in this spec is deferred pending dedicated narrative writing sessions.
 ## Requirements
 ### Requirement: [LLD-NAR-001] Guardian Dialogue — Per Vessel
-`[OPEN·MVP1]` The Judge SHALL deliver dialogue specific to the vessel petitioning for entry. Dialogue SHALL reflect what the guardian observes in that soul — what it still carries, what it has lost, and whether those qualities justify passage or refusal. Dialogue is written per vessel in a dedicated narrative writing session (see `HLD-NAR-002` for the guardian's test mechanic).
+`[OPEN·MVP2]` The Judge SHALL deliver dialogue specific to the vessel petitioning for entry. Dialogue SHALL reflect what the guardian observes in that soul — what it still carries, what it has lost, and whether those qualities justify passage or refusal. Dialogue is written per vessel in a dedicated narrative writing session (see `HLD-NAR-002` for the guardian's test mechanic).
 
-#### Scenario: [OPEN·MVP1] Guardian dialogue written for Pilgrim
+#### Scenario: [OPEN·MVP2] Guardian dialogue written for Pilgrim
 - **WHEN** the Pilgrim faces the Judge
 - **THEN** the Judge's dialogue acknowledges the Pilgrim's emptiness as the qualifying condition — not as pity, but as a neutral recognition of need
 
@@ -22,9 +22,9 @@ Holds all instance-level narrative content — guardian dialogue per vessel, bra
 ---
 
 ### Requirement: [LLD-NAR-003] Vessel Lore Fragments
-`[OPEN·MVP1]` Each vessel SHALL have associated lore fragments that the Soul Codex accumulates across runs. Fragments surface the vessel's history — their circumstances of death, their relationship to Solace, glimpses of the lives that came before them in the erosion path. Fragment content is written per vessel in a dedicated writing session.
+`[OPEN·MVP2]` Each vessel SHALL have associated lore fragments that the Soul Codex accumulates across runs. Fragments surface the vessel's history — their circumstances of death, their relationship to Solace, glimpses of the lives that came before them in the erosion path. Fragment content is written per vessel in a dedicated writing session.
 
-#### Scenario: [OPEN·MVP1] Pilgrim lore fragments written
+#### Scenario: [OPEN·MVP2] Pilgrim lore fragments written
 - **WHEN** the player encounters a Memory Fragment while playing the Pilgrim
 - **THEN** the narrative content belongs to the Pilgrim's lore pool (or a past vessel's pool, hinting at lives not yet unlocked)
 

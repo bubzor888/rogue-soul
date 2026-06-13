@@ -23,7 +23,7 @@ This produces the game's central irony: the Pilgrim, hollowed by erosion, passes
 
 The guardian's judgment also accounts for the journey taken. A soul that arrives having lost companions, purpose, or certainty along the way stands before the guardian differently from one that arrived untouched.
 
-`[OPEN·MVP1]` Specific guardian dialogue per vessel to be written in `lld-narrative`.
+`[OPEN·MVP2]` Specific guardian dialogue per vessel to be written in `lld-narrative`.
 
 #### Scenario: Pilgrim passes most easily
 - **WHEN** the Pilgrim reaches the Judge
@@ -40,7 +40,7 @@ The game's environments SHALL degrade in groundedness as the soul approaches Sol
 
 Enemy visual clarity on the final floor SHALL scale with vessel tier. The Pilgrim faces haze and half-shapes. Tier 3 vessels face sharp, fully resolved enemies. The floor communicates difficulty through atmosphere rather than a UI indicator.
 
-`[OPEN·MVP1]` Specific visual direction for each floor register to be defined in a UI/art direction session.
+`[OPEN·MVP2]` Specific visual direction for each floor register to be defined in a UI/art direction session.
 
 #### Scenario: Final floor atmosphere for Pilgrim
 - **WHEN** the Pilgrim plays the final floor

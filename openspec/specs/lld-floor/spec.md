@@ -150,8 +150,6 @@ The first two rooms SHALL have no counter constraints applied. Any room type may
 ### Requirement: [LLD-FLOOR-BEATS-002] Beat 2 — Combat Lock
 When the player has taken 2 or more event rooms with fewer than 2 combats completed, both doors SHALL show combat encounters. The player chooses which fight, not whether to fight.
 
-`[OPEN·MVP1]` Exact counter thresholds (currently: ≥2 events, <2 combats) to be tuned during playtesting.
-
 #### Scenario: Combat Lock triggers
 - **WHEN** the player has completed 2 non-combat rooms and only 0–1 combat rooms
 - **THEN** both door options are combat encounters with different enemy identities

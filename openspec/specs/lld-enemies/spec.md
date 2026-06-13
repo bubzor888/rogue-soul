@@ -105,7 +105,7 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 | `slam` | 40% | 5–7 physical (release only) | 1 | Charge→Release: charge turn telegraphs, no damage; release deals 5–7 physical |
 | `shamble` | 20% | — | 2 | No action |
 
-`[OPEN·MVP1]` Slam release damage range (5–7) to be validated in playtesting.
+
 
 **Omen contributions (see `HLD-OMEN-006`):**
 - **Family card:** `LLD-OMEN-CARD-011` (Grave Knit) ×1 per Zombie
@@ -256,7 +256,7 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 | `swipe` | 40% | 3–5 physical | 2 | — | Two independent hits, each rolling 3–5 physical |
 | `frenzy` | 20% | — | — | 1 | Applies Frenzied to self (status_apply: `"frenzied"`, status_target: `"self"`) |
 
-`[OPEN·MVP1]` Swipe per-hit damage range (3–5) to be validated in playtesting.
+
 
 **Intent conditionals:**
 
@@ -326,8 +326,7 @@ The Judge is the guardian at the threshold of Solace. It judges need, not worthi
 
 **Tags:** `judge`. **HP:** 30. **All damage type:** Physical.
 
-`[OPEN·MVP1]` All stat values to be validated in playtesting.
-`[OPEN·MVP1]` Vessel-specific Judge dialogue to be written in lld-narrative (per HLD-NAR-002).
+`[OPEN·MVP2]` Vessel-specific Judge dialogue to be written in lld-narrative (per HLD-NAR-002).
 `[OPEN·MVP2]` Visual and audio design for Judge encounter to be defined in a UI/art direction session.
 
 **Burden score tier brackets (see HLD-RUN-007):**
@@ -357,7 +356,7 @@ The Judge is the guardian at the threshold of Solace. It judges need, not worthi
 
 When the `hp_percent_lte:30` condition is met, `pass_judgment` is the only available intent. The weighted random pool (`strike`, `suffer`, `ponder`) is no longer used.
 
-`[OPEN·MVP1]` Damage ranges, intent weights, and Pass Judgment threshold to be validated in playtesting.
+
 
 #### Scenario: Boss placement
 - **WHEN** the player completes all 9 rooms on Floor 3
@@ -414,7 +413,7 @@ The Witness of Mercy is a passive support entity that sustains The Judge through
 
 **Family:** Judge. **Tags:** `judge_witness`. **HP:** 10. **No vulnerability.**
 
-`[OPEN·MVP1]` Mending magnitudes to be validated in playtesting.
+
 `[OPEN·MVP2]` Visual design to be defined in a UI/art direction session.
 
 **Omen contributions:** None.
@@ -472,7 +471,7 @@ The Witness of Vengeance is a passive support entity that empowers The Judge's s
 
 **Family:** Judge. **Tags:** `judge_witness`. **HP:** 10. **No vulnerability.**
 
-`[OPEN·MVP1]` Emboldened magnitudes to be validated in playtesting.
+
 `[OPEN·MVP2]` Visual design to be defined in a UI/art direction session.
 
 **Omen contributions:** None.
@@ -538,7 +537,7 @@ Max-wins rules (HLD-COMBAT-019) apply to Emboldened (Physical) reapplication.
 | `fire_strike` | 50% | 4–6 fire | 2 | Deals fire damage |
 | `kindle` | 50% | — | 2 | Applies Burning (magnitude 2) to player; if Burning already active, increments existing magnitude by 2 (see `HLD-COMBAT-018`) |
 
-`[OPEN·MVP1]` Kindle magnitude value (2) and fire_strike damage range (4–6) to be validated in playtesting.
+
 
 **Kill references** (assumes fire_strike every turn):
 - Walking Staff (6 dmg): 3–4 turns (fire damage, no inherent vulnerability unless Combustible Oil used)
@@ -587,7 +586,7 @@ Max-wins rules (HLD-COMBAT-019) apply to Emboldened (Physical) reapplication.
 | `frost_bolt` | 60% | 3–5 ice | 2 | Deals ice damage |
 | `glacial_mark` | 40% | — | 1 | Applies `"vulnerable:ice"` to player; no damage |
 
-`[OPEN·MVP1]` Frost Bolt damage range (3–5) and Glacial Mark weight (40%) to be validated in playtesting.
+
 
 **Kill references** (assumes frost_bolt every turn):
 - Walking Staff (6 physical): 3 turns (no vulnerability match)
@@ -656,7 +655,7 @@ The Lightning Elemental has only one attack — an escalating lightning strike. 
 | `turn_number:2` | `lightning_surge_2` |
 | `turn_number:3` | `lightning_surge_3` |
 
-`[OPEN·MVP1]` Phase 1 damage ranges and escalation pacing to be validated in playtesting.
+
 
 ---
 
@@ -685,7 +684,7 @@ Two Sparks are spawned simultaneously when the Lightning Elemental dies. Each Sp
 | `turn_number:2` | `spark_surge_1` |
 | `turn_number:3` | `spark_surge_2` |
 
-`[OPEN·MVP1]` Spark damage ranges to be validated in playtesting.
+
 
 ---
 
@@ -746,7 +745,7 @@ The Low HP Fanatic SHALL use the intent table below for all combat actions.
 | `taunt` | 20% | — | 2 | Applies Frenzied to the player (status_apply: `"frenzied"`, status_target: `"player"`, status_magnitude: 2) |
 | `evade` | 20% | — | 2 | Evade (is_evade: true) |
 
-`[OPEN·MVP1]` Damage range (3–5) and Frenzied magnitude (2) to be validated in playtesting.
+
 
 **Kill references** (assumes strike every turn):
 - Walking Staff (6 dmg): 2 hits
@@ -797,7 +796,7 @@ The High HP Fanatic SHALL use the intent table below for all combat actions.
 | `taunt` | 20% | — | 2 | Applies Frenzied to the player (status_apply: `"frenzied"`, status_target: `"player"`, status_magnitude: 2) |
 | `evade` | 20% | — | 2 | Evade (is_evade: true) |
 
-`[OPEN·MVP1]` Damage range (2–4) and Frenzied magnitude (2) to be validated in playtesting.
+
 
 **Kill references** (assumes strike every turn):
 - Walking Staff (6 dmg): 2 hits
@@ -840,7 +839,7 @@ The Buff Totem SHALL apply `embolden_allies` to all living Fanatics on the enemy
 |---|---|---|---|---|
 | `embolden_allies` | 100% | — | — | Applies Emboldened (Physical, magnitude 2) to all living Fanatics on this side (status_apply: `"emboldened:physical"`, status_target: `"allies"`, status_magnitude: 2); Totem itself excluded |
 
-`[OPEN·MVP1]` Emboldened magnitude (2) to be validated in playtesting.
+
 
 When the Buff Totem is killed it no longer re-applies `embolden_allies` each turn. Emboldened (Physical) already active on Fanatics persists until the current omen cycle ends. Priority: kill the Totem before the next omen cycle to remove the buff.
 
@@ -877,11 +876,9 @@ The Absorption Totem SHALL apply `harden_allies` to all living Fanatics on the e
 |---|---|---|---|---|
 | `harden_allies` | 100% | — | — | Applies Hardened (magnitude 3) to all living Fanatics on this side (status_apply: `"hardened"`, status_target: `"allies"`, status_magnitude: 3); Totem itself excluded |
 
-`[OPEN·MVP1]` Hardened magnitude (3) to be validated in playtesting.
-
 When the Absorption Totem is killed it no longer re-applies `harden_allies` each turn. Hardened already active on Fanatics persists until the current omen cycle ends. Priority: kill the Totem before the next omen cycle to remove the buff.
 
-`[OPEN·MVP1]` Interaction between Hardened absorb and the min-1 damage clamp (LLD-ARCH-019 step 8) to be resolved during implementation — Hardened absorption should reduce damage to 0 before the clamp applies.
+
 
 #### Scenario: Absorption Totem harden_allies — Fanatic gains Hardened
 - **WHEN** the Absorption Totem's intent resolves to Harden Allies

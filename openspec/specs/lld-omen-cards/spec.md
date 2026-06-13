@@ -428,8 +428,6 @@ The Repent omen card is contributed exclusively by The Judge — 3 copies are ad
 
 **On player side:** The player selects 1 item to discard from 2 randomly revealed items drawn from their current inventory. The discarded item is removed from inventory without its effect triggering. The player immediately heals 5 HP (direct heal, not Mending — no omen tick required). The discarded item counts as fully spent for burden score purposes (−1 score, see HLD-RUN-007).
 
-`[OPEN·MVP1]` Heal value (5 HP) and item reveal count (2) to be validated in playtesting.
-
 #### Scenario: Repent on player side — item selection
 - **WHEN** the player plays Repent to their own side and has 2 or more items in inventory
 - **THEN** 2 items are randomly revealed from the player's inventory; the player selects 1 to discard; the selected item is removed from inventory without its effect triggering; the player heals 5 HP; burden score decreases by 1

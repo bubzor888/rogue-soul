@@ -51,11 +51,14 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 { "type": "END_TURN" }
 { "type": "CHOOSE_DOOR", "room_id": "room_12" }
 { "type": "REPENT_DISCARD", "slot_index": N }
+{ "type": "READ_THE_ROAD_COMMIT", "send_to_bottom": [N, ...] }
 ```
 
 `get_legal_actions()` MUST always return at least one valid action in a non-terminal state. `submit_action()` with an illegal action MUST log an error and return state unchanged — never throw.
 
 **`REPENT_DISCARD` action:** Legal only when `combat_state.pending_repent_slots` is non-empty (see `LLD-ARCH-017`). `slot_index` must be one of the indices in `pending_repent_slots`. When `pending_repent_slots` is non-empty, `get_legal_combat_actions()` returns ONLY `REPENT_DISCARD` actions — one per pending slot — and no other action types. Resolving the action discards the item at that slot, heals the player 5 HP directly, decrements `item_burden_score` by 1, emits `SignalBus.item_discarded`, and clears `pending_repent_slots` (see `LLD-ARCH-019`).
+
+**`READ_THE_ROAD_COMMIT` action:** Legal only when `combat_state.read_the_road_active` is `true` (see `LLD-ARCH-017`). `send_to_bottom` is an `Array[int]` of 0–3 indices into the top of the draw pile (0 = top card, 1 = second, 2 = third); an empty array means keep all in place. Duplicate indices and out-of-range indices are invalid. When `read_the_road_active` is `true`, `get_legal_combat_actions()` returns ONLY `READ_THE_ROAD_COMMIT` — no other action types. Resolving the action reorders the draw pile and clears `read_the_road_active` (see `LLD-ARCH-019`).
 
 #### Scenario: Illegal action safety
 - **WHEN** an illegal action is submitted to ActionInjector
@@ -68,6 +71,14 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 #### Scenario: Repent pending — only REPENT_DISCARD actions returned
 - **WHEN** `combat_state.pending_repent_slots` is `[1, 2]` (slots 1 and 2 are revealed)
 - **THEN** `get_legal_combat_actions()` returns exactly two `REPENT_DISCARD` actions with `slot_index: 1` and `slot_index: 2`; no other action types are included
+
+#### Scenario: READ_THE_ROAD_COMMIT only legal during Read the Road
+- **WHEN** `combat_state.read_the_road_active` is `false`
+- **THEN** `get_legal_combat_actions()` does not include any `READ_THE_ROAD_COMMIT` action
+
+#### Scenario: Read the Road active — only READ_THE_ROAD_COMMIT returned
+- **WHEN** `combat_state.read_the_road_active` is `true`
+- **THEN** `get_legal_combat_actions()` returns exactly one `READ_THE_ROAD_COMMIT` action; no other action types are included
 
 ---
 
@@ -450,7 +461,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 **DoorData fields:** `room_type: String` (RoomType enum value), `encounter_id: String` (enemy_id for combat; event_id for non-combat), `room_id: String` (unique per-run identifier for logging)
 
-**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`)
+**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`), `read_the_road_active: bool` (set to `true` by the `peek_omen_deck` handler immediately after `assemble_omen_deck` completes; cleared to `false` by `resolve_player_action` when `READ_THE_ROAD_COMMIT` is processed; default `false`; when `true`, `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; see `LLD-ARCH-019`)
 
 **EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally), `is_evading: bool` (true when this enemy chose Evade on its turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `is_stunned: bool` (true when this enemy has been stunned by a Shocked shift trigger; the enemy skips its action this turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns)
 
@@ -485,6 +496,14 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 #### Scenario: pending_repent_slots set when Repent fires with 2+ items
 - **WHEN** Repent fires on the player side and the player has items in slots 0 and 2
 - **THEN** `combat_state.pending_repent_slots` is set to two randomly selected slot indices (e.g. `[0, 2]`) by `resolve_omen_cycle_start`; only REPENT_DISCARD actions are returned until resolved
+
+#### Scenario: read_the_road_active false when no peek pending
+- **WHEN** combat has started and the vessel has no `peek_omen_deck` ability (or it has already resolved)
+- **THEN** `combat_state.read_the_road_active` is `false`; `get_legal_combat_actions()` returns the standard action set
+
+#### Scenario: read_the_road_active set after assemble_omen_deck for Pilgrim
+- **WHEN** `assemble_omen_deck` completes for a vessel with a `peek_omen_deck` handler
+- **THEN** `combat_state.read_the_road_active` is `true` and only `READ_THE_ROAD_COMMIT` is a legal action
 
 #### Scenario: StatusInstance magnitude tracks Chilled accumulation
 - **WHEN** a unit with Chilled status reaches tick 2
@@ -770,11 +789,12 @@ CombatResolver SHALL be a `RefCounted` subclass in `src/domain/`. It is the sole
 ```
 get_legal_combat_actions(game_state: GameState) -> Array[Dictionary]
     Returns all valid player actions for the current combat turn.
-    If combat_state.pending_repent_slots is non-empty: returns ONLY REPENT_DISCARD actions,
-    one per slot index in pending_repent_slots. No other action types are included. The
-    guarantee of "at least one action" still holds — pending_repent_slots is always non-empty
-    when this branch is entered.
-    Otherwise (no pending Repent choice):
+    Priority-ordered gating (first matching branch wins):
+    1. If combat_state.read_the_road_active is true: returns ONLY READ_THE_ROAD_COMMIT.
+       No other action types are included. The guarantee of "at least one action" holds.
+    2. If combat_state.pending_repent_slots is non-empty: returns ONLY REPENT_DISCARD actions,
+       one per slot index in pending_repent_slots. No other action types are included.
+    3. Otherwise (no pending interactive choice):
       Always returns at least one action (Default Strike is always legal).
       Evade is always included as a legal Action bucket option.
       If vessel_state.is_stunned is true: all Action bucket options are excluded from the
@@ -785,6 +805,16 @@ get_legal_combat_actions(game_state: GameState) -> Array[Dictionary]
 
 resolve_player_action(action: Dictionary, game_state: GameState) -> GameState
     Applies one player action. Returns updated GameState.
+    If action.type == "READ_THE_ROAD_COMMIT":
+      - Validate that combat_state.read_the_road_active is true; if false, log error and
+        return state unchanged.
+      - Validate send_to_bottom: all indices in [0, min(2, draw_pile.size()-1)], no duplicates;
+        if invalid, log error and return state unchanged.
+      - Process in descending index order: for each index in send_to_bottom (sorted descending),
+        pop draw_pile[index] and append it to the end of draw_pile.
+      - Set combat_state.read_the_road_active = false.
+      - Return updated GameState. Do NOT advance the omen cycle; combat setup continues.
+        Do NOT reset vessel_state.is_evading or is_stunned here.
     If action.type == "REPENT_DISCARD":
       - Validate that action.slot_index is in combat_state.pending_repent_slots.
       - Remove the item at action.slot_index from inventory.
@@ -913,6 +943,10 @@ resolve_omen_cycle_start(game_state: GameState) -> GameState
 assemble_omen_deck(sources: Array[String], game_state: GameState) -> GameState
     Builds OmenDeckState from all contributing sources (vessel, enemies, items, companions).
     Assigns timer values via COMBAT stream per LLD-OMEN-MECH-008.
+    After building and shuffling the draw pile, executes passive ability handlers from the
+    vessel's AbilityData entries. If any handler sets read_the_road_active = true, returns
+    the updated GameState immediately — the caller must wait for READ_THE_ROAD_COMMIT before
+    proceeding to the first omen draw.
 
 resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
     Removes the dead enemy's family card copy from draw_pile and discard_pile immediately.
@@ -941,11 +975,26 @@ resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
 5. Resistance (×0.5 if target resists the resolved damage type)
 6. Vulnerability (×1.5 if target has an active `vulnerable` StatusInstance whose `string_param` matches the resolved damage type)
 7. Resistance + Vulnerability cancel: if both apply to the same type → net ×1.0
-8. Clamp to minimum 1
 
-#### Scenario: Legal actions always include Default Strike and Evade (no pending Repent)
-- **WHEN** the vessel has zero item charges remaining, no ability charges, and `pending_repent_slots` is `[]`
+#### Scenario: Legal actions always include Default Strike and Evade (no pending choice)
+- **WHEN** the vessel has zero item charges remaining, no ability charges, `pending_repent_slots` is `[]`, and `read_the_road_active` is `false`
 - **THEN** `get_legal_combat_actions()` returns exactly two actions: Default Strike and Evade
+
+#### Scenario: read_the_road_active takes priority over pending_repent_slots
+- **WHEN** both `read_the_road_active` is `true` and `pending_repent_slots` is non-empty
+- **THEN** `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; the Repent choice is deferred until Read the Road resolves
+
+#### Scenario: READ_THE_ROAD_COMMIT with partial send — descending splice order
+- **WHEN** the player submits `READ_THE_ROAD_COMMIT` with `send_to_bottom: [2, 0]` and draw_pile is `[A, B, C, D, E]`
+- **THEN** indices are processed descending (2 first, then 0): C appended → `[A, B, D, E, C]`; A appended → `[B, D, E, C, A]`; `read_the_road_active` is cleared
+
+#### Scenario: READ_THE_ROAD_COMMIT with empty array — pile unchanged
+- **WHEN** the player submits `READ_THE_ROAD_COMMIT` with `send_to_bottom: []`
+- **THEN** draw_pile order is unchanged; `read_the_road_active` is cleared to `false`
+
+#### Scenario: Hardened absorption can reduce damage to 0
+- **WHEN** an enemy with Hardened magnitude 5 is struck for 4 damage (after all multipliers)
+- **THEN** Hardened absorbs all 4 points; the enemy takes 0 damage; no minimum applies
 
 #### Scenario: is_stunned excludes Action bucket from legal actions
 - **WHEN** vessel_state.is_stunned is true at the start of the player's turn
