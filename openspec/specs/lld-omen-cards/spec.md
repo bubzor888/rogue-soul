@@ -419,3 +419,46 @@ Low timer cards are desirable when Exposed is active on the enemy side — the o
 - **WHEN** Exposed triggers on an enemy that already has a `"vulnerable:physical"` StatusInstance from Brittle Charm
 - **THEN** the physical multiplier remains ×1.5 — two sources of the same Vulnerable type do not stack (see `HLD-COMBAT-007`)
 
+---
+
+### Requirement: [LLD-OMEN-CARD-020] Repent (Enemy Card — The Judge)
+The Repent omen card is contributed exclusively by The Judge — 3 copies are added to the omen deck at the start of the Judge encounter. It is the only omen contribution from The Judge or either Witness. The 3 copies are not subject to the standard Tier 1 / Tier 2 family/type model (see HLD-OMEN-006); they are a fixed contribution unique to this encounter.
+
+**On Judge side:** No effect. Steering Repent to The Judge's side is always a legal option and produces no game-state change. The card still functions as a timer card if it is the leftover draw.
+
+**On player side:** The player selects 1 item to discard from 2 randomly revealed items drawn from their current inventory. The discarded item is removed from inventory without its effect triggering. The player immediately heals 5 HP (direct heal, not Mending — no omen tick required). The discarded item counts as fully spent for burden score purposes (−1 score, see HLD-RUN-007).
+
+`[OPEN·MVP1]` Heal value (5 HP) and item reveal count (2) to be validated in playtesting.
+
+#### Scenario: Repent on player side — item selection
+- **WHEN** the player plays Repent to their own side and has 2 or more items in inventory
+- **THEN** 2 items are randomly revealed from the player's inventory; the player selects 1 to discard; the selected item is removed from inventory without its effect triggering; the player heals 5 HP; burden score decreases by 1
+
+#### Scenario: Repent on player side — only one item in inventory
+- **WHEN** the player plays Repent to their own side and has exactly 1 item in inventory
+- **THEN** that item is automatically the discard target (no selection needed); it is removed from inventory without its effect triggering; the player heals 5 HP; burden score decreases by 1
+
+#### Scenario: Repent on player side — no items in inventory
+- **WHEN** the player plays Repent to their own side and has no items in inventory
+- **THEN** no discard occurs; the player still heals 5 HP; burden score is unchanged
+
+#### Scenario: Repent on Judge side — no effect
+- **WHEN** the player plays Repent to The Judge's side
+- **THEN** no status is applied; no item is discarded; no healing occurs; the card produces no game-state change
+
+#### Scenario: Repent as timer card
+- **WHEN** Repent is the leftover card in an omen draw
+- **THEN** its number sets the cycle duration normally; no item discard or healing occurs from the leftover position
+
+#### Scenario: Repent discard reduces burden score
+- **WHEN** the player discards a floor-acquired item via Repent (originally +2 at pickup)
+- **THEN** burden score decreases by 1; if this drop crosses a tier boundary, the Witnesses use the new tier on their next turn
+
+#### Scenario: Repent discard of per-encounter item reduces score
+- **WHEN** the player discards a per-encounter durability item via Repent
+- **THEN** burden score decreases by 1; this is the only path to reducing a per-encounter item's score contribution during the Judge fight
+
+#### Scenario: Repent heal is immediate, not Mending
+- **WHEN** Repent is played to the player side and triggers
+- **THEN** the player's HP increases by 5 immediately at the moment of resolution; no Mending StatusInstance is created; the heal is not subject to omen tick timing
+

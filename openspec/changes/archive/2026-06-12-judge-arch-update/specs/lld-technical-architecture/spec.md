@@ -1,46 +1,4 @@
-## Purpose
-Defines the technical architecture of Soul Protocol — layer structure, domain entities, resource schemas, core systems, and combat resolver interface.
-## Requirements
-### Requirement: [LLD-ARCH-001] Four-Layer Architecture
-The codebase SHALL follow a strict four-layer dependency rule. Inner layers never depend on outer layers. The rule is enforced by project structure and code review discipline (not by language access modifiers).
-
-```
-Presentation  →  Application  →  Domain  →  Infrastructure
-```
-
-| Layer | Godot Location | May depend on | Must not depend on |
-|---|---|---|---|
-| Infrastructure | `src/infrastructure/` + Autoloads | Nothing | Domain, Application, Presentation |
-| Domain | `src/domain/` | Infrastructure only | Application, Presentation, Godot scene tree |
-| Application | `src/application/` | Domain + Infrastructure | Presentation, Godot scene tree |
-| Presentation | `src/presentation/` (scenes) | All layers | Nothing upward |
-
-#### Scenario: Domain layer purity
-- **WHEN** any domain class is implemented
-- **THEN** it MUST NOT instantiate a Node or access the scene tree; it MUST extend RefCounted or Resource
-
----
-
-### Requirement: [LLD-ARCH-002] Headless Execution
-The game loop SHALL have zero dependency on rendering or input devices. Domain layer classes run in headless mode for simulation and testing.
-
-**Rendering layer behaviour:** All rendering nodes and UI scenes MUST check `GameConfig.HEADLESS` at `_ready()` and either instantiate normally or skip entirely (call `queue_free()`). They do not receive data, emit signals, or take actions when headless is true.
-
-**Domain layer constraint:** The domain layer (game loop, combat resolver, RNG, event log) MUST NOT check `GameConfig.HEADLESS`. These systems always run. Headless is a presentation concern, not a logic concern.
-
-#### Scenario: AI player runs headless
-- **WHEN** `GameConfig.HEADLESS` is true
-- **THEN** a complete run can execute via AIPlayerAgent without any scene tree or display
-
-#### Scenario: Rendering nodes self-disable
-- **WHEN** `GameConfig.HEADLESS` is true and a rendering node initialises
-- **THEN** that node calls `queue_free()` at `_ready()` and takes no further action — no data binding, no signal connections
-
-#### Scenario: Domain layer never checks headless
-- **WHEN** any domain class is implemented
-- **THEN** it MUST NOT contain any reference to `GameConfig.HEADLESS` — the flag is invisible below the presentation layer
-
----
+## MODIFIED Requirements
 
 ### Requirement: [LLD-ARCH-003] Action Command Pattern
 All game decisions SHALL be serialisable Dictionary commands. ActionInjector is the single interface through which all decisions (from UI, AI, or debug tools) enter the game loop.
@@ -68,104 +26,6 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 #### Scenario: Repent pending — only REPENT_DISCARD actions returned
 - **WHEN** `combat_state.pending_repent_slots` is `[1, 2]` (slots 1 and 2 are revealed)
 - **THEN** `get_legal_combat_actions()` returns exactly two `REPENT_DISCARD` actions with `slot_index: 1` and `slot_index: 2`; no other action types are included
-
----
-
-### Requirement: [LLD-ARCH-004] GameState Immutability
-GameState SHALL be treated as immutable by convention — methods return a new state rather than mutating in place. `GameState.clone()` is a first-class requirement.
-
-GameState SHALL also be fully serialisable to and from JSON at any point during a run. `GameState.to_json() -> Dictionary` and `GameState.from_json(data: Dictionary) -> GameState` are required methods. This enables mid-run state snapshots for AI simulation, targeted testing from a specific state, and state diffing before and after an action.
-
-#### Scenario: State branching for AI
-- **WHEN** the AIPlayerAgent evaluates multiple action options
-- **THEN** it can clone GameState and simulate each branch without side effects on the real game state
-
-#### Scenario: GameState round-trip serialisation
-- **WHEN** `GameState.to_json()` is called and the result is passed to `GameState.from_json()`
-- **THEN** the deserialised state is identical to the original — all fields, statuses, and run state are preserved
-
-#### Scenario: Mid-run snapshot
-- **WHEN** a specific combat scenario needs to be reproduced for targeted testing
-- **THEN** a JSON snapshot taken at any point in the run can be loaded to resume from that exact state
-
----
-
-### Requirement: [LLD-ARCH-005] Ability Pipeline (Chain of Responsibility)
-Vessel abilities and items SHALL both execute through the same AbilityPipeline using a Chain of Responsibility pattern. An ability/item is an ordered list of HandlerConfig entries. New vessel abilities are data files; new code is only required for genuinely novel effects.
-
-#### Scenario: New vessel ability, no new code
-- **WHEN** a new vessel ability is defined using only existing handlers
-- **THEN** the new ability is a .tres data file only — no AbilityHandler subclass is written
-
-#### Scenario: Handler startup validation
-- **WHEN** the game starts
-- **THEN** AbilityRegistry validates that every handler_id in every ability/item chain resolves to a known handler; unknown IDs are a fatal startup error
-
----
-
-### Requirement: [LLD-ARCH-006] Registry + Data Files Pattern
-VesselRegistry, ItemRegistry, and AbilityRegistry SHALL discover content via directory scan at startup. New content is added by adding files — no registration code required.
-
-#### Scenario: New vessel added
-- **WHEN** a new VesselData .tres file is placed in `data/vessels/`
-- **THEN** the game discovers and loads it at startup without any code change
-
----
-
-### Requirement: [LLD-ARCH-007] Autoloads
-The following SHALL be implemented as Godot Autoloads (global singletons):
-
-| Autoload | Layer | Role |
-|---|---|---|
-| GameConfig | Infrastructure | Environment flags (HEADLESS, DEBUG), global constants |
-| RNGService | Infrastructure | All randomness via named streams; randf() is never called directly |
-| EventLog | Infrastructure | Structured JSON event recorder; flushed at floor transitions |
-| PersistenceService | Infrastructure | All FileAccess abstracted here |
-| SignalBus | Infrastructure | Global signal bus for cross-cutting events; all layers may emit and connect |
-| ScreenManager | Application | Owns all scene transitions; reacts to SignalBus.phase_changed |
-| SaveManager | Application | Coordinates save/load; reacts to SignalBus.save_requested |
-
-**RunController is NOT an autoload.** It is an Application-layer node instantiated when a run begins and freed when it ends (see `LLD-ARCH-016`). ScreenManager and SaveManager connect to its signals via SignalBus, not directly.
-
-#### Scenario: No direct FileAccess
-- **WHEN** any domain or application class needs to read/write files
-- **THEN** it MUST call PersistenceService — never FileAccess directly
-
-#### Scenario: SignalBus accessible from domain layer
-- **WHEN** a domain class (e.g. CombatResolver) needs to emit a cross-cutting event
-- **THEN** it emits on SignalBus — this is legal because SignalBus is Infrastructure, which Domain may depend on
-
----
-
-### Requirement: [LLD-ARCH-008] RNG Streams
-All randomness SHALL flow through RNGService named streams. The global `randf()` function is NEVER called anywhere in the codebase — calling it directly is a bug.
-
-| Stream | Usage |
-|---|---|
-| NAVIGATION | Room sequence generation |
-| COMBAT | Combat RNG (hit rolls, damage variance, enemy intent selection) |
-| LOOT | Item drops, loot table rolls |
-| EVENTS | Non-combat event outcomes, Memory Fragment content |
-
-**Derived seed formula:** Each stream is a separate `RandomNumberGenerator` instance initialised with `base_seed + stream_index`. A single base seed fully determines a run; no need to store or display multiple seeds.
-
-**Seed I/O:** The run seed SHALL be injectable at run start — a caller can pass a specific seed to reproduce a prior run. The seed SHALL be automatically written to the EventLog on run end (death or completion) in the format: `{ "event": "run_end", "data": { "seed": <value>, "vessel": <id>, "floor_reached": <n>, "outcome": "death|completion" } }`.
-
-#### Scenario: Seeded reproducibility
-- **WHEN** a run is started with the same seed
-- **THEN** the same room sequence, combat outcomes, and loot drops are produced
-
-#### Scenario: Stream independence
-- **WHEN** a new RNG call is added to the COMBAT stream (e.g. a new proc mechanic)
-- **THEN** NAVIGATION, LOOT, and EVENTS stream sequences are unaffected for the same seed
-
-#### Scenario: No direct randf() calls
-- **WHEN** any class requires a random value
-- **THEN** it MUST call `RNGService.roll(<stream_name>)` — never `randf()` or `randi()` directly
-
-#### Scenario: Seed recorded on run end
-- **WHEN** a run ends by death or completion
-- **THEN** the EventLog records the seed, vessel ID, floor reached, and outcome before the final flush
 
 ---
 
@@ -211,210 +71,6 @@ SignalBus SHALL be an Infrastructure autoload. Domain code emits on SignalBus fo
 #### Scenario: item_broken and item_discarded are independent signals
 - **WHEN** an item breaks due to charge exhaustion (ActionInjector) and separately a Repent discard occurs (CombatResolver) in the same combat
 - **THEN** `item_broken` is emitted for the charge exhaustion; `item_discarded` is emitted for the Repent discard; no handler conflates the two
-
----
-
-### Requirement: [LLD-ARCH-010] Save Format and Migration
-Save data SHALL be stored as JSON for debuggability and forward compatibility. GameConfig.SAVE_VERSION is written to every save. Version mismatch on load triggers a migration path.
-
-#### Scenario: Save version migration
-- **WHEN** a save file with an older SAVE_VERSION is loaded
-- **THEN** PersistenceService applies the appropriate migration function before returning data
-
----
-
-### Requirement: [LLD-ARCH-011] Charge Management
-ChargeManager SHALL handle all replenishment events for both abilities and items. Replenishment event IDs are plain strings defined as constants in ReplenishEvents. Items break at zero if `breaks_at_zero: true`. Abilities never break.
-
-#### Scenario: Replenishment event fires
-- **WHEN** RunController fires a replenishment event (e.g. "floor_start")
-- **THEN** ChargeManager restores charges for all abilities/items whose replenish_triggers contains that event ID
-
-#### Scenario: Item breaks at zero
-- **WHEN** an item's remaining_charges reaches 0 and breaks_at_zero is true
-- **THEN** ActionInjector removes the ItemInstance from the slot and emits SignalBus.item_broken
-
----
-
-### Requirement: [LLD-ARCH-012] Handler Naming Convention
-Handler class names SHALL be PascalCase with the suffix `Handler`. Their registered `handler_id` SHALL be snake_case matching the class name without the suffix. See `LLD-ARCH-005` for the AbilityPipeline architecture that consumes these handlers.
-
-Example: `DealDamageHandler` → `"deal_damage"`, `ApplyStatusHandler` → `"apply_status"`
-
-#### Scenario: Naming consistency
-- **WHEN** a new handler is implemented
-- **THEN** its class name is PascalCase ending in `Handler` and its registered handler_id is the snake_case equivalent; startup validation (per `LLD-ARCH-005`) fails if the ID is unregistered
-
----
-
-### Requirement: [LLD-ARCH-013] Event Log
-The EventLog autoload SHALL record every meaningful game event throughout a run as structured, newline-delimited JSON (one event object per line). The log is the primary diagnostic tool for manual playtesting, AI simulation analysis, and bug reproduction.
-
-**Format:** Each event object MUST contain at minimum:
-```
-{ "tick": <int>, "category": <string>, "event": <string>, "data": { ... } }
-```
-
-**Event categories:**
-
-| Category | Examples |
-|---|---|
-| navigation | Room entered, door chosen, floor transition |
-| combat | Turn started, action taken, damage dealt/received, status applied, unit death |
-| items | Item acquired, item used, item broken |
-| companions | Companion summoned, companion departed |
-| rng | Every roll: stream, call index, raw value, resolved outcome (debug mode only) |
-| meta | Run started (seed, vessel), run ended (seed, vessel, floor, outcome) |
-
-**Buffer and flush policy:** The EventLog MUST use an in-memory buffer during play. The buffer SHALL be flushed to file at: (1) every floor transition, (2) every boss completion, (3) run end (death or completion). This bounds data loss on crash to the current floor's events. Continuous per-event file I/O is NOT permitted.
-
-**RNG roll logging:** Raw RNG roll events (category: `rng`) SHALL only be written when `GameConfig.DEBUG` is true. Outcome events (damage dealt, item acquired, room generated) are always logged regardless of debug state.
-
-**Log storage:** Logs are written via `PersistenceService` to `user://logs/`. Each run produces one log file named by seed and timestamp (e.g. `run_<seed>_<timestamp>.jsonl`). The `user://logs/` directory is writable in all build configurations including exported builds.
-
-#### Scenario: Event written on damage dealt
-- **WHEN** a unit takes damage in combat
-- **THEN** an event with category `combat`, event `damage_dealt`, and data containing source, target, amount, and damage type is written to the in-memory buffer
-
-#### Scenario: Buffer flushed at floor transition
-- **WHEN** the player transitions between floors
-- **THEN** the in-memory event buffer is flushed to disk before the next floor begins
-
-#### Scenario: RNG rolls suppressed in release
-- **WHEN** `GameConfig.DEBUG` is false and a combat roll occurs
-- **THEN** the roll outcome (e.g. damage dealt) is logged but the raw roll value and stream index are not
-
-#### Scenario: Crash recovery via seed
-- **WHEN** a crash occurs mid-floor and the log is partially flushed
-- **THEN** the seed recorded at run start (in the `meta` / `run_started` event) is recoverable from the log; the full run can be reproduced from that seed
-
----
-
-### Requirement: [LLD-ARCH-014] Debug Mode
-Debug mode SHALL be controlled by a single boolean constant `GameConfig.DEBUG`. All debug UI nodes and code paths MUST gate on this flag. Debug mode MUST NOT be controlled by commented-out code, conditional compilation, or separate export configurations.
-
-**Build strategy:** Debug UI and tooling are compiled into every build but gated by `GameConfig.DEBUG`. No separate debug build is required or maintained. The build under test is always the release build with the flag set.
-
-**Debug node lifecycle:** All debug UI nodes MUST check `GameConfig.DEBUG` at `_ready()` and call `queue_free()` if false. Debug code paths in game logic are gated with `if GameConfig.DEBUG`.
-
-**Per-system debug features** (added as each system is built):
-
-| System | Debug Features |
-|---|---|
-| Core / RNG | Seed display and override input, RNG stream call count monitor |
-| Navigation | Room sequence override (specify next N room types manually), current floor visualiser |
-| Combat | Unit stat inspector, force-set HP on any unit, force specific enemy intent, freeze enemy AI, skip combat |
-| Items | Full item spawner, force specific loot drop, set full inventory loadout |
-| Companions | Toggle companion permadeath on/off, force revival scenario |
-| Meta-progression | Override Soul Codex state, grant/revoke vessel unlocks, selective progression reset |
-
-#### Scenario: Debug node self-destructs in release
-- **WHEN** `GameConfig.DEBUG` is false and a debug UI node initialises
-- **THEN** the node calls `queue_free()` at `_ready()` and is never visible or active
-
-#### Scenario: Single flag controls all debug behaviour
-- **WHEN** `GameConfig.DEBUG` is set to false for export
-- **THEN** all debug overlays, inspectors, and code paths are inactive; no separate build step is required
-
-#### Scenario: RNG stream monitor visible in debug
-- **WHEN** `GameConfig.DEBUG` is true
-- **THEN** a live readout shows the current call count for each RNG stream, making stream contamination (a roll on the wrong stream) immediately visible
-
----
-
-### Requirement: [LLD-ARCH-015] Unit Testing
-Soul Protocol SHALL use GdUnit4 v6.1.x as its unit testing framework. GdUnit4 is installed as a Godot plugin via the Asset Store. It supports headless command-line test runs and generates JUnit XML reports.
-
-**Compatible version:** GdUnit4 v6.1.x is the correct line for Godot 4.6.x. v6.0.x covers only Godot 4.5–4.5.1; v5.x covers Godot 4.3–4.4. Using an incompatible version is a bug.
-
-**What is unit tested** — pure logic systems with no scene dependency:
-
-| System | What to Test |
-|---|---|
-| RNG | Correct stream initialisation from seed; derived stream seeds produce expected values; no cross-stream contamination; same seed always produces same sequence |
-| Combat resolver | Damage calculations; legal action generation for a given state; action application produces correct state delta; edge cases (0 HP, full HP, empty inventory) |
-| Event log | Events written in correct format; buffer flushes at checkpoints; log complete on run end; JSON is valid and parseable |
-| GameState serialiser | Round-trip: serialise → deserialise produces identical state; state diff correct before and after a known action |
-| Action injector | All legal actions returned for a known state; illegal actions rejected; state advances correctly after a valid action |
-
-**What is NOT unit tested** (explicitly out of scope — covered by playtesting and manual review):
-- Scene composition and node hierarchy
-- UI layout, sizing, and visual correctness
-- Animation and audio
-- Input mapping and device handling
-- Game feel — pacing, difficulty, moment-to-moment experience
-
-**Test organisation:** Tests live in a top-level `tests/` directory. One test file per system under test: `tests/test_rng.gd`, `tests/test_combat_resolver.gd`, `tests/test_event_log.gd`, `tests/test_game_state.gd`, `tests/test_action_injector.gd`. The `tests/` directory is committed to version control.
-
-#### Scenario: Headless test run
-- **WHEN** GdUnit4 tests are run from the command line in headless mode
-- **THEN** all tests execute without a display and produce a JUnit XML report
-
-#### Scenario: RNG determinism test
-- **WHEN** the RNG system is initialised with a known seed
-- **THEN** the test asserts that the first N values from each stream match the pre-computed expected sequence
-
-#### Scenario: Combat resolver edge case — zero HP
-- **WHEN** the combat resolver applies damage that would reduce a unit to below 0 HP
-- **THEN** the unit's HP is clamped to 0 and a unit_death event is emitted — never negative HP
-
-#### Scenario: Illegal action rejection
-- **WHEN** `ActionInjector.submit_action()` is called with an action not in `get_legal_actions()`
-- **THEN** the game state is unchanged, an error is logged, and no exception is raised (per `LLD-ARCH-003`)
-
----
-
-### Requirement: [LLD-ARCH-016] RunController
-RunController SHALL be an Application-layer node (NOT an autoload) instantiated when a run begins and freed when it ends. It is the sole orchestrator of run phase transitions, replenishment events, and save triggers. It has no knowledge of rendering or UI — it communicates exclusively via SignalBus.
-
-**Run phases:**
-
-| Phase | Description |
-|---|---|
-| `NAVIGATION` | Player choosing between two doors |
-| `COMBAT` | Active combat encounter |
-| `LOOT_SELECTION` | Post-combat two-option loot pick |
-| `NON_COMBAT_EVENT` | Memory Fragment, Wandering Soul, Elite Gate |
-| `FLOOR_TRANSITION` | End-of-floor processing (HP restore, temporary companion departs) |
-| `RUN_END` | Terminal state — death or completion |
-
-**Replenishment events** fired to ChargeManager (see `LLD-ARCH-011`):
-
-| Event ID | When fired |
-|---|---|
-| `"encounter_start"` | On entering any room with an encounter (combat or non-combat) |
-| `"encounter_end"` | On leaving any encounter |
-| `"floor_start"` | At the beginning of each floor |
-| `"floor_end"` | At floor transition (after boss defeated, before HP restore) |
-
-**Save triggers** emitted on SignalBus (`save_requested(SaveType)`):
-
-| SaveType | When | Player-visible |
-|---|---|---|
-| `BACKGROUND` | Immediately after the player confirms a door choice | No — silent background save |
-| `CHECKPOINT` | After floor completion (boss defeated, before transition) | Yes — on next load, player sees resume/restart option |
-
-On reload with an existing `CHECKPOINT` save, the player is offered two options: **Resume** (load from checkpoint) or **Start Over** (discard run). Choosing Start Over clears the saved run state.
-
-#### Scenario: Phase transition fires signal
-- **WHEN** RunController transitions from NAVIGATION to COMBAT
-- **THEN** `SignalBus.phase_changed(COMBAT, NAVIGATION)` is emitted; ScreenManager reacts to switch scenes
-
-#### Scenario: Background save after door choice
-- **WHEN** the player confirms a door selection in NAVIGATION phase
-- **THEN** RunController emits `SignalBus.save_requested(BACKGROUND)` before advancing to the next phase; the save is invisible to the player
-
-#### Scenario: Checkpoint save after floor boss
-- **WHEN** the floor boss is defeated
-- **THEN** RunController emits `SignalBus.save_requested(CHECKPOINT)` before emitting the floor transition; the next load offers resume or start over
-
-#### Scenario: Replenishment on encounter start
-- **WHEN** RunController transitions to COMBAT or NON_COMBAT_EVENT
-- **THEN** ChargeManager receives the `"encounter_start"` replenishment event before the first player action
-
-#### Scenario: RunController freed at run end
-- **WHEN** the run reaches RUN_END phase
-- **THEN** RunController emits `SignalBus.phase_changed(RUN_END, <previous>)`, completes final EventLog flush, and queues itself for deletion; no RunController instance exists between runs
 
 ---
 
@@ -897,18 +553,17 @@ resolve_omen_cycle_start(game_state: GameState) -> GameState
       that already has an active `type_convert` StatusInstance, remove the existing one first —
       only one Type Convert may be active on a unit at a time. This replacement rule also
       applies in resolve_player_action and resolve_enemy_turns when status_apply is processed.
-      **Repent special handling:** if a played card has `card_id == "repent"` and its target
-      side is the player:
-        - Count the player's non-empty item slots (N).
-        - If N == 0: immediately heal the player 5 HP; continue processing remaining cards.
-        - If N == 1: set `combat_state.pending_repent_slots` to `[<that slot index>]`;
-          return the GameState immediately (step 5 processing stops; remaining cards are
-          not applied this cycle step — they apply after REPENT_DISCARD resolves).
-        - If N >= 2: randomly select 2 non-empty item slot indices via COMBAT stream;
-          set `combat_state.pending_repent_slots` to those two indices; return the GameState
-          immediately (same early-return as N == 1).
-      When `pending_repent_slots` is non-empty, `get_legal_combat_actions()` returns only
-      REPENT_DISCARD actions until the player resolves the choice (see LLD-ARCH-019).
+      **Repent card handling:** if a played card has card_id `"repent"` and was assigned to
+      the player side, apply the Repent effect:
+        - If player has 2 or more items: randomly select 2 slot indices from non-null inventory
+          slots via COMBAT stream; set combat_state.pending_repent_slots to those indices;
+          return the updated GameState immediately — omen cycle processing does not continue
+          until the player resolves the REPENT_DISCARD action.
+        - If player has exactly 1 item: set combat_state.pending_repent_slots to that slot's
+          index (single-element array); return immediately.
+        - If player has 0 items: heal player 5 HP directly (no discard); do NOT set
+          pending_repent_slots; continue omen cycle processing normally.
+      If Repent is on the Judge side: no effect; continue normally.
 
 assemble_omen_deck(sources: Array[String], game_state: GameState) -> GameState
     Builds OmenDeckState from all contributing sources (vessel, enemies, items, companions).
@@ -918,18 +573,12 @@ resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
     Removes the dead enemy's family card copy from draw_pile and discard_pile immediately.
     Checks for last-of-type; removes type card if so (per HLD-OMEN-006).
     Cards already drawn into OmenCycleState are NOT removed.
-    After omen card removal: reads `EnemyData.on_death_apply_to_player` for the dead enemy.
-    If non-empty, creates and applies a StatusInstance to the player:
-      - `status_id` and `string_param` are parsed from the colon-encoded string (e.g.
-        `"vulnerable:physical"` → status_id: "vulnerable", string_param: "physical").
-      - `remaining_ticks` is set to the current omen cycle's remaining ticks at the moment
-        of death resolution (guaranteed ≥ 1; see design.md open question re: ordering).
-      - `magnitude` is set to `EnemyData.on_death_apply_magnitude`.
-      - For magnitude-additive statuses (Burning, Poisoned, Bleed): if the player already
-        has an active instance, increment its magnitude rather than creating a new one.
-      - For max-wins statuses (Mending, Emboldened, Hardened, Vulnerable, Chilled, etc.):
-        if the player already has an active instance with equal or greater magnitude,
-        the new application is ignored.
+    After omen card removal, check EnemyData.on_death_apply_to_player for the dead enemy:
+      if non-empty: create a StatusInstance from the colon-encoded status ID with
+      remaining_ticks = current_cycle.timer_value (the current omen cycle's remaining ticks)
+      and magnitude = EnemyData.on_death_apply_magnitude; apply to the player using the same
+      magnitude-additive / max-wins rules as status_apply (see HLD-COMBAT-018, HLD-COMBAT-019).
+    After on-death status application, process on_death_summons (per existing spec).
 ```
 
 **Damage resolution order** (applied in this sequence for every hit):
@@ -944,11 +593,11 @@ resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
 8. Clamp to minimum 1
 
 #### Scenario: Legal actions always include Default Strike and Evade (no pending Repent)
-- **WHEN** the vessel has zero item charges remaining, no ability charges, and `pending_repent_slots` is `[]`
+- **WHEN** the vessel has zero item charges remaining and no ability charges and `pending_repent_slots` is empty
 - **THEN** `get_legal_combat_actions()` returns exactly two actions: Default Strike and Evade
 
 #### Scenario: is_stunned excludes Action bucket from legal actions
-- **WHEN** vessel_state.is_stunned is true at the start of the player's turn
+- **WHEN** vessel_state.is_stunned is true at the start of the player's turn and `pending_repent_slots` is empty
 - **THEN** `get_legal_combat_actions()` returns no Action bucket options; Support and Consumable options are still returned
 
 #### Scenario: Shocked enemy skips its turn
@@ -1027,57 +676,26 @@ resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState
 - **WHEN** the Burning omen card (status_magnitude: 5) fires on an enemy that already has Burning with magnitude 2
 - **THEN** CombatResolver increments the existing Burning StatusInstance's magnitude to 7; no new StatusInstance is created
 
-#### Scenario: Repent fires with 2+ items — pending_repent_slots set and step 5 pauses
-- **WHEN** the Repent card fires on the player side and the player has items in slots 0 and 2
-- **THEN** `combat_state.pending_repent_slots` is set to two randomly selected slot indices (e.g. `[0, 2]`); `resolve_omen_cycle_start` returns immediately without applying remaining cards; `get_legal_combat_actions()` returns only REPENT_DISCARD actions for those slot indices
+#### Scenario: Repent fires — player has 2 items — pending set and cycle paused
+- **WHEN** resolve_omen_cycle_start processes Repent on the player side and the player has items in slots 0 and 2
+- **THEN** 2 slot indices are randomly selected via COMBAT stream; `pending_repent_slots` is set to those indices; the method returns immediately; omen cycle processing does not continue
 
-#### Scenario: Repent fires with 0 items — immediate heal, no pause
-- **WHEN** the Repent card fires on the player side and the player has no items in any slot
-- **THEN** the player is healed 5 HP immediately; `pending_repent_slots` remains `[]`; omen cycle step 5 continues processing remaining cards normally
+#### Scenario: Repent fires — player has 0 items — heal only, no pending
+- **WHEN** resolve_omen_cycle_start processes Repent on the player side and the player has no items
+- **THEN** the player heals 5 HP immediately; `pending_repent_slots` remains `[]`; omen cycle processing continues normally
 
-#### Scenario: REPENT_DISCARD resolves — item removed, heal applied, burden decremented
-- **WHEN** the player submits a REPENT_DISCARD action with slot_index: 0 and `pending_repent_slots` is `[0, 2]`
-- **THEN** the item in slot 0 is removed from the player's inventory; the player is healed 5 HP; `game_state.item_burden_score` is decremented by 1; `SignalBus.item_discarded` is emitted with (item_id, 0); `combat_state.pending_repent_slots` is cleared to `[]`
+#### Scenario: REPENT_DISCARD resolves — item removed, heal applied, score decremented
+- **WHEN** the player submits `{ "type": "REPENT_DISCARD", "slot_index": 2 }` and slot 2 contains the Walking Staff
+- **THEN** Walking Staff is removed from slot 2; player heals 5 HP (clamped to max_hp); `item_burden_score` decrements by 1; `SignalBus.item_discarded("walking_staff", 2)` is emitted; `pending_repent_slots` is cleared to `[]`
 
-#### Scenario: resolve_enemy_death — Witness on-death status applied to player
-- **WHEN** Witness of Mercy is killed and `EnemyData.on_death_apply_to_player` is `"vulnerable:physical"` with current cycle remaining_ticks = 2
-- **THEN** a `vulnerable:physical` StatusInstance is created on the player with remaining_ticks = 2 (using max-wins rule against any existing Vulnerable)
+#### Scenario: resolve_enemy_death — on_death_apply_to_player — Witness of Vengeance
+- **WHEN** the Witness of Vengeance (`on_death_apply_to_player: "frenzied"`, `on_death_apply_magnitude: 0`) is killed and the current cycle has 1 tick remaining
+- **THEN** a Frenzied StatusInstance is applied to the player with `remaining_ticks: 1`; omen card removal proceeds normally
 
-#### Scenario: resolve_enemy_death — Plague Rat on-death Poisoned applied to player
-- **WHEN** Plague Rat is killed and `EnemyData.on_death_apply_to_player` is `"poisoned"` with `on_death_apply_magnitude` = 2 and the player has no active Poisoned
-- **THEN** a Poisoned StatusInstance with magnitude 2 and remaining_ticks = current cycle remaining ticks is created on the player
+#### Scenario: resolve_enemy_death — on_death_apply_to_player — Plague Rat first death
+- **WHEN** the first Plague Rat dies (`on_death_apply_to_player: "poisoned"`, `on_death_apply_magnitude: 2`) and the player has no active Poisoned
+- **THEN** a new Poisoned StatusInstance is applied to the player with magnitude: 2 and remaining_ticks = current cycle remaining ticks
 
-#### Scenario: resolve_enemy_turns step 7d — IntentWeight handlers executed after status_apply
-- **WHEN** a Witness enemy's selected IntentWeight has `handlers: [{ "handler_id": "apply_mending_by_burden_tier" }]` and `game_state.item_burden_score` is 10 (Medium tier)
-- **THEN** after step 7c (status_apply), AbilityPipeline executes apply_mending_by_burden_tier; the handler reads `item_burden_score`, determines Medium tier, and applies Mending magnitude 3 to The Judge using max-wins rules
-
-### Requirement: [LLD-ARCH-020] AIPlayerAgent
-AIPlayerAgent SHALL be a `RefCounted` subclass in `src/application/`. It implements the Random strategy: at each decision point, it calls `ActionInjector.get_legal_actions()` and selects uniformly at random using a dedicated local `RandomNumberGenerator` seeded independently (NOT from RNGService — AI decisions must not contaminate game RNG streams).
-
-**Interface:**
-
-```
-play_turn(game_state: GameState) -> void
-    Selects one legal action uniformly at random and submits it via ActionInjector.
-
-run_to_completion(seed: int, vessel_id: String) -> RunResult
-    Starts a new run with the given seed and vessel, plays all decisions randomly
-    until RUN_END phase, returns a RunResult.
-```
-
-**RunResult fields:** `seed: int`, `vessel_id: String`, `floors_completed: int`, `outcome: String` (`"death"` | `"completion"`), `turn_count: int`
-
-The Random agent is the primary integration test for the full headless loop. It MUST be buildable as soon as ActionInjector and CombatResolver exist, before any content is complete.
-
-#### Scenario: Random agent uses separate RNG
-- **WHEN** AIPlayerAgent selects a random action
-- **THEN** it uses its own local RandomNumberGenerator instance — never RNGService — so AI decisions do not advance any game RNG stream
-
-#### Scenario: Random agent completes a run
-- **WHEN** `run_to_completion(seed, "pilgrim")` is called with GameConfig.HEADLESS true
-- **THEN** the run executes without rendering until RUN_END phase and returns a RunResult with outcome set
-
-#### Scenario: Random agent as integration test
-- **WHEN** a new seed is run twice with the Random agent
-- **THEN** both runs produce identical RunResult values — the same turns, same loot, same outcome — confirming full determinism
-
+#### Scenario: IntentWeight handlers executed after status_apply
+- **WHEN** a Witness's `testify_mercy` intent resolves (status_apply: "", handlers: [apply_mending_by_burden_tier])
+- **THEN** CombatResolver first processes status_apply (no-op since empty); then executes the handler chain; the handler reads `game_state.item_burden_score`, determines the tier, and applies Mending at the appropriate magnitude to The Judge
