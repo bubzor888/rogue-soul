@@ -1,79 +1,4 @@
-## Purpose
-Defines all items available in the game: their categories, durability rules, damage baselines, floor-specific drop pools, and starting loadouts per vessel.
-## Requirements
-### Requirement: [LLD-ITEMS-001] Item Categories
-> Canonical category rules defined in `HLD-ITEMS-004`. This requirement provides Floor 3 context and scenarios.
-
-Items SHALL belong to one of three functional categories determining their action bucket:
-
-| Category | Action bucket | Limiting factor |
-|---|---|---|
-| Attack (Durability) | Attack — occupies the attack action | Charge count; breaks at zero |
-| Support (Durability) | Support — free action, does not consume attack | Charge count; breaks at zero |
-| Consumable | Consumable — free action, does not consume attack | Single use (max_charges: 1, breaks_at_zero: true) |
-
-#### Scenario: Support item does not consume attack
-- **WHEN** a player uses a Support item on their turn
-- **THEN** they can still use an Attack item or ability in the same turn
-
----
-
-### Requirement: [LLD-ITEMS-002] Durability Decrement
-> Canonical durability rules defined in `HLD-ITEMS-005`. This requirement provides Floor 3 context and scenarios.
-
-Durability items SHALL decrement charges according to their category:
-
-- **Attack (Durability)**: loses 1 charge each time it is used in an attack action.
-- **Support (Durability)**: loses 1 charge per encounter (once on room entry, regardless of turns).
-
-Both break at zero charges if `breaks_at_zero: true`.
-
-#### Scenario: Attack item per-use decrement
-- **WHEN** a weapon with 6 charges is used 3 times across 2 combats
-- **THEN** it has 3 charges remaining, regardless of how many combats occurred
-
-#### Scenario: Support item per-encounter decrement
-- **WHEN** a support durability item with 3 charges is carried through 3 rooms
-- **THEN** it has 0 charges remaining and breaks, regardless of whether it was activated in those rooms
-
----
-
-### Requirement: [LLD-ITEMS-003] Damage Baseline
-All item damage values SHALL be set relative to the following reference:
-
-| Source | Damage per hit |
-|---|---|
-| Throw Rock (default strike) | 3 |
-| Walking Staff (Pilgrim starting weapon) | 6 |
-| Normal drop weapons | 7 |
-| Elite drop weapons | 9 |
-| Burst weapons (Cracked Cudgel / Iron Maul) | 9 / 10 |
-| AoE weapons (Rope Flail / Spiked Chain) | 4 / 6 per target |
-
-#### Scenario: Normal drop vs starting weapon
-- **WHEN** a player picks up a normal drop weapon
-- **THEN** it MUST deal more damage per hit than the Walking Staff (7 > 6)
-
----
-
-### Requirement: [LLD-ITEMS-004] Floor 3 Starting Items — The Pilgrim
-The Pilgrim SHALL start every run with these three items (defined per `LLD-VESSELS-001`):
-
-**Walking Staff** — Attack (Durability), Physical, damage: 6, charges: 6. Effect chain: `deal_damage { base_damage: 6, damage_type: physical }`.
-
-**Spoiled Potion** — Consumable. Effect chain: `apply_status { status_id: "poisoned" }`. Applies Poisoned (see `HLD-COMBAT-006` for escalating damage mechanic; starting value X = 2).
-
-**Worn Map** — Support (Durability), charges: 3, breaks_at_zero: true. Decrements 1 charge per encounter. Break effect: forces the next room to be a temporary companion encounter (Memory Fragment). Removed from inventory after triggering. Implements the encounter-countdown item system (see `HLD-ITEMS-003`).
-
-#### Scenario: Walking Staff damage
-- **WHEN** the Pilgrim uses the Walking Staff against an enemy
-- **THEN** the enemy takes 6 physical damage (unmodified)
-
-#### Scenario: Worn Map trigger
-- **WHEN** the Worn Map's charges reach 0 (after 3 encounters)
-- **THEN** the next room is replaced with a temporary companion encounter and the Worn Map is removed from inventory
-
----
+## MODIFIED Requirements
 
 ### Requirement: [LLD-ITEMS-005] Floor 3 Durability Drop Pool — Normal Tier
 The following durability items SHALL be in the normal drop pool for Floor 3:
@@ -95,6 +20,10 @@ The following durability items SHALL be in the normal drop pool for Floor 3:
 #### Scenario: Ember Shard vs Burning enemy
 - **WHEN** the player uses Ember Shard against an enemy with the Burning status
 - **THEN** the enemy takes 7 × 1.5 = ~11 fire damage (rounded per HLD-COMBAT-007)
+
+#### Scenario: Battered Sword charge count
+- **WHEN** the Hedge Knight's starting Battered Sword appears in the normal drop pool
+- **THEN** it has 8 charges (matching the Hedge Knight starting item definition in `LLD-ITEMS-010`)
 
 ---
 
@@ -148,6 +77,8 @@ The following consumables SHALL be in the normal drop pool for Floor 3:
 - **WHEN** a player uses Frost Shard on an enemy
 - **THEN** the enemy gains Chilled (damage reduction effect per `HLD-COMBAT-006`); no Vulnerable (Ice) is applied
 
+---
+
 ### Requirement: [LLD-ITEMS-008] Floor 3 Consumable Drop Pool — Elite Tier
 The following consumables SHALL be in the elite drop pool for Floor 3:
 
@@ -164,33 +95,6 @@ The following consumables SHALL be in the elite drop pool for Floor 3:
 #### Scenario: Fulminating Powder stun value
 - **WHEN** Fulminating Powder is applied and the timer card drawn is 1 (shortest)
 - **THEN** the stun occurs quickly — low timer cards are more valuable when Shocked is active (see HLD-COMBAT-006)
-
----
-
-### Requirement: [LLD-ITEMS-009] Starting Items — The Drifter
-The Drifter SHALL start every run with these three items (defined per `LLD-VESSELS-002`):
-
-**Pocket of Sand** — Consumable, single use. Effect: Escape the current combat immediately with no rewards. Cannot be used in elite or boss encounters.
-
-**Loaf of Bread** — Consumable, single use, floor-bound (removed at floor transition if unused; see `HLD-ITEMS-002`). Effect: Restores HP to the vessel. `[OPEN·MVP3]` heal amount to be set during playtesting relative to typical incoming damage per encounter.
-
-**Lucky Paw** — Support (Durability), charges: 2, breaks_at_zero: true. Decrements 1 charge per encounter (per `LLD-ITEMS-002`). Effect: At the start of each combat while charges remain, applies the **Evasive** buff — a `[OPEN·MVP3]` % chance to dodge incoming physical attacks for that combat. Does not apply to elemental or magical damage types.
-
-#### Scenario: Pocket of Sand — escape
-- **WHEN** the player uses Pocket of Sand in a standard combat
-- **THEN** the combat ends immediately; no post-combat rewards are awarded and the item is consumed
-
-#### Scenario: Pocket of Sand — boss restriction
-- **WHEN** the player attempts to use Pocket of Sand in an elite or boss encounter
-- **THEN** the item cannot be activated
-
-#### Scenario: Loaf of Bread — floor-bound
-- **WHEN** the Drifter transitions from floor 2 to floor 3 with an unused Loaf of Bread
-- **THEN** the Loaf of Bread is removed from inventory
-
-#### Scenario: Lucky Paw — evasion applies at combat start
-- **WHEN** a combat begins and the Lucky Paw has at least 1 charge remaining
-- **THEN** the Evasive buff is applied before the first action; a physical attack has a chance to be dodged
 
 ---
 
@@ -233,4 +137,3 @@ The item score table in `LLD-IR-011` is used by the Wandering Soul trade generat
 #### Scenario: Score table used for trade generation
 - **WHEN** the Wandering Soul system generates an item-for-item trade
 - **THEN** it reads item scores from `LLD-IR-011` and applies the tolerance formula in `LLD-IR-010`
-

@@ -25,10 +25,10 @@ The three categories are:
 ### Requirement: [HLD-MF-003] Category A — Fair Trade
 Category A SHALL present the player with a fully-revealed fair trade and the option to walk away. Both options are disclosed before the player commits.
 
-**Option 1 — Take the deal:** Pay the cost, receive the reward. Cost and reward are at rough tier parity.
+**Option 1 — Take the deal:** Pay the cost, receive the reward. Cost and reward are within the score tolerance window (see `LLD-IR-010` and `HLD-ITEMS-009`).
 **Option 2 — Walk away:** No cost, no reward.
 
-Valid cost/reward types (any combination): HP (at fair value), a main item (same or adjacent tier), a consumable (same or adjacent tier). All costs and rewards for a given scenario are fixed — the same scenario always presents the same trade.
+Valid cost/reward types (any combination): HP (at fair value), a main item (within score tolerance), a consumable (within score tolerance). All costs and rewards for a given scenario are fixed — the same scenario always presents the same trade.
 
 #### Scenario: Fair trade accepted
 - **WHEN** the player chooses Option 1 in a Category A fragment
@@ -68,7 +68,7 @@ Companion Encounter fragments may also hint at locked vessels — surfacing memo
 ### Requirement: [HLD-MF-005] Category C — Unfair Trade
 Category C SHALL present two options, both of which cost something. Walking away is NOT an option — the fragment has already taken hold. The player must choose between a bad deal and cutting their losses.
 
-**Option 1 — Take the bad deal:** Receive something, but pay more than it is worth by the tier system's standards. The reward is real; the price is deliberately above fair value.
+**Option 1 — Take the bad deal:** Receive something, but pay significantly more than it is worth by the scoring system's standards. The reward is real; the price is deliberately above fair value. Option 1's cost SHALL exceed the reward's score by at least 50% above the fair tolerance window (see `LLD-IR-010`).
 **Option 2 — Cut your losses:** Lose something outright, receive nothing.
 
 The choice MUST never be obvious. Option 2 must be genuinely tempting — if Option 1's cost exceeds what Option 2 takes, cutting losses is the correct play.

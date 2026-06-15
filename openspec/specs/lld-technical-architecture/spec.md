@@ -581,6 +581,7 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `action_bucket` | String | `"attack"` \| `"support"` \| `"consumable"` \| `"passive"` |
 | `max_charges` | int | 0 = unlimited (passive, default strike) |
 | `breaks_at_zero` | bool | true for items; false for vessel abilities |
+| `score` | int | Precomputed item score from LLD-IR-011 (Durability or Consumable scale as applicable); 0 for vessel abilities, which are not traded. Set by the designer when authoring the `.tres` file using the LLD-IR formulas as a worksheet; never derived at runtime. |
 | `replenish_triggers` | Array[String] | Event IDs from ReplenishEvents constants |
 | `handlers` | Array[HandlerConfig] | Ordered chain; executed left to right |
 
@@ -674,6 +675,14 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 #### Scenario: Item uses AbilityData schema
 - **WHEN** the Walking Staff item is defined as a `.tres` file
 - **THEN** it uses AbilityData with `action_bucket: "attack"`, `breaks_at_zero: true`, `max_charges: 6`, and one HandlerConfig entry
+
+#### Scenario: Item .tres file carries precomputed score
+- **WHEN** an item AbilityData `.tres` file is loaded by ItemRegistry at startup
+- **THEN** the `score` field contains the item's precomputed score from LLD-IR-011; the engine never derives this value at runtime
+
+#### Scenario: Vessel ability score is zero
+- **WHEN** a vessel ability `.tres` file (e.g. Pilgrim's Insight ability) is loaded
+- **THEN** its `score` field is 0; vessel abilities are never traded and carry no score
 
 #### Scenario: OmenCardData tag filter — undead only
 - **WHEN** the Grave Knit omen card (requires_tag: "undead") is applied to a side with one Skeleton and one Plague Rat
@@ -1129,4 +1138,81 @@ The Random agent is the primary integration test for the full headless loop. It 
 #### Scenario: Random agent as integration test
 - **WHEN** a new seed is run twice with the Random agent
 - **THEN** both runs produce identical RunResult values — the same turns, same loot, same outcome — confirming full determinism
+
+---
+
+### Requirement: [LLD-ARCH-021] TradeGenerator
+TradeGenerator SHALL be a `RefCounted` subclass in `src/application/`. It is the sole system responsible for constructing trade offer arrays for Wandering Soul and Memory Fragment Category A and C encounters. It reads item pools from ItemRegistry, enforces the same-scale pairing rule (see `HLD-ITEMS-006`), applies the score tolerance formula (see `LLD-IR-010`), and resolves HP values via the HP conversion bucket tables (see `LLD-IR-009`). It uses the LOOT RNG stream (see `LLD-ARCH-008`) for all randomness. It does not modify GameState directly — it returns offer arrays that RunController stores for the encounter handler.
+
+**Interface:**
+
+```
+generate_wandering_soul_offers(game_state: GameState) -> Array[Dictionary]
+    Returns 2–3 trade offer Dictionaries for a Wandering Soul encounter.
+    Always includes at least one HP-for-item offer (see HLD-WS-003).
+    Item-for-item offers pair items from the same scoring scale within the ±20%
+    tolerance window (see LLD-IR-010). HP amounts are resolved from LLD-IR-009 buckets.
+    Uses LOOT stream for all item selection rolls.
+
+generate_category_a_offer(game_state: GameState) -> Dictionary
+    Returns one fair trade offer Dictionary for a Memory Fragment Category A encounter.
+    Cost and reward are within the ±20% score tolerance window (see LLD-IR-010).
+    Both sides are from the same scoring scale.
+
+generate_category_c_offers(game_state: GameState) -> Array[Dictionary]
+    Returns exactly two offer Dictionaries for a Memory Fragment Category C encounter.
+    Option 1's cost exceeds the reward score by at least 50% above the fair tolerance
+    window (see LLD-IR-010 and HLD-MF-005).
+    Option 2 is a straight loss — cost with no reward.
+    Uses LOOT stream for item selection.
+
+is_fair_trade(score_a: int, score_b: int) -> bool
+    Returns true when |score_a - score_b| ≤ 0.20 × max(score_a, score_b).
+    Pure utility — no RNG, no registry access.
+
+hp_for_score(score: int, scale: String) -> int
+    Returns the HP bucket value for the given item score on the given scale
+    ("durability" or "consumable"). Reads from LLD-IR-009 bucket tables.
+    Returns 0 if the scale is unrecognised or the HP amounts are not yet set ([OPEN·MVP2]).
+```
+
+**TradeOffer Dictionary format** (all offers use this shape for GameState serialisability):
+
+```
+{
+    "offer_type": String,      # "item_for_item" | "item_for_hp" | "hp_for_item" | "consumable_for_item" | "loss_only"
+    "give_item_id": String,    # ability_id of the item the player gives up; "" if HP cost
+    "give_hp": int,            # HP the player pays; 0 if item cost
+    "receive_item_id": String, # ability_id of the item the player receives; "" if HP reward
+    "receive_hp": int,         # HP the player receives; 0 if item reward
+}
+```
+
+#### Scenario: Wandering Soul always includes HP-for-item offer
+- **WHEN** `generate_wandering_soul_offers` is called
+- **THEN** at least one returned offer has `offer_type: "hp_for_item"`; this offer is never absent regardless of inventory state
+
+#### Scenario: Item-for-item pair from same scale within tolerance
+- **WHEN** `generate_wandering_soul_offers` generates an item-for-item trade
+- **THEN** both `give_item_id` and `receive_item_id` resolve to items on the same scoring scale (both Durability or both Consumable), and `is_fair_trade(score_give, score_receive)` returns true
+
+#### Scenario: is_fair_trade boundary — within tolerance
+- **WHEN** `is_fair_trade(40, 49)` is called (gap = 9, 9/49 ≈ 18%)
+- **THEN** returns true
+
+#### Scenario: is_fair_trade boundary — outside tolerance
+- **WHEN** `is_fair_trade(20, 49)` is called (gap = 29, 29/49 ≈ 59%)
+- **THEN** returns false
+
+#### Scenario: Category C Option 1 cost exceeds tolerance threshold
+- **WHEN** `generate_category_c_offers` produces an Option 1 offer with reward score R
+- **THEN** the cost score C satisfies C ≥ R × 1.70 (50% above the ±20% fair window upper bound of R × 1.20)
+
+#### Scenario: TradeGenerator uses LOOT stream only
+- **WHEN** `generate_wandering_soul_offers` or any generate method rolls for item selection
+- **THEN** all random calls use the LOOT RNG stream; no other stream is consumed
+
+#### Scenario: hp_for_score returns zero for OPEN bucket
+- **WHEN** `hp_for_score` is called before HP bucket amounts are set ([OPEN·MVP2])
+- **THEN** it returns 0; the caller substitutes a placeholder and the offer is skipped or deferred
 
