@@ -1,12 +1,4 @@
-## Purpose
-Floor-specific data for the Memory Fragment system — category weights and scenario/companion pools per floor. System mechanics are defined in `hld-memory-fragments`.
-## Requirements
-### Requirement: [LLD-MF-007] Floor 3 Category Weights
-The Memory Fragment category draw on Floor 3 SHALL use the following weights: **40% Category A / 40% Companion Encounter / 20% Category C**. See `HLD-MF-002` for the draw mechanic.
-
-#### Scenario: Category C is least common
-- **WHEN** Memory Fragment categories are drawn across multiple runs on Floor 3
-- **THEN** Category C appears roughly half as often as Category A or Companion Encounter
+## MODIFIED Requirements
 
 ### Requirement: [LLD-MF-008] Category A Trade Generation (Floor 3)
 Category A (Fair Trade) encounters on Floor 3 SHALL generate their trade offer at runtime using item ranking scores from `LLD-IR-011`. No hand-authored scenario pool is required. The generator SHALL produce a trade pair that satisfies the ±20% fair tolerance defined in `LLD-IR-010`.
@@ -31,29 +23,6 @@ See `HLD-MF-003` for the category mechanic (both options revealed, walk away ava
 #### Scenario: No valid pairing available
 - **WHEN** the generator cannot find a same-scale pair within tolerance (e.g. player has only one item and it has no pool counterpart in range)
 - **THEN** the generator falls back to an item-for-HP trade using the player's highest-scored item
-
----
-
-### Requirement: [LLD-MF-009] Companion Encounter Pool (Floor 3)
-The Companion Encounter pool for Floor 3 contains three temporary companions. When a companion encounter fires on Floor 3, one companion is drawn at random from this pool using the NAVIGATION RNG stream and offered to the player. See `HLD-MF-004` for the mandatory acceptance rule and one-per-floor limit.
-
-All three companions are defined in `lld-companions` (`LLD-COMP-001`, `LLD-COMP-002`, `LLD-COMP-003`).
-
-| Companion | Key mechanic | Departs when |
-|---|---|---|
-| The Raven | Grants a one-use active ability: mark one enemy for death at the next omen shift | Ability is used (departs immediately on use) |
-| The Shadow | Drains 2 HP/turn from a random enemy; switches target on kill | Cumulative drain total reaches 20 HP |
-| The Life Mote | Intercepts vessel death once; revives at 5 HP | Revive triggers |
-
-**Flavour text introductions** (shown to player on offer; no mechanics disclosed):
-
-- **The Raven**: *"A dark shape lands on your shoulder. It watches the road ahead with sharp, knowing eyes — waiting for you to point it somewhere."*
-- **The Shadow**: *"Something cold and weightless settles beside you. You cannot see it clearly, but you sense it is hungry."*
-- **The Life Mote**: *"A soft light drifts close, hovering just at the edge of sight. It asks nothing. It simply stays."*
-
-#### Scenario: Companion pool draw
-- **WHEN** a companion encounter fires on Floor 3
-- **THEN** one companion is selected at random from the three pool entries using the NAVIGATION RNG stream; that companion is offered to the player
 
 ---
 
@@ -83,4 +52,3 @@ See `HLD-MF-005` for the category mechanic (no walk-away, both options cost some
 #### Scenario: Player has only one item
 - **WHEN** the generator runs and the player has exactly one item in inventory
 - **THEN** Option 1 uses that item as the cost; Option 2 uses an HP loss as the cut-your-losses cost
-

@@ -138,6 +138,28 @@ Wandering Soul rooms SHALL present a trading opportunity — a lost spirit that 
 - **WHEN** the player enters a Wandering Soul room
 - **THEN** no combat occurs; the player is presented with trade options from the floor's item pools
 
+### Requirement: [LLD-FLOOR-ELITE-001] Elite Combat Definition
+An elite combat encounter on Floor 3 SHALL use the same combat loop as a standard encounter — identical damage resolution, omen cycle, status effects, and intent selection rules. The two distinguishing properties are:
+
+1. **Enemy pool**: enemies are drawn exclusively from the elite enemy pool defined in `lld-enemies` (Witnesses of Mending, Emboldened, and Strength; the Bear; the Lightning Elemental). Normal enemies do not appear in elite encounters.
+2. **Loot tier**: post-combat item drops are drawn from the elite drop pools (`LLD-ITEMS-006` for durability, `LLD-ITEMS-008` for consumables), not the normal drop pools.
+
+On-death status effects from Witness enemies (`EnemyData.on_death_apply_to_player`) are applied by the standard `resolve_enemy_death` path defined in `LLD-ARCH-019`. No additional mechanics are required.
+
+#### Scenario: Elite combat uses standard combat loop
+- **WHEN** the player enters an elite combat encounter
+- **THEN** the combat proceeds identically to a standard encounter — same action types, same omen cycle, same damage resolution steps
+
+#### Scenario: Post-elite loot is from elite pools
+- **WHEN** the player wins an elite combat encounter
+- **THEN** the loot selection draws from the elite durability pool (LLD-ITEMS-006) and elite consumable pool (LLD-ITEMS-008), not the normal pools
+
+#### Scenario: Witness on-death effect applies via standard path
+- **WHEN** a Witness enemy is killed in an elite encounter
+- **THEN** its `on_death_apply_to_player` status is applied by `resolve_enemy_death` exactly as it would be in any other encounter type
+
+---
+
 ### Requirement: [LLD-FLOOR-BEATS-001] Beat 1 — Opening (Rooms 1–2)
 The first two rooms SHALL have no counter constraints applied. Any room type may appear behind either door. Full player agency at the start of the run.
 
@@ -184,7 +206,7 @@ Choosing the **standard combat** door: counts toward the floor's overall standar
 
 Choosing the **elite combat** door: triggers a guaranteed rest encounter at room 6 (see `LLD-FLOOR-BEATS-006`) — the only rest room on the floor.
 
-Full elite combat design in `lld-elite-gate`.
+Elite combat definition: see `LLD-FLOOR-ELITE-001`.
 
 #### Scenario: Elite Gate always at room 5
 - **WHEN** the player completes room 4
