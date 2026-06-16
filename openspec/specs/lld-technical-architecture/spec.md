@@ -518,8 +518,8 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 - **THEN** `get_legal_combat_actions()` never generates actions targeting a companion; companions are not valid action targets
 
 #### Scenario: item_burden_score initialized at run start
-- **WHEN** a Pilgrim run begins (Pilgrim has 1 starting item: Walking Staff)
-- **THEN** `game_state.item_burden_score` is initialized to 1 (1 per starting item per HLD-RUN-007)
+- **WHEN** a Pilgrim run begins (Pilgrim has 3 starting items: Walking Staff, Spoiled Potion, Worn Map — see `LLD-ITEMS-004`)
+- **THEN** `game_state.item_burden_score` is initialized to 3 (1 per starting item per HLD-RUN-007)
 
 #### Scenario: item_burden_score persists across floors
 - **WHEN** the player transitions from Floor 3 to the next floor
