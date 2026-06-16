@@ -107,12 +107,15 @@ omen, status, loot, navigation, and burden systems functional. No UI. (`SCOPE-00
 
 ## Phase 0 — Scaffolding & Conventions
 
-### T0.1 — Repository structure & layer skeleton
+### T0.1 — Repository structure & layer skeleton  ✅ **Done**
 Create the `src/{infrastructure,domain,application,presentation}` and `data/*` and `tests/`
 directory tree above. Add a short `src/README.md` restating the four-layer rule and `@Spec`
 convention so it's discoverable in-tree.
 - **@Spec:** `LLD-ARCH-001`
 - **DoD:** directories exist; no logic yet; committed.
+- ✅ Layer tree (`src/{infrastructure,domain,application,presentation}`), `data/*` (vessels,
+  abilities, items, enemies, omen_cards, companions, floors), and `tests/` created (each with a
+  `.gitkeep`); `src/README.md` restates the four-layer rule and `@Spec` convention.
 
 ### T0.2 — Install & wire GdUnit4 v6.1.x  *(prerequisite; may need human action)*
 Install GdUnit4 v6.1.x as a Godot plugin (Asset Store / addon), enable it, and confirm a trivial
