@@ -145,23 +145,37 @@ Infrastructure autoload holding `HEADLESS`, `DEBUG`, `SAVE_VERSION`, and global 
 
 ## Phase 1 — Infrastructure Autoloads
 
-### T1.1 — `RNGService` (TDD)  ⭐ mandated test system
+### T1.1 — `RNGService` (TDD)  ⭐ mandated test system  ✅ **Done**
 Named-stream RNG: `NAVIGATION`, `COMBAT`, `LOOT`, `EVENTS`. Each stream is a `RandomNumberGenerator`
 seeded `base_seed + stream_index`. Public `roll(stream)` / helpers; seed injection at run start.
 Write `tests/test_rng.gd` first: determinism from seed, stream independence (no cross-contamination),
 pre-computed expected sequence.
 - **@Spec:** `LLD-ARCH-008`, `LLD-ARCH-015`
 - **DoD:** all RNG tests green; no direct `randf()` anywhere.
+- ✅ `src/infrastructure/rng_service.gd` (autoload `RNGService`, no `class_name`): `Stream` enum
+  (NAVIGATION/COMBAT/LOOT/EVENTS = indices 0–3), `seed_run(base_seed)`, `roll`/`roll_range`/
+  `randi_range`, plus `get_call_count` for the LLD-ARCH-014 debug monitor. `tests/test_rng.gd`
+  written first — 7 cases, all green: same-seed determinism, derived-seed formula (each stream matches
+  a reference `RandomNumberGenerator` seeded `base+index` — the "pre-computed expected sequence"),
+  no cross-stream contamination, different-seed divergence, `[0,1)` bound, deterministic bounded
+  `randi_range`, re-seed reset. No direct `randf()`/`randi()` outside RNGService (verified by grep).
 
-### T1.2 — `SignalBus` autoload
+### T1.2 — `SignalBus` autoload  ✅ **Done**
 Infrastructure global signal bus declaring the full MVP1 signal catalogue from `LLD-ARCH-009`
 (`phase_changed`, `save_requested`, `combat_started/ended`, `turn_started`, `action_resolved`,
 `damage_dealt`, `status_applied/cleared`, `unit_died`, `omen_drawn/applied`, `item_broken/
 discarded/acquired`, `room_entered`, `floor_transitioned`). Signals only — no logic.
 - **@Spec:** `LLD-ARCH-009`, `LLD-ARCH-007`
 - **DoD:** all listed signals declared with correct payload types.
+- ✅ `src/infrastructure/signal_bus.gd` (autoload `SignalBus`, no `class_name`): all 17 signals
+  declared. **Layer note:** Infrastructure may depend on nothing (`LLD-ARCH-001`), so domain-typed
+  payloads are declared with built-in base types to avoid importing Domain — enum payloads
+  (`RunPhase`/`SaveType` for `phase_changed`/`save_requested`) typed `int`; `combat_state` typed
+  `Resource` (CombatState's base). The emitting domain code passes the concrete types. `tests/
+  test_signal_bus.gd` pins every signal's name + arity and guards against undeclared drift (2 cases,
+  green).
 
-### T1.3 — `EventLog` autoload (TDD)  ⭐ mandated test system
+### T1.3 — `EventLog` autoload (TDD)  ⭐ mandated test system  ✅ **Done**
 Structured newline-delimited JSON recorder. Connects to `SignalBus` signals (domain never calls
 EventLog directly). In-memory buffer; flush at floor transition / boss completion / run end.
 Categories per `LLD-ARCH-013`. RNG-roll events only when `GameConfig.DEBUG`. Writes via
@@ -170,12 +184,31 @@ meta events with seed. Write `tests/test_event_log.gd` first.
 - **@Spec:** `LLD-ARCH-013`, `LLD-ARCH-008` (seed recording), `LLD-ARCH-015`
 - **DoD:** event format valid/parseable; buffer flush at checkpoints; debug-gated RNG logging; tests green.
 - **Dependency:** needs T1.4 (PersistenceService) for actual file writes — can stub then wire.
+- ✅ `src/infrastructure/event_log.gd` (autoload `EventLog`, listed after GameConfig/SignalBus/
+  PersistenceService since it depends on all three). `record()` emits `{tick, category, event, data}`;
+  `connect_to_bus()` wires all 15 recordable SignalBus signals → navigation/combat/items categories
+  (domain never calls EventLog directly); in-memory buffer; `flush()` appends newline-delimited JSON
+  via PersistenceService and clears; `floor_transitioned` auto-flushes; `start_run`/`end_run` record
+  `meta` events with seed (end flushes). RNG rolls gated via `debug_rng_logging` (defaults from
+  `GameConfig.DEBUG`). **Decision:** `tick` is a monotonic per-event counter for MVP1 (no game-clock
+  source yet). T1.4 done first, so PersistenceService is wired real (not stubbed). `tests/
+  test_event_log.gd` written first — 11 cases green (format, tick increment, parseable jsonl flush,
+  append-across-flushes, empty no-op, RNG gating both branches, run_started/run_end meta, SignalBus
+  wiring, floor-transition flush). No direct `FileAccess` (only PersistenceService).
 
-### T1.4 — `PersistenceService` autoload
+### T1.4 — `PersistenceService` autoload  ✅ **Done**
 Sole `FileAccess` abstraction. JSON read/write, `user://logs/` and save paths, `SAVE_VERSION`
 stamping, and a migration hook (`LLD-ARCH-010`). Migration table can start empty.
 - **@Spec:** `LLD-ARCH-007`, `LLD-ARCH-010`
 - **DoD:** read/write round-trips; version stamped; migration entry-point present.
+- ✅ `src/infrastructure/persistence_service.gd` (autoload `PersistenceService`, no `class_name`):
+  `read_json`/`write_json`, `write_text`/`append_text` (for EventLog `.jsonl`), versioned
+  `write_save` (stamps `GameConfig.SAVE_VERSION`) / `read_save` (runs migrations on older versions),
+  `register_migration` hook (table starts empty), `log_file_path(seed, ts)` per `LLD-ARCH-013`, and
+  auto parent-dir creation. Sole `FileAccess`/`DirAccess` user — verified by grep (no other `src/`
+  file touches them). `tests/test_persistence_service.gd` — 9 cases green (round-trip, JSON
+  int→float contract, missing-file→null, version stamping, no-mutation, current-version read,
+  migration upgrade, append accumulation, log-path format).
 
 ---
 

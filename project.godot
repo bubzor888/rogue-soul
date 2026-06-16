@@ -17,6 +17,10 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameConfig="*res://src/infrastructure/game_config.gd"
+RNGService="*res://src/infrastructure/rng_service.gd"
+SignalBus="*res://src/infrastructure/signal_bus.gd"
+PersistenceService="*res://src/infrastructure/persistence_service.gd"
+EventLog="*res://src/infrastructure/event_log.gd"
 
 [editor_plugins]
 
