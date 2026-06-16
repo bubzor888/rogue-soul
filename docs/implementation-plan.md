@@ -131,10 +131,15 @@ command in `tests/README.md`.
   `reports/report_<n>/results.xml`, git-ignored). Canonical headless command documented in
   `tests/README.md`. No manual editor step was needed — fully scripted.
 
-### T0.3 — `GameConfig` autoload
+### T0.3 — `GameConfig` autoload  ✅ **Done**
 Infrastructure autoload holding `HEADLESS`, `DEBUG`, `SAVE_VERSION`, and global constants. No logic.
 - **@Spec:** `LLD-ARCH-007`, `LLD-ARCH-002`, `LLD-ARCH-010`, `LLD-ARCH-014`
 - **DoD:** autoload registered; flags readable; defaults set (`HEADLESS=true` for MVP1 dev runs).
+- ✅ `src/infrastructure/game_config.gd` (`extends Node`, no `class_name` to avoid colliding with the
+  autoload global), registered in `project.godot` `[autoload]` as `GameConfig`. `HEADLESS=true`,
+  `DEBUG=false`, `SAVE_VERSION=1`. Flags are `const` (no logic; `DEBUG` is the single boolean constant
+  per `LLD-ARCH-014`). Verified by `tests/test_game_config.gd` (4 cases, green). `SAVE_VERSION` initialized
+  to `1` — no value was specified in the spec.
 
 ---
 
