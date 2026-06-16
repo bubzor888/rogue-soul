@@ -117,13 +117,19 @@ convention so it's discoverable in-tree.
   abilities, items, enemies, omen_cards, companions, floors), and `tests/` created (each with a
   `.gitkeep`); `src/README.md` restates the four-layer rule and `@Spec` convention.
 
-### T0.2 — Install & wire GdUnit4 v6.1.x  *(prerequisite; may need human action)*
+### T0.2 — Install & wire GdUnit4 v6.1.x  ✅ **Done**
 Install GdUnit4 v6.1.x as a Godot plugin (Asset Store / addon), enable it, and confirm a trivial
 headless test runs from the command line producing JUnit XML. Document the exact headless test
 command in `tests/README.md`.
 - **@Spec:** `LLD-ARCH-015`
 - **DoD:** `runtest` headless command green on an empty sample test; command documented.
 - **Note:** plugin install is a manual editor step — flag to the human if it can't be scripted.
+- ✅ GdUnit4 **v6.1.3** (latest 6.1.x, matches Godot 4.6.x) installed at `addons/gdUnit4/` and
+  enabled in `project.godot` `[editor_plugins]`. Godot binary:
+  `C:\Program Files\GoDot\Godot_v4.6.3-stable_win64.exe`. Global class cache built via
+  `--headless --import`. `tests/test_sample.gd` runs green headlessly (exit 0, JUnit XML at
+  `reports/report_<n>/results.xml`, git-ignored). Canonical headless command documented in
+  `tests/README.md`. No manual editor step was needed — fully scripted.
 
 ### T0.3 — `GameConfig` autoload
 Infrastructure autoload holding `HEADLESS`, `DEBUG`, `SAVE_VERSION`, and global constants. No logic.
