@@ -512,7 +512,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 **OmenDeckState fields:** `draw_pile: Array[Dictionary]`, `discard_pile: Array[Dictionary]`. Each entry is `{ "card_id": String, "timer_value": int }`. Timer values are assigned once when the deck is assembled at combat start (see `LLD-OMEN-MECH-009`) and do not change on reshuffle — the discard pile preserves the originally-assigned values.
 
-**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the timer card), `sides_assigned: bool`
+**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the leftover timer card; -1 = not yet assigned — derived only after `player_choice_index` and `random_assignment_index` are set, so read it only when `sides_assigned` is true), `sides_assigned: bool`
 
 #### Scenario: Two enemies are individually targetable
 - **WHEN** a combat contains two Skeletons

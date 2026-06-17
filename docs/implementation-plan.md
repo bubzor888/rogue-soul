@@ -243,8 +243,9 @@ identity; clone independence; field-level defaults (e.g. `is_evading` resets, `s
   (single serialisation path, guaranteed deep independence). `from_json` defensively `int()`-casts so
   both the in-memory Dictionary path and the JSON-**text** path (PersistenceService save files) are
   correct — the int→float issue flagged in T1.4. Shared static helper `src/domain/serde.gd` (`Serde`)
-  keeps (de)serialisation terse. **Decision:** `OmenCycleState.timer_index` defaults `-1` (spec gives
-  no default; chosen for consistency with the sibling `-1` indices). `tests/test_game_state.gd` written
+  keeps (de)serialisation terse. **Decision:** `OmenCycleState.timer_index` defaults `-1` (= not yet
+  assigned — it's the leftover index, derivable only after the player/random indices are set, so read it
+  only when `sides_assigned`; `LLD-ARCH-017` updated directly to record this). `tests/test_game_state.gd` written
   first — 8 cases green: in-memory round-trip identity, field fidelity, JSON-text int casting, null
   inventory slots preserved, clone independence (deep mutation isolation), null sub-resources, defaults,
   RunPhase enum. Domain purity verified by grep.
