@@ -214,15 +214,22 @@ stamping, and a migration hook (`LLD-ARCH-010`). Migration table can start empty
 
 ## Phase 2 — Domain Data Model
 
-### T2.1 — Data resource schemas (`LLD-ARCH-018`)
+### T2.1 — Data resource schemas (`LLD-ARCH-018`)  ✅ **Done**
 Define `Resource` subclasses with `@Spec` annotations for every content schema: `AbilityData`
 (shared by items), `HandlerConfig`, `VesselData`, `EnemyData`, `IntentWeight`, `IntentConditional`,
 `OmenCardData`, `CompanionData`. Every field JSON-serialisable. Include the colon-encoding
 convention note for parameterized statuses in `AbilityData`/`OmenCardData` doc comments.
 - **@Spec:** `LLD-ARCH-018`, `LLD-ARCH-006`
 - **DoD:** all schema classes compile; fields match the spec tables exactly.
+- ✅ All 8 schemas in `src/domain/` (each `class_name … extends Resource`, `@Spec`-annotated, all
+  fields `@export`): `handler_config`, `ability_data`, `vessel_data`, `enemy_data`, `intent_weight`,
+  `intent_conditional`, `omen_card_data`, `companion_data`. Fields match the `LLD-ARCH-018` tables
+  exactly, including non-zero defaults (`IntentWeight.hit_count=1`, `status_target="player"`).
+  Colon-encoding convention documented in `AbilityData`/`OmenCardData`/`IntentWeight` headers.
+  `tests/test_data_schemas.gd` — 10 cases green (defaults, nested typed arrays, is-Resource). Domain
+  purity verified by grep: no `Node`/`HEADLESS`/`FileAccess`/`SignalBus` references in `src/domain/`.
 
-### T2.2 — `GameState` + sub-Resources with serialisation (TDD)  ⭐ mandated test system
+### T2.2 — `GameState` + sub-Resources with serialisation (TDD)  ⭐ mandated test system  ✅ **Done**
 Implement `GameState` and all sub-Resources from `LLD-ARCH-017`: `VesselState`, `ItemInstance`,
 `AbilityState`, `StatusInstance`, `CompanionState`, `NavigationState`, `DoorData`, `CombatState`,
 `EnemyState`, `OmenDeckState`, `OmenCycleState`. Implement `clone()`, `to_json()`, `from_json()`.
@@ -230,6 +237,17 @@ Define the `RunPhase` enum. Write `tests/test_game_state.gd` first: round-trip s
 identity; clone independence; field-level defaults (e.g. `is_evading` resets, `string_param` "").
 - **@Spec:** `LLD-ARCH-017`, `LLD-ARCH-004`, `LLD-ARCH-015`
 - **DoD:** round-trip and clone tests green; all fields present with correct types/defaults.
+- ✅ `GameState` + all 11 sub-Resources in `src/domain/` (each `class_name … extends Resource`,
+  fields match `LLD-ARCH-017` exactly). `RunPhase` enum on `GameState`
+  (NAVIGATION..RUN_END). `to_json`/`from_json` on every type; **`clone()` = `from_json(to_json())`**
+  (single serialisation path, guaranteed deep independence). `from_json` defensively `int()`-casts so
+  both the in-memory Dictionary path and the JSON-**text** path (PersistenceService save files) are
+  correct — the int→float issue flagged in T1.4. Shared static helper `src/domain/serde.gd` (`Serde`)
+  keeps (de)serialisation terse. **Decision:** `OmenCycleState.timer_index` defaults `-1` (spec gives
+  no default; chosen for consistency with the sibling `-1` indices). `tests/test_game_state.gd` written
+  first — 8 cases green: in-memory round-trip identity, field fidelity, JSON-text int casting, null
+  inventory slots preserved, clone independence (deep mutation isolation), null sub-resources, defaults,
+  RunPhase enum. Domain purity verified by grep.
 
 ---
 
