@@ -438,7 +438,7 @@ decrement all; clear expired tick statuses) and `resolve_omen_cycle_start` shift
   a true per-tick Hardened budget) are needed, `StatusInstance` needs an extra field (small `LLD-ARCH-017`
   spec/schema change) — worth a deliberate decision before Floor-3 Chilled/Hardened content is tuned (T8.3).
 
-### T5.4 — Omen system: assembly, draw cycle, timers, reshuffle  🟡 **Partial — spec + foundation done; omen machinery remaining**
+### T5.4 — Omen system: assembly, draw cycle, timers, reshuffle  ✅ **Done**
 `assemble_omen_deck` (four sources, timer assignment via COMBAT per `LLD-OMEN-MECH-008/-009`, then
 passive handler pass that may set `read_the_road_active`); three-card draw cycle (player-choice +
 random + timer card per `HLD-OMEN-001`); deck reshuffle (`HLD-OMEN-003`); two-tier enemy
@@ -457,13 +457,32 @@ contribution & removal (`HLD-OMEN-006`); per-unit / tag-conditional application 
     the **omen-choice gating branch** in `get_legal_combat_actions` (6 actions = 3 cards × 2 sides;
     read_the_road priority; inactive once `sides_assigned`). `tests/test_combat_resolver.gd` +3 cases. Full
     suite 133/133.
-- ⏳ **Remaining (the bulk — substantial, clean fresh-session task against `LLD-ARCH-024` + `LLD-OMEN-*`):**
-  `assemble_omen_deck` (4 sources + 25/50/25 COMBAT timer distribution + shuffle + passive `peek_omen_deck`
-  pass); `resolve_omen_cycle_start` restructure (draw 3, record pending-Vulnerable, pause); `CHOOSE_OMEN`
-  resolution in `resolve_player_action` (sides/timer/deferred-Vulnerable/apply-2-cards w/ tag filter +
-  magnitude + handlers + type_convert + Repent); reshuffle (`HLD-OMEN-003`); two-tier enemy
-  contribution/removal (`HLD-OMEN-006`, `resolve_enemy_death` family-card removal + Tier-1 injection);
-  per-unit/tag-conditional application (`HLD-OMEN-005`).
+- ✅ **Machinery (code)** — all in `CombatResolver` (Domain, no autoload access; verified by grep):
+  - `assemble_omen_deck(source_card_ids, game_state)` — merges the passed-in vessel/item/floor/companion
+    card ids with the **two-tier enemy contributions** (`HLD-OMEN-006`: Tier-1 family card `omen_contributions[0]`
+    per instance, Tier-2 type card `omen_contributions[1]` per type), assigns timers (25/50/25 via COMBAT,
+    `LLD-OMEN-MECH-008/-009`), shuffles, then runs the passive-ability handler pass (read_the_road short-circuit).
+  - `resolve_omen_cycle_start` restructured per `LLD-ARCH-024` — fire shifts → clear expired → discard spent
+    cycle → draw 3 (reshuffle if short, `HLD-OMEN-003`) → record `pending_vulnerable_units` → **pause** for CHOOSE_OMEN.
+  - `resolve_choose_omen(action, game_state)` — sides/timer derivation, deferred Vulnerable applied with the new
+    timer, per-unit/tag-conditional application of the 2 played cards (`HLD-OMEN-005`), Repent special handling
+    (0→heal / 1→one slot / 2+→two via COMBAT, early-return halt), Type Convert replacement (via `StatusRules`).
+  - `remove_enemy_omen_cards(unit_id, game_state)` — two-tier removal helper (`HLD-OMEN-006`) for `resolve_enemy_death`
+    (T5.7) to call; family copy always, type card only on last-of-type; cards already in the cycle untouched.
+  - `tests/test_omen_system.gd` — 19 cases green (two-tier composition same/distinct types, family-only, 25/50/25
+    distribution, cycle draw+pause, reshuffle, CHOOSE_OMEN sides/timer/card-application, tag filter, family-to-player
+    safe, deferred Vulnerable, invalid no-op, Repent 0/1/2-item, two-tier removal incl. discard-pile). Full suite **152/152**.
+- **Decisions:** (1) **Source split** — vessel/item/floor/companion card ids are *injected* via `source_card_ids`
+  (they need registry + FloorProfile lookups outside Domain); enemy contributions are derived inside (Domain owns
+  CombatState + the two-tier rule). Mirrors the ChargeManager/ContentRegistry injection pattern. (2) `CHOOSE_OMEN`
+  resolution lives in its own `resolve_choose_omen` method (not folded into `resolve_player_action`, which is T5.6 —
+  T5.6's dispatcher will call it). (3) Timer split is **count-based exact** (nearest whole-number per `LLD-OMEN-MECH-008`)
+  with randomised assignment via the shuffle, so distribution is invariant under the RNG.
+- ⏳ **Still deferred (content-coupled, land with Phase 8):** the omen-card **non-status handlers**
+  (`elemental_synergy`/`sacred_ground` `LLD-OMEN-CARD-013/-014`, Combustible Oil branch `LLD-ITEMS-007`) — the
+  `_apply_omen_card` handler-chain call site is wired, but the concrete handlers are not registered yet, so the
+  T3.2/T4.1 boot validator will (correctly) reject content referencing them until they land in T8. The passive-handler
+  pass is implemented but exercises no MVP1 content (Pilgrim has no passive omen ability).
 
 ### T5.5 — Enemy turns & intent engine
 `resolve_enemy_turns`: per-enemy reset, Charge→Release continuation, intent_conditionals (forced
