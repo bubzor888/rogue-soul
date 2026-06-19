@@ -394,7 +394,7 @@ legal, ability/item actions, `is_stunned` excludes Action bucket. Always returns
   (Strike+Evade), per-target strike, dead-enemy exclusion, stun keeps support / excludes attack item /
   END_TURN fallback, ≥1. Full suite 100/100.
 
-### T5.2 — Damage resolution order
+### T5.2 — Damage resolution order  ✅ **Done**
 The 7-step (0–7) pipeline from `LLD-ARCH-019`: evade miss → base+type (with Type Convert override)
 → Emboldened flat → Last Stand ×1.5 → Charge ×2 / Emboldened elemental ×1.5 → resistance ×0.5 →
 vulnerability ×1.5 → resistance+vuln cancel. Player damage flat, enemy damage rolled on COMBAT.
@@ -415,7 +415,7 @@ vulnerability ×1.5 → resistance+vuln cancel. Player damage flat, enemy damage
   flat/elemental, evade miss/hit via stub rng, 0-HP clamp+died, charge consumed, handler single/all,
   registration). Full suite 115/115. No autoload access.
 
-### T5.3 — Status tick & shift resolution
+### T5.3 — Status tick & shift resolution  ✅ **Done**
 `resolve_omen_tick` (tick-trigger effects fire: Burning/Chilled/Poisoned/Mending/Hardened/Bleed;
 decrement all; clear expired tick statuses) and `resolve_omen_cycle_start` shift handling
 (`death_mark`→`shocked`→`exposed` order per `LLD-ARCH-023`; deferred Vulnerable application).
