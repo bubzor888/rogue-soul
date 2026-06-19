@@ -305,14 +305,24 @@ rebuild it.
 
 ## Phase 4 — Ability Pipeline & Handlers
 
-### T4.1 — `AbilityPipeline` + `AbilityHandler` base + handler registry
+### T4.1 — `AbilityPipeline` + `AbilityHandler` base + handler registry  ✅ **Done**
 Chain-of-Responsibility executor: an ability/item is an ordered `Array[HandlerConfig]`; handlers
 run left-to-right over a shared context (`game_state`, source, target, params). Base class +
 registry keyed by `handler_id`. Enforce naming convention (`DealDamageHandler` → `"deal_damage"`).
 - **@Spec:** `LLD-ARCH-005`, `LLD-ARCH-012`
 - **DoD:** a 2-handler test chain executes in order; registry resolves ids.
+- ✅ Three Domain classes in `src/domain/`: `AbilityContext` (shared mutable ctx: `game_state`,
+  `source_id`, `target_id`, `params`, `results`), `AbilityHandler` (base; `apply(ctx)` to override;
+  **`get_handler_id()` derives the id from the class global name** — strip `Handler`, PascalCase→
+  snake_case — so `LLD-ARCH-012` can't be violated), `AbilityPipeline` (`register`/`has_handler`/
+  `known_handler_ids`/`execute` left-to-right; `with_default_handlers`/`default_handler_ids` static
+  factory — empty until T4.2). **Closed the T3.2 seam:** `ContentRegistry._ready` now calls
+  `validate_handlers(AbilityPipeline.default_handler_ids())` — unknown content handler ids abort boot.
+  `tests/test_ability_pipeline.gd` — 6 cases green (order, per-config params, registry membership,
+  context carries state, `derive_handler_id` cases, default set empty). Domain purity verified
+  (ContentRegistry mentions are comments only).
 
-### T4.2 — Concrete handlers for MVP1
+### T4.2 — Concrete handlers for MVP1  🟡 **Partial — self-contained handlers done; damage/content-coupled sequenced to T5.2**
 Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requirement that drives it):
 - `deal_damage` — flat player damage + type; **multi-target/arc modes** for items that hit all
   enemies (Rope Flail) or arc to a second target (Arc Wand) (`HLD-COMBAT-005`, `-016`; Throw Rock
@@ -332,6 +342,27 @@ Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requiremen
 - **@Spec:** as listed per handler.
 - **DoD:** each handler unit-tested for its core effect; cleanse is category-scoped (never universal);
   multi-target/arc verified; all handlers referenced by MVP1 content resolve at startup.
+- 🟡 **Done now** (self-contained; in `src/domain/handlers/`, each `class_name …Handler extends AbilityHandler`,
+  registered in `AbilityPipeline.with_default_handlers()`):
+  - `apply_status` (`ApplyStatusHandler`) — colon split + stacking via shared `src/domain/status_rules.gd`
+    (`StatusRules`: additive [burning/poisoned/bleed], max-wins [hardened/emboldened/mending], idempotent
+    [chilled], type_convert replacement, shift-trigger default).
+  - `cleanse_status` (`CleanseStatusHandler`) — category-scoped, data-driven `clears` matcher list
+    (matches `string_param` so Vulnerable(Physical) clears without touching Vulnerable(Fire)); never universal.
+  - `peek_omen_deck` (`PeekOmenDeckHandler`) — sets `read_the_road_active`.
+  - `apply_mending_by_burden_tier` (`ApplyMendingByBurdenTierHandler`) — reads `item_burden_score`, picks
+    magnitude from data-driven `tiers`, applies Mending (max-wins prevents mid-cycle downgrade).
+  - `tests/test_handlers.gd` — 14 cases green. Full suite 90/90.
+- ⏳ **Sequenced (flagged), each blocked by later work whose core logic it *is*:**
+  - `deal_damage` → **T5.2** (the 7-step multiplier pipeline: Type Convert override, Emboldened, Last Stand,
+    Charge, resistance ×0.5, Vulnerable ×1.5, evade miss; needs injected `EnemyData` resistances). Multi-
+    target/arc targeting lands with it.
+  - `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → needs per-item `max_charges` content lookup
+    (injected like ChargeManager's Callable) — wire when the resolver gets ContentRegistry access.
+  - Omen-card non-status handlers (Elemental Synergy/Sacred Ground `LLD-OMEN-CARD-013/-014`, Combustible Oil
+    branch `LLD-ITEMS-007`) → **T5.4** omen mechanics + Phase-8 content.
+  > These are **not** registered yet, so Phase-8 content referencing them would (correctly) abort boot via
+  > the T3.2/T4.1 validator until they land — a built-in reminder to complete them before T8.
 
 > Note: `apply_buff` (Charge), `remove_status` (Hardy), passive Last-Stand modifier are `[OPEN·MVP3]`
 > — defer. The damage resolver's Charge/Last-Stand multiplier *hooks* are built in T5.2 but unused in MVP1.

@@ -39,8 +39,8 @@ func _ready() -> void:
 	load_all()
 	if not load_errors.is_empty():
 		_abort("content load errors: %s" % str(load_errors))
-	# Handler-chain validation against the AbilityPipeline handler registry is
-	# wired here in T4.1 (validate_handlers(AbilityPipeline.known_handler_ids())).
+	# Fatal startup error if any content references an unknown handler (LLD-ARCH-005).
+	validate_handlers(AbilityPipeline.default_handler_ids())
 
 
 ## --- Scan & index -----------------------------------------------------------
