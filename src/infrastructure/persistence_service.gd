@@ -87,6 +87,20 @@ func file_exists(path: String) -> bool:
 	return FileAccess.file_exists(path)
 
 
+# List filenames (not full paths) in a directory, optionally filtered by extension
+# (without the dot, e.g. "tres"). Returns empty if the directory does not exist.
+# Used by ContentRegistry for boot-time content discovery. @Spec: LLD-ARCH-006
+func list_files(dir_path: String, extension: String = "") -> PackedStringArray:
+	var out := PackedStringArray()
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		if extension == "" or f.get_extension() == extension:
+			out.append(f)
+	return out
+
+
 ## --- Versioned saves (LLD-ARCH-010) -----------------------------------------
 
 # Stamp the current SAVE_VERSION into `data` and write it as JSON. Does not mutate

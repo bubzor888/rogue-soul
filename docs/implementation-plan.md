@@ -254,7 +254,7 @@ identity; clone independence; field-level defaults (e.g. `is_evading` resets, `s
 
 ## Phase 3 — Registries, Charge Management & Constants
 
-### T3.1 — `ReplenishEvents` constants + `ChargeManager` (decrement asymmetry)
+### T3.1 — `ReplenishEvents` constants + `ChargeManager` (decrement asymmetry)  ✅ **Done**
 String constants for `encounter_start/end`, `floor_start/end` (`LLD-ARCH-016`). `ChargeManager`
 restores charges for abilities/items whose `replenish_triggers` contain a fired event; items with
 `breaks_at_zero` are flagged for removal at 0 (removal itself happens in ActionInjector). Implement
@@ -265,8 +265,18 @@ the **decrement asymmetry** (`HLD-ITEMS-005`): Attack-durability items lose 1 ch
 - **@Spec:** `LLD-ARCH-011`, `LLD-ARCH-016`, `HLD-ITEMS-004`, `HLD-ITEMS-005`
 - **DoD:** replenishment fires correctly; break-at-zero flagging works; support items decrement once
   per encounter, attack items decrement per use (verified with Worn Map and Walking Staff).
+- ✅ `src/infrastructure/replenish_events.gd` (`ReplenishEvents`: 4 const event IDs). `src/application/
+  charge_manager.gd` (`ChargeManager`, RefCounted): `fire_replenish_event` (restores abilities/items —
+  incl. companion abilities — whose `replenish_triggers` match, to `max_charges`); `decrement_support_items`
+  (per-encounter −1 for `action_bucket=="support"`, returns broken slots); `decrement_on_use` (per-use −1
+  for attack/consumable, returns broke); `get_broken_slots` (flags 0-charge `breaks_at_zero` items for
+  ActionInjector to remove). **Decision:** the AbilityData lookup is injected as a `Callable` (not a direct
+  ContentRegistry dep, since T3.2 isn't built) — RunController/ContentRegistry supplies it later; tests
+  stub it. Bucket constants per `HLD-ITEMS-004`. `tests/test_charge_manager.gd` — 12 cases green
+  (replenish match/non-match/items, Worn Map per-encounter, Walking Staff per-use + untouched-by-encounter,
+  zero clamp, break flagging, non-breaking-at-zero, constants). Application purity verified by grep.
 
-### T3.2 — `ContentRegistry` autoload (single registry, directory scan + startup validation)
+### T3.2 — `ContentRegistry` autoload (single registry, directory scan + startup validation)  ✅ **Done**
 One `ContentRegistry` autoload (the **8th autoload**, see registries note above) owning sub-registries
 `AbilityRegistry`, `VesselRegistry`, `ItemRegistry`, `EnemyRegistry`, `OmenCardRegistry`,
 `CompanionRegistry` (as needed for MVP1). At engine boot it scans each `data/` subdir, indexes by id,
@@ -275,6 +285,21 @@ startup error**. RunController/CombatResolver read `ContentRegistry` for lookups
 rebuild it.
 - **@Spec:** `LLD-ARCH-006`, `LLD-ARCH-005`, `LLD-ARCH-007` (autoload list extension)
 - **DoD:** placing a `.tres` makes content discoverable with no code change; unknown handler id aborts startup at boot.
+- ✅ `src/application/content_registry.gd` (autoload `ContentRegistry`, 8th; no `class_name`). `_ready`
+  → `load_all()` scans the six `data/` dirs, indexes by id (abilities **and** items share one
+  `ability_id` index — items are AbilityData), records duplicate/empty-id/load-fail into `load_errors`,
+  and `_abort()`s (push_error + `get_tree().quit(1)`) on any. Typed getters `get_ability`/`get_vessel`/
+  `get_enemy`/`get_omen_card`/`get_companion` + `has_ability`. Handler validation: `collect_handler_ids`
+  (across abilities/omen cards/enemy intents/companions), `find_unresolved_handlers(known)`,
+  `validate_handlers(known)` → fatal on unknown. **Decisions:** (1) sub-registries are internal
+  per-type dictionaries, not separate classes (MVP1 simplification); (2) layer = **Application** (returns
+  Domain Resources; Domain code never reads it — per `LLD-ARCH-019` content is injected into
+  CombatResolver, matching ChargeManager's Callable lookup); (3) **boot-time handler validation against
+  the real handler set is wired in T4.1** (handler registry doesn't exist yet) — detection + abort path
+  implemented and tested now. Dir listing added to `PersistenceService.list_files` (keeps `DirAccess`
+  centralized); `.tres` via `ResourceLoader` (CACHE_MODE_REPLACE). `tests/test_content_registry.gd` —
+  6 cases green (discovery by id, non-tres ignored, duplicate-id error, missing→null, handler collection,
+  unresolved detection). Boots cleanly against empty `data/` dirs (no abort).
 
 ---
 
