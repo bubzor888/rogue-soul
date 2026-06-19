@@ -74,6 +74,7 @@ func _make_full_state() -> GameState:
 	combat.current_cycle = cycle
 	combat.pending_repent_slots.assign([0, 2])
 	combat.read_the_road_active = false
+	combat.pending_vulnerable_units.assign(["enemy_0"])
 
 	var gs := GameState.new()
 	gs.run_seed = 424242

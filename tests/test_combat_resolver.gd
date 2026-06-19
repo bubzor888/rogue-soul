@@ -179,3 +179,55 @@ func test_always_at_least_one_action() -> void:
 	var content := StubContent.new()
 	var gs := _combat_state(content, 1)
 	assert_bool(_resolver(content).get_legal_combat_actions(gs).size() >= 1).is_true()
+
+
+# --- Omen choice gating (LLD-ARCH-024) --------------------------------------
+
+func _with_pending_cycle(gs: GameState) -> void:
+	var cycle := OmenCycleState.new()
+	cycle.drawn_cards.assign([
+		{"card_id": "a", "timer_value": 1},
+		{"card_id": "b", "timer_value": 2},
+		{"card_id": "c", "timer_value": 3},
+	])
+	cycle.sides_assigned = false
+	gs.combat_state.current_cycle = cycle
+
+
+# Omen choice pending → only CHOOSE_OMEN actions, one per card × side (3 × 2 = 6).
+func test_omen_choice_gate_returns_card_times_side() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	_with_pending_cycle(gs)
+	var actions := _resolver(content).get_legal_combat_actions(gs)
+	assert_int(actions.size()).is_equal(6)
+	for a in actions:
+		assert_str(a["type"]).is_equal("CHOOSE_OMEN")
+	# Every (index, side) combination is present.
+	var combos := {}
+	for a in actions:
+		combos["%d:%s" % [a["card_index"], a["side"]]] = true
+	for i in 3:
+		assert_bool(combos.has("%d:player" % i)).is_true()
+		assert_bool(combos.has("%d:enemy" % i)).is_true()
+
+
+func test_read_the_road_takes_priority_over_omen_choice() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	_with_pending_cycle(gs)
+	gs.combat_state.read_the_road_active = true
+	var actions := _resolver(content).get_legal_combat_actions(gs)
+	assert_int(actions.size()).is_equal(1)
+	assert_str(actions[0]["type"]).is_equal("READ_THE_ROAD_COMMIT")
+
+
+# Once sides are assigned the omen gate is inactive → standard actions return.
+func test_sides_assigned_skips_omen_gate() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	_with_pending_cycle(gs)
+	gs.combat_state.current_cycle.sides_assigned = true
+	var types := _types(_resolver(content).get_legal_combat_actions(gs))
+	assert_bool("CHOOSE_OMEN" in types).is_false()
+	assert_bool("EVADE" in types).is_true()

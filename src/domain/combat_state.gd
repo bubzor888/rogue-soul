@@ -22,6 +22,11 @@ extends Resource
 ## get_legal_combat_actions() returns only READ_THE_ROAD_COMMIT. Default false.
 @export var read_the_road_active: bool = false
 
+## Unit ids marked pending-Vulnerable by an Exposed shift at cycle start; the
+## deferred "vulnerable:physical" is applied during CHOOSE_OMEN once the new cycle
+## timer is known, then this is cleared (LLD-ARCH-024).
+@export var pending_vulnerable_units: Array[String] = []
+
 
 func to_json() -> Dictionary:
 	return {
@@ -31,6 +36,7 @@ func to_json() -> Dictionary:
 		"current_cycle": Serde.to_json_or_null(current_cycle),
 		"pending_repent_slots": pending_repent_slots.duplicate(),
 		"read_the_road_active": read_the_road_active,
+		"pending_vulnerable_units": pending_vulnerable_units.duplicate(),
 	}
 
 
@@ -42,4 +48,5 @@ static func from_json(data: Dictionary) -> CombatState:
 	c.current_cycle = Serde.obj_from_json(data.get("current_cycle"), Callable(OmenCycleState, "from_json"))
 	c.pending_repent_slots.assign(Serde.int_array(data.get("pending_repent_slots", [])))
 	c.read_the_road_active = bool(data.get("read_the_road_active", false))
+	c.pending_vulnerable_units.assign(Serde.str_array(data.get("pending_vulnerable_units", [])))
 	return c

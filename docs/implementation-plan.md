@@ -438,13 +438,32 @@ decrement all; clear expired tick statuses) and `resolve_omen_cycle_start` shift
   a true per-tick Hardened budget) are needed, `StatusInstance` needs an extra field (small `LLD-ARCH-017`
   spec/schema change) — worth a deliberate decision before Floor-3 Chilled/Hardened content is tuned (T8.3).
 
-### T5.4 — Omen system: assembly, draw cycle, timers, reshuffle
+### T5.4 — Omen system: assembly, draw cycle, timers, reshuffle  🟡 **Partial — spec + foundation done; omen machinery remaining**
 `assemble_omen_deck` (four sources, timer assignment via COMBAT per `LLD-OMEN-MECH-008/-009`, then
 passive handler pass that may set `read_the_road_active`); three-card draw cycle (player-choice +
 random + timer card per `HLD-OMEN-001`); deck reshuffle (`HLD-OMEN-003`); two-tier enemy
 contribution & removal (`HLD-OMEN-006`); per-unit / tag-conditional application (`HLD-OMEN-005`).
-- **@Spec:** `HLD-COMBAT-008`, `HLD-OMEN-001`..`-006`, `LLD-OMEN-MECH-008`, `-009`, `LLD-ARCH-019`
+- **@Spec:** `HLD-COMBAT-008`, `HLD-OMEN-001`..`-006`, `LLD-OMEN-MECH-008`, `-009`, `LLD-ARCH-019`, `LLD-ARCH-024`
 - **DoD:** deck composition, timer distribution, reshuffle, tier-1/tier-2 removal scenarios green.
+- 🟡 **Done so far:**
+  - **Spec prerequisite** — the omen *choice* had no MVP1 action (`HLD-OMEN-001` says the player picks a
+    card+side, but the action set omitted it). Resolved via OpenSpec change `add-choose-omen-action`
+    (archived `2026-06-19`): new **`LLD-ARCH-024` Omen Choice Action** — `CHOOSE_OMEN
+    {card_index, side}`, the gating priority (read_the_road → omen-choice → repent → standard), the
+    `resolve_player_action` flow (choice → random-assign → leftover=timer → deferred Vulnerable → apply 2
+    cards), the `resolve_omen_cycle_start` restructure (draw + pause), and a new `CombatState.
+    pending_vulnerable_units` field to carry the Exposed deferred-Vulnerable across the choice pause.
+  - **Foundation (code):** `CombatState.pending_vulnerable_units` field + serialisation (round-trip tested);
+    the **omen-choice gating branch** in `get_legal_combat_actions` (6 actions = 3 cards × 2 sides;
+    read_the_road priority; inactive once `sides_assigned`). `tests/test_combat_resolver.gd` +3 cases. Full
+    suite 133/133.
+- ⏳ **Remaining (the bulk — substantial, clean fresh-session task against `LLD-ARCH-024` + `LLD-OMEN-*`):**
+  `assemble_omen_deck` (4 sources + 25/50/25 COMBAT timer distribution + shuffle + passive `peek_omen_deck`
+  pass); `resolve_omen_cycle_start` restructure (draw 3, record pending-Vulnerable, pause); `CHOOSE_OMEN`
+  resolution in `resolve_player_action` (sides/timer/deferred-Vulnerable/apply-2-cards w/ tag filter +
+  magnitude + handlers + type_convert + Repent); reshuffle (`HLD-OMEN-003`); two-tier enemy
+  contribution/removal (`HLD-OMEN-006`, `resolve_enemy_death` family-card removal + Tier-1 injection);
+  per-unit/tag-conditional application (`HLD-OMEN-005`).
 
 ### T5.5 — Enemy turns & intent engine
 `resolve_enemy_turns`: per-enemy reset, Charge→Release continuation, intent_conditionals (forced

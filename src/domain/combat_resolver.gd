@@ -20,6 +20,10 @@ const ACTION_EVADE := "EVADE"
 const ACTION_END_TURN := "END_TURN"
 const ACTION_READ_THE_ROAD_COMMIT := "READ_THE_ROAD_COMMIT"
 const ACTION_REPENT_DISCARD := "REPENT_DISCARD"
+const ACTION_CHOOSE_OMEN := "CHOOSE_OMEN"
+
+const SIDE_PLAYER := "player"
+const SIDE_ENEMY := "enemy"
 
 const BUCKET_ATTACK := "attack"
 
@@ -52,15 +56,28 @@ func get_legal_combat_actions(game_state: GameState) -> Array:
 	if combat != null and combat.read_the_road_active:
 		return [{"type": ACTION_READ_THE_ROAD_COMMIT, "send_to_bottom": []}]
 
-	# 2. Repent pending → only a discard action per revealed slot.
+	# 2. Omen choice pending → only CHOOSE_OMEN actions (LLD-ARCH-024).
+	if combat != null and combat.current_cycle != null and not combat.current_cycle.sides_assigned:
+		return _omen_choice_actions(combat.current_cycle)
+
+	# 3. Repent pending → only a discard action per revealed slot.
 	if combat != null and not combat.pending_repent_slots.is_empty():
 		var repent_actions: Array = []
 		for slot in combat.pending_repent_slots:
 			repent_actions.append({"type": ACTION_REPENT_DISCARD, "slot_index": slot})
 		return repent_actions
 
-	# 3. Standard action set.
+	# 4. Standard action set.
 	return _standard_actions(game_state)
+
+
+# One CHOOSE_OMEN action per (card_index, side). @Spec: LLD-ARCH-024
+func _omen_choice_actions(cycle: OmenCycleState) -> Array:
+	var actions: Array = []
+	for card_index in cycle.drawn_cards.size():
+		for side in [SIDE_PLAYER, SIDE_ENEMY]:
+			actions.append({"type": ACTION_CHOOSE_OMEN, "card_index": card_index, "side": side})
+	return actions
 
 
 func _standard_actions(game_state: GameState) -> Array:
