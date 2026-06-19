@@ -354,9 +354,7 @@ Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requiremen
     magnitude from data-driven `tiers`, applies Mending (max-wins prevents mid-cycle downgrade).
   - `tests/test_handlers.gd` — 14 cases green. Full suite 90/90.
 - ⏳ **Sequenced (flagged), each blocked by later work whose core logic it *is*:**
-  - `deal_damage` → **T5.2** (the 7-step multiplier pipeline: Type Convert override, Emboldened, Last Stand,
-    Charge, resistance ×0.5, Vulnerable ×1.5, evade miss; needs injected `EnemyData` resistances). Multi-
-    target/arc targeting lands with it.
+  - ✅ `deal_damage` → **done in T5.2** (the 7-step `DamageCalculator` + multi-target/arc handler).
   - `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → needs per-item `max_charges` content lookup
     (injected like ChargeManager's Callable) — wire when the resolver gets ContentRegistry access.
   - Omen-card non-status handlers (Elemental Synergy/Sacred Ground `LLD-OMEN-CARD-013/-014`, Combustible Oil
@@ -375,13 +373,26 @@ Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requiremen
 never touches autoloads except emitting on `SignalBus` (`LLD-ARCH-019`). Build `tests/
 test_combat_resolver.gd` incrementally alongside each sub-task. Split across sessions:
 
-### T5.1 — Legal-action generation & gating
+### T5.1 — Legal-action generation & gating  ✅ **Done**
 `get_legal_combat_actions()` with the priority-ordered gating from `LLD-ARCH-019`:
 (1) `read_the_road_active` → only `READ_THE_ROAD_COMMIT`; (2) `pending_repent_slots` → only
 `REPENT_DISCARD`; (3) otherwise the action-bucket set — Default Strike always legal, Evade always
 legal, ability/item actions, `is_stunned` excludes Action bucket. Always returns ≥1 action.
 - **@Spec:** `LLD-ARCH-019`, `LLD-ARCH-003`, `HLD-COMBAT-004`, `HLD-COMBAT-011`, `HLD-COMBAT-017`
 - **DoD:** scenarios from `LLD-ARCH-019` (gating priority, stun exclusion, zero-charge fallback) green.
+- ✅ `src/domain/combat_resolver.gd` (`CombatResolver`, RefCounted) started. **Constructor injection**
+  (`_init(rng, content, pipeline)`) — RNGService + a `content` provider (ContentRegistry-style
+  `get_vessel`/`get_ability`) + AbilityPipeline; **no autoload access** (verified by grep), matching the
+  ChargeManager pattern and `LLD-ARCH-019`. `get_legal_combat_actions` implements the 3-branch priority
+  gate; standard set = Default Strike (one USE_ABILITY per living enemy) + EVADE + charged abilities/items;
+  stun drops Action-bucket (Strike/Evade/attack abilities+items), keeps Support/Consumable; END_TURN
+  fallback guarantees ≥1. **Decisions:** Default Strike = `USE_ABILITY` with the vessel's
+  `default_strike_id` (not tracked in `ability_states`); Evade modeled as `{"type":"EVADE"}` (spec doesn't
+  pin these shapes — documented; ActionInjector validates in T6.1); attack actions enumerate per living
+  target, non-attack are single non-targeted. `tests/test_combat_resolver.gd` (grows across T5.x) — 10
+  cases green: read-the-road gate, repent-per-slot, read-the-road > repent priority, zero-charge fallback
+  (Strike+Evade), per-target strike, dead-enemy exclusion, stun keeps support / excludes attack item /
+  END_TURN fallback, ≥1. Full suite 100/100.
 
 ### T5.2 — Damage resolution order
 The 7-step (0–7) pipeline from `LLD-ARCH-019`: evade miss → base+type (with Type Convert override)
@@ -390,6 +401,19 @@ vulnerability ×1.5 → resistance+vuln cancel. Player damage flat, enemy damage
 - **@Spec:** `LLD-ARCH-019`, `HLD-COMBAT-005`, `-007`, `-016`, `-017`, `-018`, `-019`
 - **DoD:** the worked scenarios (Last Stand+Charge+Vuln=31; resistance cancels vuln; type-convert
   interactions; Hardened absorption to 0) green; 0-HP clamp + `unit_died` (no negative HP).
+- ✅ **Done** (also resolves the `deal_damage` handler deferred from T4.2). `src/domain/damage_calculator.gd`
+  (`DamageCalculator`, static): the shared 7-step routine — evade-miss (COMBAT roll ≤34) → type +
+  Type-Convert override (matched by id, string_param IS the type) → Emboldened-physical flat → Last Stand
+  ×1.5 (MVP3 hook) → Charge ×2 (consumed) / Emboldened-elemental ×1.5 → resistance/vulnerability with
+  cancel-to-×1.0. **Multipliers accumulate as float, floored once at end** (7×1.5×2×1.5=31.5→31); Hardened
+  absorbs from the floored int; HP clamps at 0 with `died` flag (never negative). Base is an input (player
+  flat / enemy pre-rolled). `src/domain/handlers/deal_damage_handler.gd` (`DealDamageHandler`,
+  registered) — single/all/arc targeting, records one result per hit on `ctx.results` (resolver emits in
+  T5.6). `AbilityContext` extended with injected `content`/`rng`. **Decisions:** Hardened per-hit cap now;
+  per-tick budget/reset is T5.3. `STREAM_COMBAT=1` const (avoids touching the RNGService autoload global).
+  `tests/test_damage.gd` — 15 cases green (all worked scenarios + resist-only/vuln-only, Emboldened
+  flat/elemental, evade miss/hit via stub rng, 0-HP clamp+died, charge consumed, handler single/all,
+  registration). Full suite 115/115. No autoload access.
 
 ### T5.3 — Status tick & shift resolution
 `resolve_omen_tick` (tick-trigger effects fire: Burning/Chilled/Poisoned/Mending/Hardened/Bleed;
@@ -397,6 +421,22 @@ decrement all; clear expired tick statuses) and `resolve_omen_cycle_start` shift
 (`death_mark`→`shocked`→`exposed` order per `LLD-ARCH-023`; deferred Vulnerable application).
 - **@Spec:** `LLD-ARCH-019`, `LLD-ARCH-023`, `HLD-COMBAT-006`, `-015`, `-018`, `-019`
 - **DoD:** Bleed decay sequence, Poison tripling, Chilled accumulation, shift ordering scenarios green.
+- ✅ **Done.** `CombatResolver.resolve_omen_tick` — per-unit (vessel + enemies): Burning (dmg=mag, flat),
+  Poisoned (dmg=mag then ×3), Bleed (dmg=mag then floor(mag/2), clears at 0), Mending (heal=mag, clamp
+  max_hp), Chilled (mag += step), Hardened (no-op — see below); then decrement `remaining_ticks` on ALL,
+  clear expired **tick** statuses (shift statuses at 0 left for cycle start). Shift handling:
+  `fire_shift_statuses` fires in `LLD-ARCH-023` order (death_mark instant-kill skips rest on that unit →
+  shocked sets is_stunned → exposed returns pending-Vulnerable ids), `clear_expired_statuses` (step 2),
+  `apply_deferred_vulnerable(ids, new_timer)` (step 4; timer from the draw in T5.4). Added **Chilled
+  outgoing reduction** to `DamageCalculator` (flat, never reduces a non-zero hit below 1 — was missed in
+  T5.2). `death_mark` added to `StatusRules.SHIFT_TRIGGER`. **Hardened finalized:** per-hit absorption cap,
+  `magnitude` constant (the single `magnitude` field can't hold both a depleting per-tick budget and a
+  reset value); "resets each tick" holds trivially since it never depletes → tick effect is a no-op. The
+  T5.2 provisional flag is resolved. `tests/test_status_resolution.gd` — 15 cases green. Full suite 130/130.
+  ⚠️ **Flag (single-field limitation):** Chilled's per-tick *step* ("amounts defined by omen card") can't be
+  data-driven with only `magnitude`; using a constant `CHILLED_TICK_STEP=1` for MVP1. If per-card steps (or
+  a true per-tick Hardened budget) are needed, `StatusInstance` needs an extra field (small `LLD-ARCH-017`
+  spec/schema change) — worth a deliberate decision before Floor-3 Chilled/Hardened content is tuned (T8.3).
 
 ### T5.4 — Omen system: assembly, draw cycle, timers, reshuffle
 `assemble_omen_deck` (four sources, timer assignment via COMBAT per `LLD-OMEN-MECH-008/-009`, then

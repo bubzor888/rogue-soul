@@ -20,8 +20,8 @@ const MAX_WINS := ["hardened", "emboldened", "mending"]
 const IDEMPOTENT := ["chilled"]
 
 ## Statuses whose effect fires once at the omen shift (remaining_ticks == 0)
-## rather than per tick.
-const SHIFT_TRIGGER := ["shocked", "exposed"]
+## rather than per tick (death_mark/shocked/exposed — see LLD-ARCH-023).
+const SHIFT_TRIGGER := ["shocked", "exposed", "death_mark"]
 
 
 # Split a (possibly colon-encoded) status id into [status_id, string_param].

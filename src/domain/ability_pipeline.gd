@@ -44,13 +44,12 @@ func execute(handler_configs: Array, ctx: AbilityContext) -> void:
 # per-resolver and for ContentRegistry's boot-time handler validation.
 static func with_default_handlers() -> AbilityPipeline:
 	var pipeline := AbilityPipeline.new()
-	# Self-contained handlers (T4.2):
+	pipeline.register(DealDamageHandler.new())          # T5.2 — DamageCalculator 7-step pipeline
 	pipeline.register(ApplyStatusHandler.new())
 	pipeline.register(CleanseStatusHandler.new())
 	pipeline.register(PeekOmenDeckHandler.new())
 	pipeline.register(ApplyMendingByBurdenTierHandler.new())
-	# Sequenced to T5.2 / later (their core logic is that work):
-	#   deal_damage           — 7-step multiplier pipeline + injected EnemyData (T5.2)
+	# Still sequenced to later (their core logic is that work):
 	#   restore_item_charges  — needs per-item max_charges content lookup
 	#   elemental_synergy / sacred_ground / combustible_oil — omen mechanics (T5.4) + content
 	return pipeline

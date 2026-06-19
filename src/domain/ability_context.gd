@@ -23,6 +23,13 @@ var params: Dictionary = {}
 ## emit. Each entry is a plain Dictionary.
 var results: Array = []
 
+## Injected dependencies for handlers that need them (set by CombatResolver when it
+## builds the context). `content` is the ContentRegistry-style provider
+## (get_enemy/get_ability/…); `rng` is the RNGService instance. Both may be null
+## for handlers that don't need them.
+var content = null
+var rng = null
+
 
 func _init(p_game_state: GameState = null, p_source_id: String = "", p_target_id: String = "") -> void:
 	game_state = p_game_state
