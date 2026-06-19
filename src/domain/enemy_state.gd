@@ -32,6 +32,13 @@ extends Resource
 ## reset at the start of its resolution in resolve_enemy_turns.
 @export var is_stunned: bool = false
 
+## Per-enemy turn counter (LLD-ARCH-017). Starts at 1 when the enemy enters combat
+## (combat start or mid-combat summon) and increments each of that enemy's turns in
+## resolve_enemy_turns. The `turn_number:N` IntentConditional is evaluated against
+## this, NOT the global CombatState.turn_number — so a Spark summoned on global
+## turn 3 still matches `turn_number:1` on its own first action.
+@export var turns_alive: int = 1
+
 
 func to_json() -> Dictionary:
 	return {
@@ -46,6 +53,7 @@ func to_json() -> Dictionary:
 		"is_charging": is_charging,
 		"is_evading": is_evading,
 		"is_stunned": is_stunned,
+		"turns_alive": turns_alive,
 	}
 
 
@@ -62,4 +70,5 @@ static func from_json(data: Dictionary) -> EnemyState:
 	e.is_charging = bool(data.get("is_charging", false))
 	e.is_evading = bool(data.get("is_evading", false))
 	e.is_stunned = bool(data.get("is_stunned", false))
+	e.turns_alive = int(data.get("turns_alive", 1))
 	return e

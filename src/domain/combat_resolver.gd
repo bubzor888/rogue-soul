@@ -639,3 +639,300 @@ func _find_enemy(game_state: GameState, unit_id: String) -> EnemyState:
 		if enemy.instance_id == unit_id:
 			return enemy
 	return null
+
+
+## --- Enemy turns & intent engine (T5.5) -------------------------------------
+
+# Resolve every living enemy's turn in order (LLD-ARCH-019 resolve_enemy_turns).
+# Iterates a snapshot taken up front so mid-pass summons act next round, not now.
+# @Spec: LLD-ARCH-019, HLD-COMBAT-009, HLD-COMBAT-014, HLD-COMBAT-016
+func resolve_enemy_turns(game_state: GameState) -> GameState:
+	if game_state.combat_state == null:
+		return game_state
+	var roster: Array = []
+	for enemy in game_state.combat_state.enemies:
+		roster.append(enemy)
+	for enemy in roster:
+		if enemy.hp <= 0:
+			continue  # died earlier this resolution
+		_resolve_one_enemy(enemy, game_state)
+		enemy.turns_alive += 1
+	return game_state
+
+
+func _resolve_one_enemy(enemy: EnemyState, game_state: GameState) -> void:
+	# Step 0: reset per-turn flags; a stunned enemy skips its whole turn. A stun
+	# during a charge cancels the pending release (HLD-COMBAT-014: never fires).
+	var was_stunned := enemy.is_stunned
+	enemy.is_evading = false
+	enemy.is_stunned = false
+	if was_stunned:
+		enemy.is_charging = false
+		return
+
+	# Step 1: a charging enemy releases unconditionally — no roll, no streak/cap.
+	if enemy.is_charging:
+		enemy.is_charging = false
+		var charged := _find_intent(enemy, enemy.last_intent_id, game_state)
+		if charged != null:
+			_execute_intent(enemy, charged, game_state)
+		return
+
+	# Steps 2-3: select the intent (forced / restricted / full pool + cap re-roll).
+	var intent := _select_intent(enemy, game_state)
+	if intent == null:
+		return
+
+	# Step 4: update streak + last_intent_id; set current_intent for display.
+	if intent.intent_id == enemy.last_intent_id:
+		enemy.intent_streak += 1
+	else:
+		enemy.intent_streak = 1
+	enemy.last_intent_id = intent.intent_id
+	enemy.current_intent = intent.intent_id
+
+	# Step 5: Evade. Step 6: begin a Charge→Release (no damage this turn).
+	if intent.is_evade:
+		enemy.is_evading = true
+		return
+	if intent.is_charge_release:
+		enemy.is_charging = true
+		return
+
+	# Step 7: execute the intent.
+	_execute_intent(enemy, intent, game_state)
+
+
+# Steps 2-3: evaluate conditionals (first match short-circuits), then roll; a
+# forced intent_id skips the roll and the consecutive cap.
+func _select_intent(enemy: EnemyState, game_state: GameState) -> IntentWeight:
+	var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
+	if data == null:
+		return null
+
+	var pool: Array = data.intent_weights
+	for cond in data.intent_conditionals:
+		if not _condition_met(cond.condition, enemy, game_state):
+			continue
+		if cond.intent_id != "":
+			return _find_intent(enemy, cond.intent_id, game_state)  # forced — no roll/cap
+		if not cond.intent_ids.is_empty():
+			pool = _restrict_pool(data.intent_weights, cond.intent_ids)
+		break  # first matching conditional wins
+
+	# Weighted roll with consecutive-cap re-roll (HLD-COMBAT-009).
+	var intent := _weighted_pick(pool)
+	var attempts := 0
+	while intent != null and _violates_cap(intent, enemy) and attempts < 20:
+		intent = _weighted_pick(pool)
+		attempts += 1
+	return intent
+
+
+func _violates_cap(intent: IntentWeight, enemy: EnemyState) -> bool:
+	return intent.intent_id == enemy.last_intent_id \
+		and intent.max_consecutive > 0 \
+		and enemy.intent_streak >= intent.max_consecutive
+
+
+func _restrict_pool(weights: Array, intent_ids: Array) -> Array:
+	var pool: Array = []
+	for w in weights:
+		if w.intent_id in intent_ids:
+			pool.append(w)
+	return pool
+
+
+# Weighted random selection over a pool on the COMBAT stream. Weight-0 intents are
+# never randomly selected (only reachable via a forced conditional).
+func _weighted_pick(pool: Array) -> IntentWeight:
+	var total := 0
+	for w in pool:
+		if w.weight > 0:
+			total += w.weight
+	if total <= 0:
+		return null
+	var r := 0
+	if _rng != null:
+		r = _rng.randi_range(STREAM_COMBAT, 0, total - 1)
+	var cumulative := 0
+	for w in pool:
+		if w.weight <= 0:
+			continue
+		cumulative += w.weight
+		if r < cumulative:
+			return w
+	return null
+
+
+func _find_intent(enemy: EnemyState, intent_id: String, game_state: GameState) -> IntentWeight:
+	var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
+	if data == null:
+		return null
+	for w in data.intent_weights:
+		if w.intent_id == intent_id:
+			return w
+	return null
+
+
+# Step 7: damage (hit_count rolls, each evade-checked) → status_apply → handler
+# chain → summon. @Spec: HLD-COMBAT-016, HLD-COMBAT-017, HLD-COMBAT-009
+func _execute_intent(enemy: EnemyState, intent: IntentWeight, game_state: GameState) -> void:
+	var damage_type := _enemy_damage_type(enemy)
+	if intent.damage_max > 0:
+		for _h in maxi(intent.hit_count, 1):
+			var base := intent.damage_min
+			if _rng != null:
+				base = _rng.randi_range(STREAM_COMBAT, intent.damage_min, intent.damage_max)
+			DamageCalculator.resolve_hit(game_state, enemy.instance_id, "player", base, damage_type, _content, _rng)
+
+	if intent.status_apply != "":
+		var ticks := _cycle_remaining_ticks(game_state)
+		for target in _status_targets(enemy, intent.status_target, game_state):
+			StatusRules.apply_to_unit(target.active_statuses, intent.status_apply, intent.status_magnitude, ticks)
+
+	if not intent.handlers.is_empty() and _pipeline != null:
+		var ctx := AbilityContext.new(game_state, enemy.instance_id, _handler_target_id(enemy, intent.status_target, game_state))
+		ctx.content = _content
+		ctx.rng = _rng
+		# Inject the cycle remaining ticks so status-applying handlers (e.g.
+		# apply_mending_by_burden_tier) use the omen-cycle duration.
+		var ticks := _cycle_remaining_ticks(game_state)
+		for config in intent.handlers:
+			config.params["remaining_ticks"] = ticks
+		_pipeline.execute(intent.handlers, ctx)
+
+	if intent.summon_enemy_id != "":
+		resolve_enemy_summon(intent.summon_enemy_id, game_state)
+
+
+func _enemy_damage_type(enemy: EnemyState) -> String:
+	var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
+	return data.damage_type if data != null else "physical"
+
+
+# status_target: "player" → the vessel; "self" → the caster; "allies" → every
+# living enemy except the caster.
+func _status_targets(enemy: EnemyState, status_target: String, game_state: GameState) -> Array:
+	match status_target:
+		"self":
+			return [enemy]
+		"allies":
+			var allies: Array = []
+			for other in game_state.combat_state.enemies:
+				if other.instance_id != enemy.instance_id and other.hp > 0:
+					allies.append(other)
+			return allies
+		_:
+			return [game_state.vessel_state] if game_state.vessel_state != null else []
+
+
+# The single target id a handler chain acts on, derived from status_target. For
+# "allies" handlers (single-ally buffs like the Witnesses' Mending to The Judge)
+# this is the first living ally; handlers may still override via their own params.
+func _handler_target_id(enemy: EnemyState, status_target: String, game_state: GameState) -> String:
+	match status_target:
+		"self":
+			return enemy.instance_id
+		"allies":
+			for other in game_state.combat_state.enemies:
+				if other.instance_id != enemy.instance_id and other.hp > 0:
+					return other.instance_id
+			return ""
+		_:
+			return "player"
+
+
+# The current omen cycle's tick budget — the leftover (timer) card's value once
+# sides are assigned. Used as remaining_ticks for enemy-applied (individual)
+# statuses, which clear at the next omen reset (LLD-OMEN-MECH-006).
+# NOTE: with no per-cycle countdown stored, this returns the cycle *length*; a
+# status applied mid-cycle therefore lasts a full timer span. Precise mid-cycle
+# remaining-tick accounting is an orchestration concern (T6.4) — flagged.
+func _cycle_remaining_ticks(game_state: GameState) -> int:
+	var combat := game_state.combat_state
+	if combat == null or combat.current_cycle == null:
+		return 1
+	var cycle := combat.current_cycle
+	if cycle.sides_assigned and cycle.timer_index >= 0 and cycle.timer_index < cycle.drawn_cards.size():
+		return int(cycle.drawn_cards[cycle.timer_index].get("timer_value", 1))
+	return 1
+
+
+# Evaluate an IntentConditional condition string against an enemy + game state.
+func _condition_met(condition: String, enemy: EnemyState, game_state: GameState) -> bool:
+	var parts := condition.split(":")
+	if parts.size() != 2:
+		return false
+	var key: String = parts[0]
+	var n := int(parts[1])
+	match key:
+		"hp_below_percent":
+			return enemy.hp < enemy.max_hp * n / 100.0
+		"hp_percent_lte":
+			return enemy.hp <= enemy.max_hp * n / 100.0
+		"ally_count_above":
+			return _ally_count(enemy, game_state) > n
+		"ally_count_equals":
+			return _ally_count(enemy, game_state) == n
+		"turn_number":
+			return enemy.turns_alive == n
+	return false
+
+
+func _ally_count(enemy: EnemyState, game_state: GameState) -> int:
+	var count := 0
+	for other in game_state.combat_state.enemies:
+		if other.instance_id != enemy.instance_id and other.hp > 0:
+			count += 1
+	return count
+
+
+# Spawn a fresh enemy of enemy_id mid-combat and inject its Tier-1 family card
+# (HLD-OMEN-006). @Spec: LLD-ARCH-019, HLD-OMEN-006, HLD-COMBAT-009
+func resolve_enemy_summon(enemy_id: String, game_state: GameState) -> GameState:
+	var combat := game_state.combat_state
+	if combat == null:
+		return game_state
+	var data = _content.get_enemy(enemy_id) if _content != null else null
+	if data == null:
+		return game_state
+
+	var spawned := EnemyState.new()
+	spawned.enemy_id = enemy_id
+	spawned.instance_id = _unique_instance_id(game_state, enemy_id)
+	spawned.hp = data.max_hp
+	spawned.max_hp = data.max_hp
+	spawned.turns_alive = 1
+	combat.enemies.append(spawned)
+
+	if combat.omen_deck != null and not data.omen_contributions.is_empty():
+		combat.omen_deck.draw_pile.append({
+			"card_id": str(data.omen_contributions[0]),
+			"timer_value": _roll_single_timer(),
+		})
+	return game_state
+
+
+# Smallest unused "<enemy_id>_<n>" suffix.
+func _unique_instance_id(game_state: GameState, enemy_id: String) -> String:
+	var n := 0
+	while true:
+		var candidate := "%s_%d" % [enemy_id, n]
+		if _find_enemy(game_state, candidate) == null:
+			return candidate
+		n += 1
+	return "%s_0" % enemy_id
+
+
+# A single timer value from the 25/50/25 distribution (LLD-OMEN-MECH-008) for a
+# card injected mid-combat (no count-based split applies to one card).
+func _roll_single_timer() -> int:
+	if _rng == null:
+		return 2
+	var r: int = _rng.randi_range(STREAM_COMBAT, 0, 99)
+	if r < 25:
+		return 1
+	if r < 75:
+		return 2
+	return 3

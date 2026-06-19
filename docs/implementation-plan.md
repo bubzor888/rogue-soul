@@ -484,13 +484,40 @@ contribution & removal (`HLD-OMEN-006`); per-unit / tag-conditional application 
   T3.2/T4.1 boot validator will (correctly) reject content referencing them until they land in T8. The passive-handler
   pass is implemented but exercises no MVP1 content (Pilgrim has no passive omen ability).
 
-### T5.5 — Enemy turns & intent engine
+### T5.5 — Enemy turns & intent engine  ✅ **Done**
 `resolve_enemy_turns`: per-enemy reset, Charge→Release continuation, intent_conditionals (forced
 `intent_id` / restricted `intent_ids`), weighted COMBAT roll, consecutive cap re-roll, evade,
 multi-hit, `status_apply` (+magnitude rules), custom `handlers`, `summon_enemy_id`. Plus
 `resolve_enemy_summon` (inject family card) and `turns_alive` tracking.
 - **@Spec:** `HLD-COMBAT-009`, `-014`, `-016`, `LLD-ARCH-019`, `LLD-ARCH-018`
 - **DoD:** weighted/conditional/consecutive/charge-release/summon/multi-hit scenarios green.
+- ✅ **Done** — all in `CombatResolver` (Domain, no autoload access; verified by grep):
+  - `resolve_enemy_turns` — iterates a roster **snapshot** (so a mid-pass summon acts next round, not
+    this one); per enemy: step 0 flag reset + stun-skip (a stun during charge clears `is_charging`, so the
+    release **never fires** per `HLD-COMBAT-014`), step 1 unconditional Charge→Release (no roll/cap), steps
+    2-3 intent selection, step 4 streak/`last_intent_id`/`current_intent` update, step 5 Evade, step 6 begin
+    charge, step 7 execute. `turns_alive` increments after each enemy acts.
+  - `_select_intent` — conditionals first (forced `intent_id` skips roll+cap; `intent_ids` restricts the
+    pool), then weighted COMBAT roll with consecutive-cap re-roll (bounded). `_condition_met` supports
+    `hp_below_percent`/`hp_percent_lte`/`ally_count_above`/`ally_count_equals`/`turn_number` (the last reads
+    per-enemy `turns_alive`).
+  - `_execute_intent` — `hit_count` independent COMBAT damage rolls via the shared `DamageCalculator`
+    (per-hit evade miss), then `status_apply` (player/self/allies targets, magnitude rules via `StatusRules`),
+    then the intent `handlers` chain (cycle `remaining_ticks` injected; `apply_mending_by_burden_tier` lands on
+    an ally), then `summon_enemy_id`.
+  - `resolve_enemy_summon` — fresh `EnemyState` at full HP with a unique `<id>_<n>` instance id and
+    `turns_alive=1`; injects one Tier-1 family card (`omen_contributions[0]`) into the draw pile with a single
+    25/50/25 timer (`HLD-OMEN-006`).
+  - `tests/test_enemy_turns.gd` — 21 cases green. Full suite **173/173**.
+- **Schema:** added `EnemyState.turns_alive` (default 1) — it was already mandated by `LLD-ARCH-017`'s
+  IntentConditional notes + Spark scenarios but the **EnemyState field enumeration omitted it**; corrected the
+  enumeration in `lld-technical-architecture` directly (a same-requirement consistency fix, not new design).
+- **Decisions / flags:** (1) the charged intent on release is looked up by `last_intent_id` (preserved across
+  the charge turn since no new roll happens). (2) Enemy-applied (individual) statuses use the **omen cycle
+  timer** as `remaining_ticks` via `_cycle_remaining_ticks`; with no per-cycle countdown stored this is the
+  cycle *length*, so a mid-cycle application lasts a full span — precise mid-cycle remaining-tick accounting is
+  an orchestration concern for **T6.4** (flagged). (3) For `status_target: "allies"` handler intents the
+  handler target is the caster's first living ally (covers Witness→Judge); handlers may override via params.
 
 ### T5.6 — Player action resolution
 `resolve_player_action` for standard actions (flag resets, Evade, AbilityPipeline run, evade-miss
