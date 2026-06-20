@@ -546,11 +546,28 @@ and `REPENT_DISCARD` (item removal, 5 HP heal, burden −1, `item_discarded` emi
   departure on `ability_used` is mentioned in the `LLD-ARCH-019` spec but **deferred to T5.7** (CompanionState
   handling lands there) — flagged.
 
-### T5.7 — Enemy death, companion triggers, death intercept
+### T5.7 — Enemy death, companion triggers, death intercept  ✅ **Done**
 `resolve_enemy_death` (omen card removal + `on_death_apply_to_player` + `on_death_summons`),
 `resolve_companion_trigger` (turn_end), `check_vessel_death_intercept` (synchronous, pre-`unit_died`).
 - **@Spec:** `LLD-ARCH-019`, `HLD-OMEN-006`, `HLD-COMPANION-003`, `LLD-ARCH-018`
 - **DoD:** Witness/Plague-Rat on-death status, Lightning Elemental spark summon, intercept scenarios green.
+- ✅ **Done** — all in `CombatResolver`:
+  - `resolve_enemy_death` — (1) two-tier omen card removal (reuses `remove_enemy_omen_cards`, T5.4; cycle cards
+    untouched), (2) `on_death_apply_to_player` applied via `StatusRules` (colon split, `remaining_ticks` = cycle
+    timer, additive/max-wins stacking), (3) `on_death_summons` → one `resolve_enemy_summon` per id (Lightning
+    Elemental → 2 Sparks).
+  - `resolve_companion_trigger` — fires every active companion (bound + temporary) whose `CompanionData.trigger`
+    matches; a `timer_exhausted` companion decrements `companion_timer` per fire and departs at 0.
+  - `check_vessel_death_intercept` — runs the `vessel_death_intercept` companion's chain (may restore HP) then
+    departs it and returns; the caller (T6.4) reads `vessel.hp > 0` to suppress `unit_died`.
+  - Picked up the T5.6 deferral: a `granted_ability_id` companion with `departure_trigger == "ability_used"`
+    now departs inside `resolve_player_action` when that ability resolves.
+  - `tests/test_enemy_death.gd` — 11 cases green (uses a test-only `TestHealHandler` to make companion chains
+    observable). Full suite **202/202**.
+- **Decision:** "depart" nulls whichever slot (`bound_companion`/`temporary_companion`) holds the companion —
+  even a bound companion is consumed by a one-time `vessel_death_intercept` per `HLD-COMPANION-003`. The dead
+  enemy's `EnemyState` is left in the array at hp 0 (consistent with the engine's clamp-not-remove death model;
+  array removal, if any, is the orchestrator's call in T6.4).
 
 ---
 

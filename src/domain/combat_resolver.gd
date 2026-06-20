@@ -1059,6 +1059,10 @@ func _resolve_standard_action(action: Dictionary, game_state: GameState) -> Game
 
 	_emit_results(action, ctx.results)
 	_consume_charge(type, data, item, vessel, content_id, _all_hits_missed(ctx.results))
+
+	# A companion that grants this ability and departs on use leaves now (T5.7).
+	if type == ACTION_USE_ABILITY:
+		_depart_companion_if_ability_used(content_id, game_state)
 	return game_state
 
 
@@ -1109,3 +1113,101 @@ func _emit_results(action: Dictionary, results: Array) -> void:
 		if r.get("died", false):
 			_signal_bus.unit_died.emit(str(r.get("target_id", "")))
 	_signal_bus.action_resolved.emit(action, {"results": results})
+
+
+## --- Enemy death, companion triggers, death intercept (T5.7) -----------------
+
+# Resolve the consequences of an enemy's death (LLD-ARCH-019): remove its omen
+# card contributions (two-tier, HLD-OMEN-006), apply its on-death status to the
+# player, then process its on-death summons. Cards already in the active cycle are
+# untouched. @Spec: LLD-ARCH-019, HLD-OMEN-006, LLD-ARCH-018
+func resolve_enemy_death(unit_id: String, game_state: GameState) -> GameState:
+	var dead := _find_enemy(game_state, unit_id)
+	if dead == null:
+		return game_state
+	var data = _content.get_enemy(dead.enemy_id) if _content != null else null
+
+	# 1. Remove the dead enemy's family + (last-of-type) type card.
+	remove_enemy_omen_cards(unit_id, game_state)
+
+	if data == null:
+		return game_state
+
+	# 2. On-death status applied to the player (stacking via StatusRules).
+	if data.on_death_apply_to_player != "":
+		var ticks := _cycle_remaining_ticks(game_state)
+		StatusRules.apply_to_unit(game_state.vessel_state.active_statuses,
+			data.on_death_apply_to_player, data.on_death_apply_magnitude, ticks)
+
+	# 3. On-death summons (each spawns a fresh enemy + injects its family card).
+	for summon_id in data.on_death_summons:
+		resolve_enemy_summon(str(summon_id), game_state)
+	return game_state
+
+
+# Fire every active companion whose trigger matches trigger_id (LLD-ARCH-019). A
+# timer-exhausted companion decrements its timer each fire and departs at 0.
+# @Spec: LLD-ARCH-019, HLD-COMPANION-003
+func resolve_companion_trigger(trigger_id: String, game_state: GameState) -> GameState:
+	for companion in _active_companions(game_state):
+		var data = _content.get_companion(companion.companion_id) if _content != null else null
+		if data == null or data.trigger != trigger_id:
+			continue
+		_run_companion_handlers(data, companion, game_state)
+		if data.departure_trigger == "timer_exhausted" and companion.companion_timer > 0:
+			companion.companion_timer -= 1
+			if companion.companion_timer <= 0:
+				_depart_companion(game_state, companion)
+	return game_state
+
+
+# Synchronous death-intercept check (LLD-ARCH-019, HLD-COMPANION-003): called when
+# the vessel reaches 0 HP, before unit_died. If an active companion has the
+# vessel_death_intercept trigger, run its handler chain (which may restore HP) and
+# depart it — the caller then does NOT emit unit_died.
+func check_vessel_death_intercept(game_state: GameState) -> GameState:
+	for companion in _active_companions(game_state):
+		var data = _content.get_companion(companion.companion_id) if _content != null else null
+		if data == null or data.trigger != "vessel_death_intercept":
+			continue
+		_run_companion_handlers(data, companion, game_state)
+		_depart_companion(game_state, companion)
+		return game_state  # one-time intercept
+	return game_state
+
+
+func _run_companion_handlers(data: CompanionData, companion: CompanionState, game_state: GameState) -> void:
+	if data.handlers.is_empty() or _pipeline == null:
+		return
+	var ctx := AbilityContext.new(game_state, companion.companion_id, "")
+	ctx.content = _content
+	ctx.rng = _rng
+	_pipeline.execute(data.handlers, ctx)
+
+
+# Depart a companion if the just-used ability is its granted ability and its
+# departure rule is "ability_used" (LLD-ARCH-019 resolve_player_action).
+func _depart_companion_if_ability_used(ability_id: String, game_state: GameState) -> void:
+	for companion in _active_companions(game_state):
+		var data = _content.get_companion(companion.companion_id) if _content != null else null
+		if data == null:
+			continue
+		if data.departure_trigger == "ability_used" and data.granted_ability_id == ability_id:
+			_depart_companion(game_state, companion)
+
+
+func _active_companions(game_state: GameState) -> Array:
+	var out: Array = []
+	if game_state.bound_companion != null:
+		out.append(game_state.bound_companion)
+	if game_state.temporary_companion != null:
+		out.append(game_state.temporary_companion)
+	return out
+
+
+# Remove a companion from whichever slot holds it (bound or temporary).
+func _depart_companion(game_state: GameState, companion: CompanionState) -> void:
+	if game_state.bound_companion == companion:
+		game_state.bound_companion = null
+	elif game_state.temporary_companion == companion:
+		game_state.temporary_companion = null
