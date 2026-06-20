@@ -519,12 +519,32 @@ multi-hit, `status_apply` (+magnitude rules), custom `handlers`, `summon_enemy_i
   an orchestration concern for **T6.4** (flagged). (3) For `status_target: "allies"` handler intents the
   handler target is the caster's first living ally (covers Witness→Judge); handlers may override via params.
 
-### T5.6 — Player action resolution
+### T5.6 — Player action resolution  ✅ **Done**
 `resolve_player_action` for standard actions (flag resets, Evade, AbilityPipeline run, evade-miss
 charge preservation, burden updates) plus the two interactive resolutions `READ_THE_ROAD_COMMIT`
 and `REPENT_DISCARD` (item removal, 5 HP heal, burden −1, `item_discarded` emit).
 - **@Spec:** `LLD-ARCH-019`, `LLD-ARCH-003`, `HLD-COMBAT-017`, `HLD-RUN-007`, `LLD-OMEN-CARD-020`
 - **DoD:** Repent (0/1/2+ items) and Read-the-Road splice scenarios green; charge preservation correct.
+- ✅ **Done** — `resolve_player_action` is the dispatcher in `CombatResolver`:
+  - **READ_THE_ROAD_COMMIT** — validates `read_the_road_active` + `send_to_bottom` (window `[0, min(2,size-1)]`,
+    no dupes), splices chosen cards to the bottom in **descending** index order, clears the flag; does not
+    advance the cycle or reset per-turn flags. Invalid → error + unchanged.
+  - **REPENT_DISCARD** — validates `slot_index ∈ pending_repent_slots`; nulls the slot (keeps other indices
+    stable), heals 5 (clamp), burden −1 (floor 0), emits `item_discarded`, clears pending. Invalid → unchanged.
+  - **CHOOSE_OMEN** — dispatched to `resolve_choose_omen` (T5.4).
+  - **Standard** — resets `is_evading`/`is_stunned`; Evade sets `is_evading` and returns; otherwise runs the
+    item/ability `handlers` chain, emits `damage_dealt`/`unit_died`/`action_resolved` from the recorded results,
+    and decrements the charge — **weapon preservation** (attack + `breaks_at_zero`, full miss → not consumed),
+    consumables always, support per-encounter (not per-use), charged abilities decrement their `AbilityState`,
+    unlimited abilities untouched.
+  - `tests/test_player_action.gd` — 18 cases green. Full suite **191/191**.
+- **Decisions / boundary:** (1) **SignalBus is injected** as an optional 4th constructor arg (the resolver
+  emits on it per `LLD-ARCH-019` but stays decoupled/testable — matches `EventLog.connect_to_bus`; tests pass a
+  fresh bus instance and record emissions). (2) **Charge decrement lives here** (the resolver knows hit/miss for
+  preservation); **T6.1 ActionInjector** owns the post-decrement bookkeeping (break detection, `item_broken`
+  emit, burden −1 on break, removal, acquisition) and will not re-decrement. (3) Companion `granted_ability_id`
+  departure on `ability_used` is mentioned in the `LLD-ARCH-019` spec but **deferred to T5.7** (CompanionState
+  handling lands there) — flagged.
 
 ### T5.7 — Enemy death, companion triggers, death intercept
 `resolve_enemy_death` (omen card removal + `on_death_apply_to_player` + `on_death_summons`),

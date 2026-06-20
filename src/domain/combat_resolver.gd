@@ -47,14 +47,18 @@ const CHILLED_TICK_STEP := 1
 var _rng
 var _content
 var _pipeline
+var _signal_bus
 
 
 # rng: RNGService; content: provider with get_vessel(id)/get_ability(id);
-# pipeline: AbilityPipeline. All injected — no autoload access.
-func _init(rng = null, content = null, pipeline = null) -> void:
+# pipeline: AbilityPipeline; signal_bus: SignalBus (the one autoload the resolver
+# may emit on, per LLD-ARCH-019 — injected so the Domain layer stays testable and
+# decoupled from the autoload, matching EventLog.connect_to_bus). All optional.
+func _init(rng = null, content = null, pipeline = null, signal_bus = null) -> void:
 	_rng = rng
 	_content = content
 	_pipeline = pipeline
+	_signal_bus = signal_bus
 
 
 # All valid player actions for the current combat turn, with the priority-ordered
@@ -936,3 +940,172 @@ func _roll_single_timer() -> int:
 	if r < 75:
 		return 2
 	return 3
+
+
+## --- Player action resolution (T5.6) ----------------------------------------
+
+# Apply one player action and return the updated GameState (LLD-ARCH-019). The
+# dispatcher: the two interactive resolutions, the omen-choice resolution
+# (LLD-ARCH-024), and the standard action path. Illegal actions log an error and
+# return state unchanged (LLD-ARCH-003 — never throw).
+# @Spec: LLD-ARCH-019, LLD-ARCH-003, HLD-COMBAT-017, HLD-RUN-007, LLD-OMEN-CARD-020
+func resolve_player_action(action: Dictionary, game_state: GameState) -> GameState:
+	match str(action.get("type", "")):
+		ACTION_READ_THE_ROAD_COMMIT:
+			return _resolve_read_the_road(action, game_state)
+		ACTION_REPENT_DISCARD:
+			return _resolve_repent_discard(action, game_state)
+		ACTION_CHOOSE_OMEN:
+			return resolve_choose_omen(action, game_state)
+		_:
+			return _resolve_standard_action(action, game_state)
+
+
+# READ_THE_ROAD_COMMIT: validate, splice the chosen draw-pile cards to the bottom
+# in descending index order, clear the flag. Does NOT advance the omen cycle or
+# reset the per-turn flags.
+func _resolve_read_the_road(action: Dictionary, game_state: GameState) -> GameState:
+	var combat := game_state.combat_state
+	if combat == null or not combat.read_the_road_active:
+		push_error("READ_THE_ROAD_COMMIT: read_the_road_active is false")
+		return game_state
+
+	var draw_pile := combat.omen_deck.draw_pile if combat.omen_deck != null else []
+	var send: Array = action.get("send_to_bottom", [])
+	# Valid indices: within [0, min(2, size-1)], no duplicates.
+	var window := mini(2, draw_pile.size() - 1)
+	var seen: Dictionary = {}
+	for idx in send:
+		var i := int(idx)
+		if i < 0 or i > window or seen.has(i):
+			push_error("READ_THE_ROAD_COMMIT: invalid send_to_bottom %s" % str(send))
+			return game_state
+		seen[i] = true
+
+	# Process in descending index order so each pop leaves lower indices valid.
+	var ordered: Array = seen.keys()
+	ordered.sort()
+	ordered.reverse()
+	for i in ordered:
+		draw_pile.append(draw_pile.pop_at(i))
+
+	combat.read_the_road_active = false
+	return game_state
+
+
+# REPENT_DISCARD: remove the chosen item, heal 5 (clamp), decrement burden (floor
+# 0), emit item_discarded, clear the pending slots. Does NOT reset per-turn flags.
+# @Spec: LLD-ARCH-019, HLD-RUN-007, LLD-OMEN-CARD-020
+func _resolve_repent_discard(action: Dictionary, game_state: GameState) -> GameState:
+	var combat := game_state.combat_state
+	var slot := int(action.get("slot_index", -1))
+	if combat == null or not (slot in combat.pending_repent_slots):
+		push_error("REPENT_DISCARD: slot %d not in pending_repent_slots" % slot)
+		return game_state
+
+	var item: ItemInstance = game_state.inventory[slot] if slot < game_state.inventory.size() else null
+	var item_id := item.item_id if item != null else ""
+	game_state.inventory[slot] = null  # null keeps other slot indices stable
+
+	_heal_unit(game_state.vessel_state, REPENT_HEAL)
+	game_state.item_burden_score = maxi(game_state.item_burden_score - 1, 0)
+	if _signal_bus != null:
+		_signal_bus.item_discarded.emit(item_id, slot)
+	combat.pending_repent_slots.assign([])
+	return game_state
+
+
+# Standard action: clear prior-turn flags, then Evade or run the ability/item
+# handler chain (with charge decrement + weapon preservation + emission).
+func _resolve_standard_action(action: Dictionary, game_state: GameState) -> GameState:
+	var vessel := game_state.vessel_state
+	if vessel != null:
+		vessel.is_evading = false
+		vessel.is_stunned = false
+
+	var type := str(action.get("type", ""))
+	if type == ACTION_EVADE:
+		if vessel != null:
+			vessel.is_evading = true
+		return game_state
+
+	# Resolve the content id (ability_id for USE_ABILITY, the item's id for USE_ITEM).
+	var content_id := ""
+	var item: ItemInstance = null
+	if type == ACTION_USE_ITEM:
+		var slot := int(action.get("slot_index", -1))
+		if slot < 0 or slot >= game_state.inventory.size() or game_state.inventory[slot] == null:
+			push_error("USE_ITEM: invalid slot %d" % slot)
+			return game_state
+		item = game_state.inventory[slot]
+		content_id = item.item_id
+	elif type == ACTION_USE_ABILITY:
+		content_id = str(action.get("ability_id", ""))
+	else:
+		push_error("resolve_player_action: unknown action type '%s'" % type)
+		return game_state
+
+	var data = _content.get_ability(content_id) if _content != null else null
+	if data == null:
+		push_error("resolve_player_action: unknown content id '%s'" % content_id)
+		return game_state
+
+	# Run the handler chain over a shared context.
+	var ctx := AbilityContext.new(game_state, "player", str(action.get("target_id", "")))
+	ctx.content = _content
+	ctx.rng = _rng
+	if _pipeline != null:
+		_pipeline.execute(data.handlers, ctx)
+
+	_emit_results(action, ctx.results)
+	_consume_charge(type, data, item, vessel, content_id, _all_hits_missed(ctx.results))
+	return game_state
+
+
+# Decrement the charge used by this action. Weapon items (attack + breaks_at_zero)
+# preserve their charge on a full miss (HLD-COMBAT-017); consumables always
+# decrement; support items decrement per-encounter elsewhere (T3.1), not per use;
+# charged abilities decrement their AbilityState; unlimited abilities do nothing.
+func _consume_charge(type: String, data: AbilityData, item: ItemInstance, vessel: VesselState, content_id: String, all_missed: bool) -> void:
+	if type == ACTION_USE_ITEM:
+		if data.action_bucket == "support":
+			return  # per-encounter decrement (ChargeManager), not per use
+		if data.action_bucket == BUCKET_ATTACK and data.breaks_at_zero and all_missed:
+			return  # weapon preservation
+		if item != null:
+			item.remaining_charges = maxi(item.remaining_charges - 1, 0)
+	elif type == ACTION_USE_ABILITY:
+		if data.max_charges <= 0 or vessel == null:
+			return  # unlimited (default strike) — no charge tracking
+		for ability_state in vessel.ability_states:
+			if ability_state.ability_id == content_id:
+				ability_state.remaining_charges = maxi(ability_state.remaining_charges - 1, 0)
+				return
+
+
+# True only when the action produced damage hits and every one missed (used for
+# weapon charge preservation). Non-damage actions return false (charge consumed).
+func _all_hits_missed(results: Array) -> bool:
+	var saw_hit := false
+	for r in results:
+		if r is Dictionary and r.has("missed"):
+			saw_hit = true
+			if not r["missed"]:
+				return false
+	return saw_hit
+
+
+# Emit combat-effect signals for the chain's recorded damage results, plus an
+# action_resolved summary. No-op without an injected SignalBus.
+func _emit_results(action: Dictionary, results: Array) -> void:
+	if _signal_bus == null:
+		return
+	for r in results:
+		if not (r is Dictionary and r.has("missed")):
+			continue
+		if r["missed"]:
+			continue
+		_signal_bus.damage_dealt.emit("player", str(r.get("target_id", "")), int(r.get("damage", 0)), str(r.get("type", "")))
+		if r.get("died", false):
+			_signal_bus.unit_died.emit(str(r.get("target_id", "")))
+	_signal_bus.action_resolved.emit(action, {"results": results})
