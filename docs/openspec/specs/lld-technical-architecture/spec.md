@@ -492,7 +492,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 | `combat_state` | CombatState | Null when not in COMBAT phase |
 | `item_burden_score` | int | Whole-run accumulated item burden (see HLD-RUN-007); initialized from vessel starting items at run start; updated by RunController (acquisition, run start), ActionInjector (item_broken), and CombatResolver (Repent discard) |
 
-**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`, `is_evading: bool` (true when the vessel chose Evade this turn; resets to false at the start of each player turn before any action is processed), `is_stunned: bool` (true when the vessel has been stunned by a Shocked shift trigger; blocks the Action bucket for the next player turn; resets to false at the start of resolve_player_action)
+**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`, `is_evading: bool` (true when the vessel chose Evade this turn; reset to false by `begin_player_turn` at the start of each player turn, so it persists through the following enemy turns), `is_stunned: bool` (true when the vessel has been stunned by a Shocked shift trigger; blocks the Action bucket for the next player turn; set at the omen shift and cleared by `end_player_turn` after the turn it suppressed — `begin_player_turn` does NOT reset it)
 
 **AbilityState fields:** `ability_id: String`, `remaining_charges: int`
 
@@ -506,13 +506,13 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 **DoorData fields:** `room_type: String` (RoomType enum value), `encounter_id: String` (enemy_id for combat; event_id for non-combat), `room_id: String` (unique per-run identifier for logging)
 
-**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`), `read_the_road_active: bool` (set to `true` by the `peek_omen_deck` handler immediately after `assemble_omen_deck` completes; cleared to `false` by `resolve_player_action` when `READ_THE_ROAD_COMMIT` is processed; default `false`; when `true`, `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; see `LLD-ARCH-019`)
+**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`), `read_the_road_active: bool` (set to `true` by the `peek_omen_deck` handler immediately after `assemble_omen_deck` completes; cleared to `false` by `resolve_player_action` when `READ_THE_ROAD_COMMIT` is processed; default `false`; when `true`, `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; see `LLD-ARCH-019`), `pending_vulnerable_units: Array[String]` (default `[]`; units marked by an Exposed shift at cycle start, consumed by `CHOOSE_OMEN`; see `LLD-ARCH-024`), `is_action_used: bool` / `is_support_used: bool` / `is_consumable_used: bool` (per-turn HLD-COMBAT-001 action buckets, default `false`; reset by `begin_player_turn`; set by `resolve_player_action` when the matching bucket resolves; `get_legal_combat_actions()` excludes a bucket's options once its flag is set — the Action bucket is also excluded while `is_stunned`; see `LLD-ARCH-019`)
 
 **EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally), `is_evading: bool` (true when this enemy chose Evade on its turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `is_stunned: bool` (true when this enemy has been stunned by a Shocked shift trigger; the enemy skips its action this turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `turns_alive: int` (per-enemy turn counter; starts at 1 when the enemy enters combat — at combat start or via mid-combat summon — and increments each of that enemy's turns in resolve_enemy_turns; the `turn_number:N` IntentConditional is evaluated against this, not the global `CombatState.turn_number` — see the IntentConditional `condition` notes below)
 
 **OmenDeckState fields:** `draw_pile: Array[Dictionary]`, `discard_pile: Array[Dictionary]`. Each entry is `{ "card_id": String, "timer_value": int }`. Timer values are assigned once when the deck is assembled at combat start (see `LLD-OMEN-MECH-009`) and do not change on reshuffle — the discard pile preserves the originally-assigned values.
 
-**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the leftover timer card; -1 = not yet assigned — derived only after `player_choice_index` and `random_assignment_index` are set, so read it only when `sides_assigned` is true), `sides_assigned: bool`
+**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the leftover timer card; -1 = not yet assigned — derived only after `player_choice_index` and `random_assignment_index` are set, so read it only when `sides_assigned` is true), `sides_assigned: bool`, `ticks_remaining: int` (default `0`; the live per-cycle countdown — set to the timer card's value when sides are assigned and decremented once per `resolve_omen_tick`; at `0` the cycle expires and the round driver calls `resolve_omen_cycle_start`; this is the precise mid-cycle remaining-tick source used for enemy-applied status durations)
 
 #### Scenario: Two enemies are individually targetable
 - **WHEN** a combat contains two Skeletons
@@ -891,15 +891,29 @@ resolve_player_action(action: Dictionary, game_state: GameState) -> GameState
       - Return updated GameState. Do NOT reset vessel_state.is_evading or is_stunned here
         (these only reset at the start of a standard action, not Repent resolution).
     Otherwise (standard action):
-      Resets vessel_state.is_evading and vessel_state.is_stunned to false at the start of
-      resolution (clears flags from the prior turn).
-      If the action is Evade: sets vessel_state.is_evading to true and returns immediately.
-      For all other actions: runs the handler chain via AbilityPipeline.
+      Per-turn flag resets are NOT done here — they belong to begin_player_turn (see
+      below), because a turn may contain several bucket actions (HLD-COMBAT-001).
+      If the action is Evade: sets vessel_state.is_evading to true, marks the Action
+      bucket used, and returns immediately.
+      For all other actions: runs the handler chain via AbilityPipeline, then marks the
+      action's HLD-COMBAT-001 bucket used (attack→is_action_used, support→is_support_used,
+      consumable→is_consumable_used).
       For attack actions against evading targets: per-hit miss roll (35% via COMBAT stream).
       Charge preservation: if ALL hits missed, weapon item charges are not decremented.
       Applies vulnerability, resistance, and damage modifier rules from hld-combat-system.
       If the resolved action used a companion's granted_ability_id and departure_trigger is
       "ability_used", the companion departs as part of this resolution.
+
+begin_player_turn(game_state: GameState) -> void
+    Starts a player turn (HLD-COMBAT-001): resets is_action_used/is_support_used/
+    is_consumable_used and vessel_state.is_evading to false. Does NOT reset is_stunned —
+    a Shocked stun set at the omen shift must block the Action bucket for this turn.
+
+end_player_turn(game_state: GameState) -> void
+    Ends a player turn: clears vessel_state.is_stunned (Shocked suppresses exactly one
+    turn). is_evading is left set so it applies during the following enemy turns and is
+    reset by the next begin_player_turn. The round driver (RunController) calls this
+    before resolve_enemy_turns.
 
 resolve_enemy_turns(game_state: GameState) -> GameState
     Resolves all living enemies' turns in order.
@@ -963,6 +977,8 @@ resolve_omen_tick(game_state: GameState) -> GameState
         Poisoned escalation, Mending heal, Hardened absorption, Bleed decay).
       - trigger: "shift" statuses: do NOT fire; remaining_ticks decrements only.
     Decrements remaining_ticks on ALL active StatusInstances.
+    Also decrements current_cycle.ticks_remaining (the per-cycle countdown) so the round
+    driver knows when the cycle has expired and resolve_omen_cycle_start must run.
     Clears only trigger: "tick" StatusInstances whose remaining_ticks has reached 0.
     Shift-triggered StatusInstances at 0 are NOT cleared here — they are processed in
     resolve_omen_cycle_start.

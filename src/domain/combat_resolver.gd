@@ -26,6 +26,8 @@ const SIDE_PLAYER := "player"
 const SIDE_ENEMY := "enemy"
 
 const BUCKET_ATTACK := "attack"
+const BUCKET_SUPPORT := "support"
+const BUCKET_CONSUMABLE := "consumable"
 const BUCKET_PASSIVE := "passive"
 
 ## COMBAT RNG stream index (RNGService.Stream.COMBAT). Held as a const so the
@@ -95,43 +97,99 @@ func _omen_choice_actions(cycle: OmenCycleState) -> Array:
 	return actions
 
 
+# The standard per-turn action set, gated by the HLD-COMBAT-001 buckets: one Action
+# (mandatory), optionally one Support and one Consumable. Each bucket's options are
+# excluded once its used-flag is set; the Action bucket is also excluded while
+# stunned. END_TURN becomes legal once the mandatory Action bucket is satisfied — or
+# is impossible (stunned / no Action option) — so the player can't skip a free
+# Action. Always returns ≥1 action.
 func _standard_actions(game_state: GameState) -> Array:
 	var actions: Array = []
 	var vessel := game_state.vessel_state
+	var combat := game_state.combat_state
 	var stunned := vessel != null and vessel.is_stunned
+	var action_used := combat != null and combat.is_action_used
+	var support_used := combat != null and combat.is_support_used
+	var consumable_used := combat != null and combat.is_consumable_used
 	var targets := _living_enemy_ids(game_state)
 
-	# Default Strike + Evade are Action-bucket options — excluded while stunned.
-	if not stunned:
+	# Does the Action bucket have any option this turn (used to gate END_TURN)? Evade
+	# is always an Action option unless stunned, so this is true whenever not stunned.
+	var action_possible := not stunned
+
+	# Action bucket: Default Strike (per living enemy) + Evade. Offered only if the
+	# Action bucket is unused and the vessel is not stunned.
+	if not action_used and not stunned:
 		var strike_id := _default_strike_id(vessel)
 		for target_id in targets:
 			actions.append({"type": ACTION_USE_ABILITY, "ability_id": strike_id, "target_id": target_id})
 		actions.append({"type": ACTION_EVADE})
 
-	# Vessel abilities that still have charges.
+	# Vessel abilities that still have charges, gated by their bucket.
 	if vessel != null:
 		for ability_state in vessel.ability_states:
 			if ability_state.remaining_charges <= 0:
 				continue
 			var bucket := _bucket_of(ability_state.ability_id)
-			if bucket == BUCKET_ATTACK and stunned:
+			if not _bucket_available(bucket, action_used, support_used, consumable_used, stunned):
 				continue
 			actions.append_array(_use_ability_actions(ability_state.ability_id, bucket, targets))
 
-	# Inventory items that still have charges.
+	# Inventory items that still have charges, gated by their bucket.
 	for i in game_state.inventory.size():
 		var item: ItemInstance = game_state.inventory[i]
 		if item == null or item.remaining_charges <= 0:
 			continue
 		var bucket := _bucket_of(item.item_id)
-		if bucket == BUCKET_ATTACK and stunned:
+		if not _bucket_available(bucket, action_used, support_used, consumable_used, stunned):
 			continue
 		actions.append_array(_use_item_actions(i, bucket, targets))
 
-	# Guarantee at least one action (e.g. stunned with no Support/Consumable items).
+	# END_TURN: legal once the mandatory Action bucket is satisfied or impossible.
+	if action_used or not action_possible:
+		actions.append({"type": ACTION_END_TURN})
+
+	# Guarantee at least one action.
 	if actions.is_empty():
 		actions.append({"type": ACTION_END_TURN})
 	return actions
+
+
+# Whether a bucket's options may be offered this turn (HLD-COMBAT-001). Attack is
+# the Action bucket (also blocked by stun); support/consumable are their own
+# once-per-turn buckets; passive abilities are never actively used.
+func _bucket_available(bucket: String, action_used: bool, support_used: bool, consumable_used: bool, stunned: bool) -> bool:
+	match bucket:
+		BUCKET_ATTACK:
+			return not action_used and not stunned
+		BUCKET_SUPPORT:
+			return not support_used
+		BUCKET_CONSUMABLE:
+			return not consumable_used
+		_:
+			return false
+
+
+# Reset the per-turn buckets and the prior turn's Evade at the start of a player
+# turn (HLD-COMBAT-001). is_stunned is NOT reset here — a stun set at the omen shift
+# must block the Action bucket for this turn; it clears in end_player_turn.
+# @Spec: LLD-ARCH-019, HLD-COMBAT-001
+func begin_player_turn(game_state: GameState) -> void:
+	var combat := game_state.combat_state
+	if combat != null:
+		combat.is_action_used = false
+		combat.is_support_used = false
+		combat.is_consumable_used = false
+	if game_state.vessel_state != null:
+		game_state.vessel_state.is_evading = false
+
+
+# End the player's turn: clear the Shocked stun that blocked the Action bucket this
+# turn (it only suppresses one turn). is_evading persists into the following enemy
+# turns and resets at the next begin_player_turn. @Spec: LLD-ARCH-019, HLD-COMBAT-006
+func end_player_turn(game_state: GameState) -> void:
+	if game_state.vessel_state != null:
+		game_state.vessel_state.is_stunned = false
 
 
 # Attack-bucket abilities/items produce one action per living enemy target; other
@@ -186,6 +244,11 @@ func _bucket_of(content_id: String) -> String:
 func resolve_omen_tick(game_state: GameState) -> GameState:
 	for unit in _all_units(game_state):
 		_tick_unit(unit)
+	# Advance the cycle countdown alongside the per-status countdowns; the round
+	# driver triggers resolve_omen_cycle_start when this reaches 0 (HLD-OMEN-001).
+	var combat := game_state.combat_state
+	if combat != null and combat.current_cycle != null:
+		combat.current_cycle.ticks_remaining -= 1
 	return game_state
 
 
@@ -491,6 +554,9 @@ func resolve_choose_omen(action: Dictionary, game_state: GameState) -> GameState
 	# Mark resolved before applying cards so the omen-choice gate (LLD-ARCH-024) is
 	# off even on the Repent early-return path (where the Repent gate takes over).
 	cycle.sides_assigned = true
+	# The cycle lasts `new_timer` turns (HLD-OMEN-001); this is the live countdown the
+	# round driver decrements each omen tick to know when to draw the next cycle.
+	cycle.ticks_remaining = new_timer
 
 	# Step 4: apply the deferred Vulnerable (Exposed shift) with the known timer.
 	apply_deferred_vulnerable(game_state, combat.pending_vulnerable_units, new_timer)
@@ -847,20 +913,16 @@ func _handler_target_id(enemy: EnemyState, status_target: String, game_state: Ga
 			return "player"
 
 
-# The current omen cycle's tick budget — the leftover (timer) card's value once
-# sides are assigned. Used as remaining_ticks for enemy-applied (individual)
-# statuses, which clear at the next omen reset (LLD-OMEN-MECH-006).
-# NOTE: with no per-cycle countdown stored, this returns the cycle *length*; a
-# status applied mid-cycle therefore lasts a full timer span. Precise mid-cycle
-# remaining-tick accounting is an orchestration concern (T6.4) — flagged.
+# The current omen cycle's remaining ticks — the live countdown (OmenCycleState.
+# ticks_remaining) so an enemy-applied (individual) status applied mid-cycle clears
+# at the next omen reset, not a full timer span later (LLD-OMEN-MECH-006). This is
+# the precise mid-cycle accounting the T5.5 note deferred to T6.4. Floored at 1 so a
+# status applied during the final tick still lasts that tick.
 func _cycle_remaining_ticks(game_state: GameState) -> int:
 	var combat := game_state.combat_state
 	if combat == null or combat.current_cycle == null:
 		return 1
-	var cycle := combat.current_cycle
-	if cycle.sides_assigned and cycle.timer_index >= 0 and cycle.timer_index < cycle.drawn_cards.size():
-		return int(cycle.drawn_cards[cycle.timer_index].get("timer_value", 1))
-	return 1
+	return maxi(combat.current_cycle.ticks_remaining, 1)
 
 
 # Evaluate an IntentConditional condition string against an enemy + game state.
@@ -1015,18 +1077,18 @@ func _resolve_repent_discard(action: Dictionary, game_state: GameState) -> GameS
 	return game_state
 
 
-# Standard action: clear prior-turn flags, then Evade or run the ability/item
-# handler chain (with charge decrement + weapon preservation + emission).
+# Standard action: Evade, or run the ability/item handler chain (with charge
+# decrement + weapon preservation + emission), then mark the used action bucket
+# (HLD-COMBAT-001). Per-turn flags are reset by begin_player_turn, not here, so the
+# player may take several bucket actions within one turn.
 func _resolve_standard_action(action: Dictionary, game_state: GameState) -> GameState:
 	var vessel := game_state.vessel_state
-	if vessel != null:
-		vessel.is_evading = false
-		vessel.is_stunned = false
 
 	var type := str(action.get("type", ""))
 	if type == ACTION_EVADE:
 		if vessel != null:
 			vessel.is_evading = true
+		_mark_bucket_used(game_state, BUCKET_ATTACK)  # Evade is an Action-bucket option
 		return game_state
 
 	# Resolve the content id (ability_id for USE_ABILITY, the item's id for USE_ITEM).
@@ -1059,11 +1121,27 @@ func _resolve_standard_action(action: Dictionary, game_state: GameState) -> Game
 
 	_emit_results(action, ctx.results)
 	_consume_charge(type, data, item, vessel, content_id, _all_hits_missed(ctx.results))
+	_mark_bucket_used(game_state, data.action_bucket)
 
 	# A companion that grants this ability and departs on use leaves now (T5.7).
 	if type == ACTION_USE_ABILITY:
 		_depart_companion_if_ability_used(content_id, game_state)
 	return game_state
+
+
+# Mark the HLD-COMBAT-001 bucket consumed by a resolved action so
+# get_legal_combat_actions excludes it for the rest of this turn.
+func _mark_bucket_used(game_state: GameState, bucket: String) -> void:
+	var combat := game_state.combat_state
+	if combat == null:
+		return
+	match bucket:
+		BUCKET_ATTACK:
+			combat.is_action_used = true
+		BUCKET_SUPPORT:
+			combat.is_support_used = true
+		BUCKET_CONSUMABLE:
+			combat.is_consumable_used = true
 
 
 # Decrement the charge used by this action. Weapon items (attack + breaks_at_zero)

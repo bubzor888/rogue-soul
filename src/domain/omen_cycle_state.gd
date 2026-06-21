@@ -19,6 +19,12 @@ extends Resource
 
 @export var sides_assigned: bool = false
 
+## Turns remaining in this cycle before the next draw — set to the timer card's
+## value when sides are assigned (resolve_choose_omen) and decremented once per omen
+## tick. At 0 the cycle expires and resolve_omen_cycle_start draws the next cycle.
+## This is the precise mid-cycle countdown the T5.5 note deferred to orchestration.
+@export var ticks_remaining: int = 0
+
 
 func to_json() -> Dictionary:
 	return {
@@ -27,6 +33,7 @@ func to_json() -> Dictionary:
 		"random_assignment_index": random_assignment_index,
 		"timer_index": timer_index,
 		"sides_assigned": sides_assigned,
+		"ticks_remaining": ticks_remaining,
 	}
 
 
@@ -37,4 +44,5 @@ static func from_json(data: Dictionary) -> OmenCycleState:
 	c.random_assignment_index = int(data.get("random_assignment_index", -1))
 	c.timer_index = int(data.get("timer_index", -1))
 	c.sides_assigned = bool(data.get("sides_assigned", false))
+	c.ticks_remaining = int(data.get("ticks_remaining", 0))
 	return c

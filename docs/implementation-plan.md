@@ -679,7 +679,7 @@ empty-pool fallbacks; LOOT stream only.
   `game_state.floor_number` via the injected content provider (rather than taking a `FloorProfile` param
   like `NavigationModel`) — kept faithful to `LLD-ARCH-022`.
 
-### T6.4 — `RunController` (orchestrator)
+### T6.4 — `RunController` (orchestrator)  ✅ **Done**
 Application-layer node (not autoload). Phase state machine (`NAVIGATION`, `COMBAT`,
 `LOOT_SELECTION`, `NON_COMBAT_EVENT` [stub for MVP1], `FLOOR_TRANSITION`, `RUN_END`). Fires
 replenishment events to ChargeManager; emits `save_requested` (BACKGROUND after door, CHECKPOINT
@@ -687,6 +687,47 @@ after boss); floor transition (full HP restore, temporary companion departs); in
 maintains `item_burden_score`; wires loot selection. Communicates only via SignalBus.
 - **@Spec:** `LLD-ARCH-016`, `LLD-ARCH-007`, `HLD-RUN-006`, `HLD-RUN-007`, `LLD-ARCH-009`
 - **DoD:** full phase walk fires correct signals/replenishments; burden lifecycle correct; freed at run end.
+- ✅ `src/application/run_controller.gd` (`RunController`, extends Node, Application; no autoload access
+  except the injected SignalBus — verified by grep). `configure(rng, content, signal_bus)` builds the
+  collaborators (CombatResolver, ActionInjector, NavigationModel, LootGenerator, ChargeManager,
+  AbilityPipeline). `start_run(seed, vessel_id)` seeds RNG, builds the initial GameState (vessel at full
+  HP, ability/item charges, **burden = starting-item count**, bound companion if any), fires `floor_start`,
+  and enters NAVIGATION with the first doors. `get_legal_actions()`/`submit_action()` are the agent/UI
+  surface — every decision routes through ActionInjector (`LLD-ARCH-003`), then `_advance()` drives phases.
+- ✅ **Phase walk:** NAVIGATION `CHOOSE_DOOR` → BACKGROUND save + `room_entered`/`combat_started` +
+  `encounter_start` replenish → COMBAT (deck assembled, first omen cycle paused for `CHOOSE_OMEN`). After
+  `CHOOSE_OMEN` → `begin_player_turn` (buckets reset). Combat victory → `encounter_end` + `combat_ended` +
+  `rooms_completed++` + LootGenerator offers → LOOT_SELECTION. Defeat → RUN_END("death"). Loot pick/decline
+  → next doors (NAVIGATION) or, after room 9, the boss. Boss victory → CHECKPOINT save → RUN_END("completion").
+- ✅ **Combat round driver** (`_run_enemy_phase`): `END_TURN` → `end_player_turn` (clears stun) →
+  `resolve_enemy_turns` → death processing → `resolve_omen_tick` (decrements the new `OmenCycleState.
+  ticks_remaining`) → if the cycle expired, `resolve_omen_cycle_start` (next cycle, pause for `CHOOSE_OMEN`),
+  else `begin_player_turn`. `_process_deaths` calls `resolve_enemy_death` once per 0-HP enemy (omen removal +
+  on-death status/summons); `_check_combat_end` runs `check_vessel_death_intercept` before declaring defeat.
+- ✅ **Phase-5 backfill (the full-bucket decision):** `CombatState` gained `is_action_used`/`is_support_used`/
+  `is_consumable_used`; `get_legal_combat_actions` now gates each HLD-COMBAT-001 bucket (Action mandatory +
+  stun-blocked, Support/Consumable optional, END_TURN legal once Action is satisfied/impossible);
+  `resolve_player_action` marks the used bucket; new `begin_player_turn`/`end_player_turn` own the
+  is_evading/is_stunned/bucket resets (moved off per-action). `OmenCycleState.ticks_remaining` is the precise
+  per-cycle countdown that **resolves the T5.5 deferral** — `_cycle_remaining_ticks` now returns the live
+  remaining ticks. T5.6/T5.1/T5.7 tests updated accordingly (turn-lifecycle + bucket-gating coverage added).
+- ✅ Tests: `tests/test_run_controller.gd` (10 cases — init/burden, door→combat signals+replenish+omen pause,
+  choose-omen→turn, victory→loot, loot→navigation (+2 burden), defeat→run-end, enemy-phase cycle tick,
+  boss→checkpoint→completion, floor transition HP-restore + temp-companion departs). `test_player_action`/
+  `test_combat_resolver`/`test_enemy_death` updated for the new turn model. Full suite **261/261**.
+- **Decisions / flags:** (1) **RunController is the agent surface** — it exposes get/submit that delegate to
+  ActionInjector (LLD-ARCH-003 honored) and then advance phases; the AIPlayerAgent (T7.1) talks to it. (2)
+  `SaveType` enum (BACKGROUND/CHECKPOINT) defined on RunController for now; **SaveManager (T6.5)** will own
+  the canonical enum and consume these ints. (3) **MVP1 single floor** — `_floor_transition` (HP restore +
+  temp-companion departure + `floor_transitioned`, HLD-RUN-006) is implemented and unit-tested but only fired
+  by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ⚠️ **One enemy per encounter** — EnemyData
+  has no encounter-count and FloorProfile no boss composition, so a combat spawns a single enemy. Multi-enemy
+  encounters (3 Wolves; the Judge + 2 Witnesses, `LLD-ENEMIES-021/-022`) need an encounter-composition schema
+  — flagged for a deliberate decision before content tuning (T8). The round loop is roster-size agnostic. (5)
+  **unit_died for status-tick kills** isn't emitted (only the resolver's damage-path emits it); minor logging
+  gap, state is correct. (6) `NON_COMBAT_EVENT` is unused in MVP1 (MF/WS deferred); the Worn Map single-door
+  beat is **T6.6**. (7) **Rest-on-elite-path** (room 6, `LLD-FLOOR-BEATS-006`) still not modelled — the door
+  choice at room 5 isn't yet read post-resolution to force a rest at room 6 (flagged in T6.2; revisit with MF/WS).
 
 ### T6.5 — `SaveManager` + `ScreenManager` (headless-appropriate) 
 `SaveManager` autoload reacts to `save_requested`, coordinates JSON save/load via

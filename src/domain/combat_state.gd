@@ -27,6 +27,14 @@ extends Resource
 ## timer is known, then this is cleared (LLD-ARCH-024).
 @export var pending_vulnerable_units: Array[String] = []
 
+## Per-turn action-bucket usage (HLD-COMBAT-001): each bucket may be used once per
+## player turn. Reset at the start of each player turn (begin_player_turn). The
+## Action bucket is mandatory; Support/Consumable are optional. get_legal_combat_actions
+## excludes a bucket's options once its flag is set.
+@export var is_action_used: bool = false
+@export var is_support_used: bool = false
+@export var is_consumable_used: bool = false
+
 
 func to_json() -> Dictionary:
 	return {
@@ -37,6 +45,9 @@ func to_json() -> Dictionary:
 		"pending_repent_slots": pending_repent_slots.duplicate(),
 		"read_the_road_active": read_the_road_active,
 		"pending_vulnerable_units": pending_vulnerable_units.duplicate(),
+		"is_action_used": is_action_used,
+		"is_support_used": is_support_used,
+		"is_consumable_used": is_consumable_used,
 	}
 
 
@@ -49,4 +60,7 @@ static func from_json(data: Dictionary) -> CombatState:
 	c.pending_repent_slots.assign(Serde.int_array(data.get("pending_repent_slots", [])))
 	c.read_the_road_active = bool(data.get("read_the_road_active", false))
 	c.pending_vulnerable_units.assign(Serde.str_array(data.get("pending_vulnerable_units", [])))
+	c.is_action_used = bool(data.get("is_action_used", false))
+	c.is_support_used = bool(data.get("is_support_used", false))
+	c.is_consumable_used = bool(data.get("is_consumable_used", false))
 	return c

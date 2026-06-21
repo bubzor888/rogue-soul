@@ -92,6 +92,7 @@ func _gs(content: StubContent, enemy_specs: Array, cycle_timer: int = 2) -> Game
 	])
 	cycle.timer_index = 2
 	cycle.sides_assigned = true
+	cycle.ticks_remaining = cycle_timer  # live countdown (precise mid-cycle accounting)
 	gs.combat_state.current_cycle = cycle
 	return gs
 

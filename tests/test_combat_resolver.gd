@@ -173,6 +173,74 @@ func test_stun_excludes_attack_item() -> void:
 	assert_array(_types(actions)).is_equal(["END_TURN"])  # attack item excluded, nothing else
 
 
+# --- Per-turn action buckets (HLD-COMBAT-001) -------------------------------
+
+# Once the Action bucket is used, Strike/Evade disappear and END_TURN appears.
+func test_action_used_excludes_action_offers_adds_end_turn() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	gs.combat_state.is_action_used = true
+	var types := _types(_resolver(content).get_legal_combat_actions(gs))
+	assert_bool("EVADE" in types).is_false()
+	assert_bool("USE_ABILITY" in types).is_false()
+	assert_bool("END_TURN" in types).is_true()
+
+
+# Support and Consumable remain selectable after the Action bucket is used.
+func test_support_and_consumable_remain_after_action_used() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	gs.combat_state.is_action_used = true
+	content.abilities["read_road"] = _ability("read_road", "support")
+	content.abilities["fire_bomb"] = _ability("fire_bomb", "consumable")
+	var ast := AbilityState.new()
+	ast.ability_id = "read_road"
+	ast.remaining_charges = 1
+	gs.vessel_state.ability_states.assign([ast])
+	var item := ItemInstance.new()
+	item.item_id = "fire_bomb"
+	item.remaining_charges = 1
+	gs.inventory.assign([item])
+
+	var has_support := false
+	var has_consumable := false
+	for a in _resolver(content).get_legal_combat_actions(gs):
+		if a["type"] == "USE_ABILITY" and a.get("ability_id") == "read_road":
+			has_support = true
+		if a["type"] == "USE_ITEM":
+			has_consumable = true
+	assert_bool(has_support).is_true()
+	assert_bool(has_consumable).is_true()
+
+
+# A used Support bucket removes the support ability (the Action strike is unaffected).
+func test_support_used_excludes_support() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	gs.combat_state.is_support_used = true
+	content.abilities["read_road"] = _ability("read_road", "support")
+	var ast := AbilityState.new()
+	ast.ability_id = "read_road"
+	ast.remaining_charges = 1
+	gs.vessel_state.ability_states.assign([ast])
+	for a in _resolver(content).get_legal_combat_actions(gs):
+		if a["type"] == "USE_ABILITY":
+			assert_str(a["ability_id"]).is_not_equal("read_road")
+
+
+# A used Consumable bucket removes consumable items.
+func test_consumable_used_excludes_consumable() -> void:
+	var content := StubContent.new()
+	var gs := _combat_state(content, 1)
+	gs.combat_state.is_consumable_used = true
+	content.abilities["fire_bomb"] = _ability("fire_bomb", "consumable")
+	var item := ItemInstance.new()
+	item.item_id = "fire_bomb"
+	item.remaining_charges = 1
+	gs.inventory.assign([item])
+	assert_bool("USE_ITEM" in _types(_resolver(content).get_legal_combat_actions(gs))).is_false()
+
+
 # --- Always ≥1 --------------------------------------------------------------
 
 func test_always_at_least_one_action() -> void:

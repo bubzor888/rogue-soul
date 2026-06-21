@@ -206,26 +206,51 @@ func test_repent_discard_invalid_slot_unchanged() -> void:
 	assert_array(gs.combat_state.pending_repent_slots).is_equal([0])  # not cleared
 
 
-# --- Standard actions: flag reset & Evade -----------------------------------
+# --- Turn lifecycle & buckets (HLD-COMBAT-001) ------------------------------
 
-# Evade sets is_evading and returns; prior-turn flags are cleared first.
-func test_evade_sets_flag_and_resets() -> void:
+# begin_player_turn resets the per-turn buckets and the prior Evade — but NOT the
+# stun, which must block the Action bucket for this turn.
+func test_begin_player_turn_resets_buckets_and_evade() -> void:
+	var content := StubContent.new()
+	var gs := _gs(content)
+	gs.vessel_state.is_evading = true
+	gs.vessel_state.is_stunned = true
+	gs.combat_state.is_action_used = true
+	gs.combat_state.is_support_used = true
+	gs.combat_state.is_consumable_used = true
+	_resolver(content).begin_player_turn(gs)
+	assert_bool(gs.vessel_state.is_evading).is_false()
+	assert_bool(gs.combat_state.is_action_used).is_false()
+	assert_bool(gs.combat_state.is_support_used).is_false()
+	assert_bool(gs.combat_state.is_consumable_used).is_false()
+	assert_bool(gs.vessel_state.is_stunned).is_true()  # stun persists into the turn
+
+
+# end_player_turn clears the Shocked stun (it suppresses only one turn).
+func test_end_player_turn_clears_stun() -> void:
 	var content := StubContent.new()
 	var gs := _gs(content)
 	gs.vessel_state.is_stunned = true
+	_resolver(content).end_player_turn(gs)
+	assert_bool(gs.vessel_state.is_stunned).is_false()
+
+
+# Evade sets is_evading and consumes the Action bucket.
+func test_evade_sets_flag_and_marks_action_bucket() -> void:
+	var content := StubContent.new()
+	var gs := _gs(content)
 	_resolver(content).resolve_player_action({"type": "EVADE"}, gs)
 	assert_bool(gs.vessel_state.is_evading).is_true()
-	assert_bool(gs.vessel_state.is_stunned).is_false()  # reset at start
+	assert_bool(gs.combat_state.is_action_used).is_true()
 
 
-# A standard (non-Evade) action clears the prior is_evading flag.
-func test_standard_action_resets_evading() -> void:
+# A standard attack consumes the Action bucket.
+func test_attack_marks_action_bucket() -> void:
 	var content := StubContent.new()
 	content.abilities["throw_rock"] = _ability("throw_rock", "attack", [_deal_damage(3)])
 	var gs := _gs(content)
-	gs.vessel_state.is_evading = true
 	_resolver(content).resolve_player_action({"type": "USE_ABILITY", "ability_id": "throw_rock", "target_id": "enemy_0"}, gs)
-	assert_bool(gs.vessel_state.is_evading).is_false()
+	assert_bool(gs.combat_state.is_action_used).is_true()
 
 
 # --- Standard actions: handler chain + emission -----------------------------
