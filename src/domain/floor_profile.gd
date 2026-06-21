@@ -36,6 +36,13 @@ extends Resource
 ## enemy_ids for the Elite Gate's elite door (the elite pool, LLD-FLOOR-ELITE-001).
 @export var elite_enemy_pool: Array[String] = []
 
+## Post-combat loot pools (read by LootGenerator, LLD-ARCH-022 / HLD-COMBAT-012/-013).
+## Normal-tier draws after standard combat; elite-tier after elite combat.
+@export var normal_durability_pool: Array[String] = []   # LLD-ITEMS-005
+@export var normal_consumable_pool: Array[String] = []   # LLD-ITEMS-007
+@export var elite_durability_pool: Array[String] = []    # LLD-ITEMS-006
+@export var elite_consumable_pool: Array[String] = []    # LLD-ITEMS-008
+
 
 # Total navigable rooms before the boss: pre-elite + the Elite Gate + post-elite
 # (LLD-FLOOR-STRUCT-006). @Spec: LLD-FLOOR-STRUCT-001, LLD-FLOOR-STRUCT-006

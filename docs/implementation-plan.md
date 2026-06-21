@@ -654,11 +654,30 @@ stream.
   pools** belong on `FloorProfile` too but are added in **T6.3** (`LootGenerator`) to keep this task's
   schema to what navigation uses.
 
-### T6.3 — `LootGenerator`
+### T6.3 — `LootGenerator`  ✅ **Done**
 Two-item offer (one durability, one consumable) from normal vs elite pools by encounter tier;
 empty-pool fallbacks; LOOT stream only.
 - **@Spec:** `LLD-ARCH-022`, `HLD-COMBAT-012`, `-013`, `LLD-ARCH-008`
 - **DoD:** elite vs normal pool separation; one-of-each; LOOT-stream-only scenarios green.
+- ✅ `src/application/loot_generator.gd` (`LootGenerator`, RefCounted, Application; rng + `content`
+  provider injected — no autoload/FileAccess/scene-tree access, verified by grep). `generate_loot_offers(
+  game_state, elite)` resolves the floor's `FloorProfile` via `content.get_floor_by_number(floor_number)`,
+  draws one durability + one consumable from the tier's pools (elite → `elite_*` pools, else `normal_*`)
+  on the **LOOT** stream, and returns an `Array` of item_ids **without mutating GameState** (RunController
+  stores them in `NavigationState.loot_offers`). Empty-pool fallbacks: one empty → both from the other
+  (distinct when ≥2, via the same no-retry distinct-pick as NavigationModel); both empty → `[]` (handled
+  like DECLINE_LOOT). Null profile → `[]`.
+- ✅ `FloorProfile` extended with the four loot pools (`normal_durability_pool`/`normal_consumable_pool`/
+  `elite_durability_pool`/`elite_consumable_pool` — LLD-ITEMS-005/-007/-006/-008); `data/floors/floor_3.tres`
+  regenerated with the canonical Floor 3 item ids (Cracked Cudgel … Small Amethyst; Iron Maul … Medium
+  Amethyst; Fire Bomb … Frost Shard; Poultice/Brittle Charm/Fulminating Powder).
+- ✅ `tests/test_loot_generator.gd` (11 cases, written first) — normal/elite tier separation (no
+  cross-tier leakage), one-durability-one-consumable, both empty-pool fallbacks + both-empty `[]`,
+  fallback distinctness, **LOOT-stream-only** (stub rng records every stream used), null-profile `[]`,
+  no-GameState-mutation (to_json before/after), same-seed determinism. Full suite **245/245**.
+- **Decision:** the spec signature `generate_loot_offers(game_state, elite)` resolves the profile from
+  `game_state.floor_number` via the injected content provider (rather than taking a `FloorProfile` param
+  like `NavigationModel`) — kept faithful to `LLD-ARCH-022`.
 
 ### T6.4 — `RunController` (orchestrator)
 Application-layer node (not autoload). Phase state machine (`NAVIGATION`, `COMBAT`,
