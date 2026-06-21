@@ -573,7 +573,7 @@ and `REPENT_DISCARD` (item removal, 5 HP heal, burden −1, `item_discarded` emi
 
 ## Phase 6 — Application Orchestration
 
-### T6.1 — `ActionInjector` (TDD)  ⭐ mandated test system
+### T6.1 — `ActionInjector` (TDD)  ⭐ mandated test system  ✅ **Done**
 Single entry point for all decisions. `get_legal_actions()` (combat + navigation + loot phases),
 `submit_action()` (validates against legal set; illegal → log + unchanged state, no throw). Handles
 attack-item per-use charge decrement (`HLD-ITEMS-005`) / break + `item_broken` emit + burden −1, and
@@ -581,6 +581,34 @@ item acquisition (no inventory cap, burden +2 — `HLD-ITEMS-001`, `HLD-RUN-007`
 Write `tests/test_action_injector.gd`.
 - **@Spec:** `LLD-ARCH-003`, `LLD-ARCH-011`, `LLD-ARCH-009`, `HLD-RUN-007`, `HLD-ITEMS-001`, `HLD-ITEMS-005`, `LLD-ARCH-015`
 - **DoD:** legal-set correctness, illegal-action safety, item-break flow, no-cap acquisition scenarios green.
+- ✅ `src/application/action_injector.gd` (`ActionInjector`, RefCounted, Application layer; no autoload/
+  FileAccess/RNG access — verified by grep). Collaborators injected (CombatResolver, ChargeManager,
+  `content` provider, SignalBus) per the established pattern. `get_legal_actions` dispatches by
+  `run_phase`: COMBAT delegates to `CombatResolver.get_legal_combat_actions` (the gating authority,
+  `LLD-ARCH-019`); NAVIGATION → one `CHOOSE_DOOR` per door; LOOT_SELECTION → one `CHOOSE_LOOT` per offer +
+  `DECLINE_LOOT`; terminal/transitional phases → `[]`. `submit_action` validates via `_is_legal`
+  (type + selector-key match; `send_to_bottom` is the player's free choice, validated by the resolver),
+  illegal → `push_error` + unchanged. Combat actions delegate to `resolve_player_action`, then
+  `_finalize_broken_items` (reads `ChargeManager.get_broken_slots` → null the slot, burden −1 [floor 0],
+  emit `item_broken`); REPENT discards are the resolver's (`item_discarded`, already-null slot) so they
+  aren't double-counted. `CHOOSE_LOOT` acquires at full `max_charges` (no cap: fill a null slot else
+  append), burden +2, emit `item_acquired`, clear offers. `tests/test_action_injector.gd` written first —
+  19 cases green (phase dispatch incl. combat gating delegation, no-cap loot offers, terminal empty,
+  illegal-in-phase + illegal-target safety, attack-item break/no-break, consumable spend, weapon
+  miss-preservation, loot acquire/fill-slot/append-when-full/decline, door + end-turn pass-throughs).
+  Full suite **221/221**.
+- **Decisions / flags:** (1) **Boundary** — ActionInjector owns post-resolution item *bookkeeping*
+  (break detection, removal, `item_broken`, burden ±) and loot *acquisition*; the resolver owns charge
+  *decrement* (T5.6, no re-decrement here); **phase transitions** after `CHOOSE_DOOR`/`END_TURN`/loot are
+  RunController's (T6.4), so those actions are validated-then-pass-through here. (2) `item_acquired` is
+  emitted here (mirrors `item_broken`'s ActionInjector attribution and the T6.1 DoD), though the
+  `SignalBus` doc-comment still attributes it to RunController — minor attribution note, no behaviour change.
+  (3) ⚠️ **Spec contradiction flagged (no spec edited):** `HLD-ITEMS-001` ("no inventory cap … item added
+  regardless of how many held") + this task's DoD ("no-cap acquisition") **conflict** with the
+  `LLD-ARCH-003` `CHOOSE_LOOT`-with-full-inventory scenario ("returns only `DECLINE_LOOT`") and the
+  `GameState.inventory` "up to 3 slots" note. Implemented **no-cap** per HLD + DoD (inventory grows past 3);
+  the `LLD-ARCH-003` full-inventory clause/scenario should be reconciled (removed or re-scoped post-MVP)
+  in a deliberate spec change before it's treated as authoritative.
 
 ### T6.2 — `FloorProfile` + `NavigationModel` (Floor 3 generation)
 Data-driven `FloorProfile` resource (`HLD-RUN-005`). Counter-based 9-room generation for Floor 3:
