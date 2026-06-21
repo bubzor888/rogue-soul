@@ -22,6 +22,7 @@ const VESSELS_DIR := "res://data/vessels"
 const ENEMIES_DIR := "res://data/enemies"
 const OMEN_CARDS_DIR := "res://data/omen_cards"
 const COMPANIONS_DIR := "res://data/companions"
+const FLOORS_DIR := "res://data/floors"
 
 # Indexes keyed by id. Abilities and items share one index — items ARE AbilityData
 # (LLD-ARCH-018), keyed by ability_id (== item_id).
@@ -30,6 +31,7 @@ var _vessels: Dictionary = {}      # vessel_id   -> VesselData
 var _enemies: Dictionary = {}      # enemy_id    -> EnemyData
 var _omen_cards: Dictionary = {}   # card_id     -> OmenCardData
 var _companions: Dictionary = {}   # companion_id-> CompanionData
+var _floors: Dictionary = {}       # floor_id    -> FloorProfile
 
 # Fatal load problems (duplicate/empty id, load failure) collected during a scan.
 var load_errors: PackedStringArray = PackedStringArray()
@@ -52,6 +54,7 @@ func load_all() -> void:
 	_enemies = {}
 	_omen_cards = {}
 	_companions = {}
+	_floors = {}
 	load_errors = PackedStringArray()
 	_index_into(_abilities, ABILITIES_DIR, "ability_id")
 	_index_into(_abilities, ITEMS_DIR, "ability_id")  # items are AbilityData too
@@ -59,6 +62,7 @@ func load_all() -> void:
 	_index_into(_enemies, ENEMIES_DIR, "enemy_id")
 	_index_into(_omen_cards, OMEN_CARDS_DIR, "card_id")
 	_index_into(_companions, COMPANIONS_DIR, "companion_id")
+	_index_into(_floors, FLOORS_DIR, "floor_id")
 
 
 # Load all `.tres` in dir_path into target, keyed by the resource's id_field.
@@ -105,6 +109,19 @@ func get_omen_card(id: String) -> OmenCardData:
 
 func get_companion(id: String) -> CompanionData:
 	return _companions.get(id, null)
+
+
+func get_floor(id: String) -> FloorProfile:
+	return _floors.get(id, null)
+
+
+# Resolve a floor profile by its floor number (NavigationModel/RunController look up
+# the profile for the current floor). Null if none defined. @Spec: HLD-RUN-005
+func get_floor_by_number(n: int) -> FloorProfile:
+	for fp in _floors.values():
+		if fp.floor_number == n:
+			return fp
+	return null
 
 
 ## --- Handler validation (LLD-ARCH-005) --------------------------------------

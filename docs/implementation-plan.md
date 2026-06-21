@@ -611,7 +611,7 @@ Write `tests/test_action_injector.gd`.
   `lld-technical-architecture` directly (same-requirement consistency fix): the `CHOOSE_LOOT` clause +
   its scenario now state no-cap, and the `GameState.inventory` row notes the array may grow past 3.
 
-### T6.2 — `FloorProfile` + `NavigationModel` (Floor 3 generation)
+### T6.2 — `FloorProfile` + `NavigationModel` (Floor 3 generation)  ✅ **Done**
 Data-driven `FloorProfile` resource (`HLD-RUN-005`). Counter-based 9-room generation for Floor 3:
 4 pre-elite, Elite Gate at room 5, 4 post-elite, then Judge; two-door choice with full enemy
 identity; pool exhaustion both-doors rule; segment caps; the Judge is the fixed final-floor boss
@@ -619,6 +619,40 @@ identity; pool exhaustion both-doors rule; segment caps; the Judge is the fixed 
 stream.
 - **@Spec:** `HLD-RUN-004`, `HLD-RUN-005`, `HLD-DOOR-001`..`-004`, `LLD-FLOOR-STRUCT-001/-006`, `LLD-FLOOR-PATT-001/-002/-003`, `LLD-ARCH-008`
 - **DoD:** deterministic 9-room sequences; Elite Gate fixed at 5; Judge at end; caps respected.
+- ✅ `src/domain/floor_profile.gd` (`FloorProfile`, Domain content Resource like `EnemyData` — loaded
+  from `.tres`, no to_json): `floor_id`/`floor_number`, `pre_elite_rooms`/`post_elite_rooms`,
+  `boss_enemy_id`, `normal_enemy_pool`/`elite_enemy_pool`, plus `total_rooms()` (= pre+1+post) and
+  `elite_gate_room()` (= pre+1). The fixed 9-room layout (`LLD-FLOOR-STRUCT-006`) is expressed as
+  segment sizes, so a new floor is a new `.tres` (`HLD-RUN-005`). `data/floors/floor_3.tres` created
+  (4/Gate/4; normal pool skeleton/zombie/plague_rat/wolf/fire_elemental/ice_elemental; elite pool
+  bear/lightning_elemental; boss `the_judge`) — the **first real content `.tres` in the repo**,
+  generated via `ResourceSaver` for a guaranteed-valid format.
+- ✅ `src/application/navigation_model.gd` (`NavigationModel`, RefCounted, Application; rng injected like
+  CombatResolver — no autoload/FileAccess/scene-tree access, verified by grep). `generate_doors(gs,
+  profile)` returns the two-door choice for room `rooms_completed+1`: the Elite Gate (`elite_gate_room()`)
+  yields one `elite_combat` door (elite pool) + one `combat` door (normal pool); every other room yields
+  two `combat` doors with **distinct** enemy identities (`HLD-DOOR-002`), collapsing to the same identity
+  only when the pool has one type (`HLD-DOOR-004`); past the last room it returns `[]` (Judge next,
+  `LLD-FLOOR-BEATS-005`). `is_boss_next()` reports when only the boss remains. Door selection uses 2
+  bounded rolls on the **NAVIGATION** stream (`_two_distinct_from`: roll i, roll j over the remaining,
+  skip past i) so distinctness costs no retry loop and is deterministic. Each `DoorData` gets a stable
+  `room_id` (`f<floor>_r<room>_d<door>`).
+- ✅ `ContentRegistry` extended to scan `data/floors/` (`get_floor(id)`, `get_floor_by_number(n)`) — floor
+  profiles are content, resolved by number at run time.
+- ✅ `tests/test_navigation_model.gd` (11 cases, written first) — profile helpers, two combat doors,
+  distinct/single-pool identities, distinct room_ids, Elite Gate at 5 + position-follows-profile,
+  no-doors-after-room-9 + `is_boss_next`, same-seed determinism, full 9-room walk. `test_content_registry.gd`
+  +2 (temp-dir floor index + real `floor_3.tres` end-to-end load). Full suite **234/234**.
+- **Scope / decisions:** (1) **MVP1 deferrals** — Memory Fragment / Wandering Soul room types and their
+  per-segment caps (`LLD-FLOOR-PATT-003`) are **MVP2**; with combat the only pooled type, "caps respected"
+  reduces to "both doors combat", and the pool-exhaustion rule (`HLD-DOOR-004`) is exercised via the
+  single-enemy-pool case. The opening/combat-lock beats (`LLD-FLOOR-BEATS-001/-002`) are moot without
+  non-combat types. (2) **Worn Map single-door beat (room 4)** is **T6.6** — `NavigationModel` generates
+  the standard two-door structure; T6.6 overrides room 4. (3) **Rest on elite path** (`LLD-FLOOR-BEATS-006`,
+  room 6 after the elite door) is not yet modelled — flagged for T6.4 orchestration / a later pass, as it
+  depends on which room-5 door was taken (post-choice state the generator doesn't yet read). (4) **Loot
+  pools** belong on `FloorProfile` too but are added in **T6.3** (`LootGenerator`) to keep this task's
+  schema to what navigation uses.
 
 ### T6.3 — `LootGenerator`
 Two-item offer (one durability, one consumable) from normal vs elite pools by encounter tier;

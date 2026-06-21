@@ -132,6 +132,40 @@ func test_find_unresolved_handlers() -> void:
 	assert_array(unresolved).is_equal(PackedStringArray(["made_up_handler"]))
 
 
+# Floor profiles are content too: discovered by floor_id and resolvable by number.
+# @Spec: LLD-ARCH-006, HLD-RUN-005
+func test_scan_discovers_floor_profile() -> void:
+	var floors_dir := "%s/floors" % TMP
+	DirAccess.make_dir_recursive_absolute(floors_dir)
+	var fp := FloorProfile.new()
+	fp.floor_id = "floor_3"
+	fp.floor_number = 3
+	ResourceSaver.save(fp, "%s/floor_3.tres" % floors_dir)
+
+	var reg = _registry()
+	reg._index_into(reg._floors, floors_dir, "floor_id")
+
+	assert_array(reg.load_errors).is_empty()
+	assert_object(reg.get_floor("floor_3")).is_not_null()
+	assert_object(reg.get_floor_by_number(3)).is_not_null()
+	assert_str(reg.get_floor_by_number(3).floor_id).is_equal("floor_3")
+	assert_object(reg.get_floor_by_number(99)).is_null()
+
+
+# The real data/floors/floor_3.tres loads and parses (end-to-end data-driven path).
+# @Spec: HLD-RUN-005, LLD-FLOOR-STRUCT-006
+func test_real_floor_3_profile_loads() -> void:
+	var reg = _registry()
+	reg.load_all()
+	var fp = reg.get_floor_by_number(3)
+	assert_object(fp).is_not_null()
+	assert_int(fp.total_rooms()).is_equal(9)
+	assert_int(fp.elite_gate_room()).is_equal(5)
+	assert_str(fp.boss_enemy_id).is_equal("the_judge")
+	assert_bool(fp.normal_enemy_pool.size() > 0).is_true()
+	assert_bool(fp.elite_enemy_pool.size() > 0).is_true()
+
+
 func _handler(id: String) -> HandlerConfig:
 	var h := HandlerConfig.new()
 	h.handler_id = id
