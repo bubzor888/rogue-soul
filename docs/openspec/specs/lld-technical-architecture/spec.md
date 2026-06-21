@@ -72,9 +72,9 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 
 **`ACCEPT_OPTION_1` / `ACCEPT_OPTION_2` actions:** Legal only in `NON_COMBAT_EVENT` phase when `event_type` is `"mf_cat_c"`. `DECLINE_TRADE` is NOT legal in this event type — the player must choose one option (see `HLD-MF-005`). `ACCEPT_OPTION_1` resolves the bad deal (player pays the cost item, receives the reward item from Option 1). `ACCEPT_OPTION_2` resolves cutting losses (player pays the loss from Option 2, receives nothing). After either resolves, RunController transitions to `NAVIGATION`.
 
-**`CHOOSE_LOOT` action:** Legal only in `LOOT_SELECTION` phase. `item_id` must be one of the two item_ids in `navigation_state.loot_offers`. Resolving the action adds the chosen item to the player's inventory (incrementing `item_burden_score` by 2; see `HLD-RUN-007`), emits `SignalBus.item_acquired`, clears `loot_offers`, and RunController transitions to `NAVIGATION`. If the inventory has no free slot, the item cannot be picked — `get_legal_actions()` excludes that offer (only `DECLINE_LOOT` is returned).
+**`CHOOSE_LOOT` action:** Legal only in `LOOT_SELECTION` phase. `item_id` must be one of the two item_ids in `navigation_state.loot_offers`. Resolving the action adds the chosen item to the player's inventory (incrementing `item_burden_score` by 2; see `HLD-RUN-007`), emits `SignalBus.item_acquired`, clears `loot_offers`, and RunController transitions to `NAVIGATION`. There is **no inventory cap** (see `HLD-ITEMS-001`): both offers are always selectable regardless of how many items are already held — `get_legal_actions()` never withholds a `CHOOSE_LOOT` offer for a "full" inventory, and there is no auto-decline.
 
-**`DECLINE_LOOT` action:** Legal in `LOOT_SELECTION` phase. The player walks away from both loot options with nothing. RunController clears `loot_offers` and transitions to `NAVIGATION`.
+**`DECLINE_LOOT` action:** Legal in `LOOT_SELECTION` phase. The player **voluntarily** walks away from both loot options with nothing. RunController clears `loot_offers` and transitions to `NAVIGATION`. Declining is a meaningful strategic choice rather than a fallback: skipping loot keeps `item_burden_score` from rising (+2 per acquired item; see `HLD-RUN-007`), which matters for burden-sensitive encounters such as the Judge.
 
 #### Scenario: Illegal action safety
 - **WHEN** an illegal action is submitted to ActionInjector
@@ -108,9 +108,9 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 - **WHEN** the game is in `NON_COMBAT_EVENT` with `event_type: "mf_cat_c"`
 - **THEN** `get_legal_actions()` returns only `ACCEPT_OPTION_1` and `ACCEPT_OPTION_2`; `DECLINE_TRADE` is not included
 
-#### Scenario: CHOOSE_LOOT with full inventory
-- **WHEN** the player is in `LOOT_SELECTION` and all 3 inventory slots are occupied
-- **THEN** `get_legal_actions()` returns only `DECLINE_LOOT`; no `CHOOSE_LOOT` actions are included
+#### Scenario: CHOOSE_LOOT is never withheld for inventory size
+- **WHEN** the player is in `LOOT_SELECTION` with a large inventory (e.g. all three starting slots already occupied)
+- **THEN** `get_legal_actions()` still returns a `CHOOSE_LOOT` action for each offer plus `DECLINE_LOOT`; no offer is auto-excluded (no inventory cap — see `HLD-ITEMS-001`)
 
 #### Scenario: DECLINE_LOOT — walk away empty-handed
 - **WHEN** the player submits `DECLINE_LOOT` in `LOOT_SELECTION` phase
@@ -483,7 +483,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 |---|---|---|
 | `run_seed` | int | Base seed for all RNG streams |
 | `vessel_state` | VesselState | Current vessel runtime state |
-| `inventory` | Array[ItemInstance] | Up to 3 slots; null entries are empty slots |
+| `inventory` | Array[ItemInstance] | Starts at 3 slots; null entries are empty slots. No hard cap (`HLD-ITEMS-001`) — acquisition fills a null slot or appends, so the array may grow past 3 |
 | `bound_companion` | CompanionState | Null if vessel has no bound companion |
 | `temporary_companion` | CompanionState | Null if no temporary companion active |
 | `floor_number` | int | Current floor (3 for MVP1) |

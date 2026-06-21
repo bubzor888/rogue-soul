@@ -603,12 +603,13 @@ Write `tests/test_action_injector.gd`.
   RunController's (T6.4), so those actions are validated-then-pass-through here. (2) `item_acquired` is
   emitted here (mirrors `item_broken`'s ActionInjector attribution and the T6.1 DoD), though the
   `SignalBus` doc-comment still attributes it to RunController — minor attribution note, no behaviour change.
-  (3) ⚠️ **Spec contradiction flagged (no spec edited):** `HLD-ITEMS-001` ("no inventory cap … item added
-  regardless of how many held") + this task's DoD ("no-cap acquisition") **conflict** with the
-  `LLD-ARCH-003` `CHOOSE_LOOT`-with-full-inventory scenario ("returns only `DECLINE_LOOT`") and the
-  `GameState.inventory` "up to 3 slots" note. Implemented **no-cap** per HLD + DoD (inventory grows past 3);
-  the `LLD-ARCH-003` full-inventory clause/scenario should be reconciled (removed or re-scoped post-MVP)
-  in a deliberate spec change before it's treated as authoritative.
+  (3) **Spec reconciled (no-cap confirmed with the designer):** `LLD-ARCH-003` previously said a full
+  inventory auto-excludes `CHOOSE_LOOT` (only `DECLINE_LOOT` returned), contradicting `HLD-ITEMS-001`
+  ("no inventory cap … item added regardless of how many held"). Confirmed there is **no cap and no
+  auto-decline**; the inventory is unbounded, both offers are always selectable, and `DECLINE_LOOT` is a
+  *voluntary* strategic choice (skipping loot keeps `item_burden_score` low for the Judge). Fixed
+  `lld-technical-architecture` directly (same-requirement consistency fix): the `CHOOSE_LOOT` clause +
+  its scenario now state no-cap, and the `GameState.inventory` row notes the array may grow past 3.
 
 ### T6.2 — `FloorProfile` + `NavigationModel` (Floor 3 generation)
 Data-driven `FloorProfile` resource (`HLD-RUN-005`). Counter-based 9-room generation for Floor 3:
