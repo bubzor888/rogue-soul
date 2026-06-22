@@ -813,18 +813,51 @@ run; the determinism gate can run on stub content first).
 
 ## Phase 7 — AIPlayerAgent & Integration
 
-### T7.1 — `AIPlayerAgent` (Random strategy)
+### T7.1 — `AIPlayerAgent` (Random strategy)  ✅ **Done**
 `RefCounted` in `src/application/`. `play_turn()` picks uniformly at random from
 `ActionInjector.get_legal_actions()` using its **own** local RNG (never RNGService).
 `run_to_completion(seed, vessel_id)` → `RunResult`.
 - **@Spec:** `LLD-ARCH-020`, `LLD-ARCH-003`
 - **DoD:** completes a run headlessly; AI RNG never advances game streams.
+- ✅ `src/application/ai_player_agent.gd` (`AIPlayerAgent`, RefCounted, Application; no autoload access —
+  `rng`/`content`/`signal_bus` injected, decision RNG is its own). `play_turn(surface)` draws one legal
+  action uniformly from `surface.get_legal_actions()` via its dedicated `ai_rng: RandomNumberGenerator`
+  and submits it (empty set → no-op). `run_to_completion(seed, vessel_id)` seeds `ai_rng` from the same
+  `seed` (deterministic *and* stream-independent), builds + configures a `RunController`, drives
+  `get_legal_actions`/`submit_action` until `is_finished()`, and returns a `RunResult`. A `MAX_ACTIONS`
+  guard prevents a wedged loop from hanging CI. `src/application/run_result.gd` (`RunResult`, RefCounted)
+  — `seed`/`vessel_id`/`floors_completed`/`outcome`/`turn_count` + `equals()`/`to_dict()`.
+- ✅ `tests/test_ai_player_agent.gd` (5 cases, written first) — play_turn submits one legal action,
+  empty-set no-op, **selection uses the local RNG not game streams** (a reference RNG seeded identically
+  reproduces every choice; the injected game-rng spy records 0 calls), run_to_completion returns a
+  finished RunResult, two same-seed runs agree.
+- **Decision / deviation (flagged):** the spec's `play_turn(game_state)` signature predates the T6.4
+  "RunController is the agent surface" decision — the agent talks to the **RunController surface**
+  (`get_legal_actions`/`submit_action`, which route through ActionInjector per `LLD-ARCH-003`), not raw
+  GameState, so phase advancement happens. `play_turn(surface)` accepts any object with that surface,
+  keeping the unit test decoupled from RunController internals.
 
-### T7.2 — Full headless determinism integration test
+### T7.2 — Full headless determinism integration test  ✅ **Done**
 End-to-end: run the same seed twice through `AIPlayerAgent` → identical `RunResult` (turns, loot,
 outcome). This is the primary MVP1 integration gate.
 - **@Spec:** `LLD-ARCH-020`, `LLD-ARCH-008`, `SCOPE-001`
 - **DoD:** two runs of N seeds produce byte-identical RunResults; green in headless CI command.
+- ✅ `tests/test_headless_determinism.gd` (3 cases) — wires the agent to the **real `RNGService`
+  autoload** + a fresh SignalBus over stub Floor-3 content (a fully playable run; Phase-8 content not
+  required for the determinism property, per the Phase 6 closing note). `test_same_seed_produces_
+  identical_run_results` runs each of 6 seeds twice and asserts `RunResult.equals()` (with the diff in
+  the failure message) — proves the game streams reset cleanly per run. Plus: RunResult records
+  seed/vessel/outcome, and **40-seed divergence** (the run isn't a constant) so the gate is meaningful.
+  Full suite **284/284**.
+
+---
+
+**Phase 7 complete.** ✅ `AIPlayerAgent` (Random strategy, dedicated decision RNG) + `RunResult` landed,
+and the headless determinism integration gate is green over multiple seeds — the full MVP1 engine loop
+(navigation → combat → omen → loot → boss → run end) runs end-to-end and deterministically on stub
+content. **The MVP1 *engine* is feature-complete; what remains is Phase 8 content** (real Pilgrim,
+Floor-3 enemies, the Judge, items, omen cards) plus the few content-coupled handlers deferred to land
+with it (`restore_item_charges`, `elemental_synergy`/`sacred_ground`, the Combustible Oil branch).
 
 ---
 
