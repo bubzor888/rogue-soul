@@ -355,8 +355,8 @@ Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requiremen
   - `tests/test_handlers.gd` — 14 cases green. Full suite 90/90.
 - ⏳ **Sequenced (flagged), each blocked by later work whose core logic it *is*:**
   - ✅ `deal_damage` → **done in T5.2** (the 7-step `DamageCalculator` + multi-target/arc handler).
-  - `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → needs per-item `max_charges` content lookup
-    (injected like ChargeManager's Callable) — wire when the resolver gets ContentRegistry access.
+  - ✅ `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → **done in T8.1** (`RestoreItemChargesHandler`,
+    `max_charges` looked up via `ctx.content`).
   - Omen-card non-status handlers (Elemental Synergy/Sacred Ground `LLD-OMEN-CARD-013/-014`, Combustible Oil
     branch `LLD-ITEMS-007`) → **T5.4** omen mechanics + Phase-8 content.
   > These are **not** registered yet, so Phase-8 content referencing them would (correctly) abort boot via
@@ -867,10 +867,36 @@ with it (`restore_item_charges`, `elemental_synergy`/`sacred_ground`, the Combus
 > (Phase 2) carry the annotations. Each task's DoD includes "discovered by registry; handler ids
 > resolve at startup; AIPlayerAgent run exercises it."
 
-### T8.1 — The Pilgrim vessel + abilities
+### T8.1 — The Pilgrim vessel + abilities  ✅ **Done**
 `pilgrim.tres` (`LLD-VESSELS-001`), Throw Rock (`LLD-ABILITIES-004`), Read the Road
 (`LLD-ABILITIES-005`), Good as New (`LLD-ABILITIES-003`), Stillness vessel omen card
 (`LLD-OMEN-CARD-006`).
+- ✅ Five `.tres` authored (via `ResourceSaver` for guaranteed-valid format, then the one-off
+  generator removed — the `.tres` are the source of truth): `data/vessels/pilgrim.tres` (HP 24,
+  `default_strike_id="throw_rock"`, abilities `[read_the_road, good_as_new]`, no companion, **2 copies
+  of Stillness** in `omen_contributions`, 3 starting items per `LLD-ITEMS-004`); `data/abilities/
+  throw_rock.tres` (attack, unlimited, `deal_damage{base_damage:3}`); `data/abilities/read_the_road.tres`
+  (**passive** — auto-fires at combat start via the existing `_run_passive_omen_handlers` pass,
+  `peek_omen_deck`); `data/abilities/good_as_new.tres` (support, 1 charge, `floor_start` replenish,
+  `restore_item_charges`); `data/omen_cards/stillness.tres` (no status, no handlers — does nothing on
+  either side, number-only timer).
+- ✅ **Unblocked the T4.2 deferral:** `restore_item_charges` (`RestoreItemChargesHandler`) is now
+  implemented + registered — Good as New refills one item to max via `ctx.content` (the `AbilityContext`
+  content provider added in T5.2). An explicit `target_slot` restores that slot (player choice, MVP2 UI);
+  with none given it auto-targets the most-depleted eligible item, matching the engine's "support actions
+  are a single non-targeted action" model so the MVP1 random agent exercises a real effect. Single-use
+  items are never affected. `tests/test_restore_item_charges.gd` — 5 cases (TDD).
+- ✅ `tests/test_pilgrim_content.gd` — 6 cases reading the **shipped** `.tres` through the live
+  `ContentRegistry` autoload (vessel/ability shapes match the specs; every Pilgrim handler resolves in
+  the pipeline). The real ContentRegistry boots cleanly with the new content (boot-time handler
+  validation passes). Full suite **295/295**.
+- **Decisions / flags:** (1) **Targeting** — true per-item-slot enumeration for Good as New (and any
+  targeted support ability) is an MVP2 UI concern; MVP1 uses the auto-target. Flagged on the handler.
+  (2) `starting_item_ids` references `walking_staff`/`spoiled_potion`/`worn_map` whose `.tres` land in
+  **T8.2** — until then they resolve to `null` (no boot error; `_build_initial_state` already tolerates
+  null item data). A full real-content `AIPlayerAgent` run is only completable once T8.2–T8.4 (items,
+  Floor-3 enemies, the Judge) land; T8.1's "run exercises it" is satisfied by the boot validation +
+  content-load tests.
 
 ### T8.2 — Pilgrim starting items
 **Three** starting items per `LLD-ITEMS-004`: Walking Staff (attack durability), Spoiled Potion

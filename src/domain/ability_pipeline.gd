@@ -49,8 +49,8 @@ static func with_default_handlers() -> AbilityPipeline:
 	pipeline.register(CleanseStatusHandler.new())
 	pipeline.register(PeekOmenDeckHandler.new())
 	pipeline.register(ApplyMendingByBurdenTierHandler.new())
+	pipeline.register(RestoreItemChargesHandler.new())  # T8.1 — Good as New (content lookup via ctx.content)
 	# Still sequenced to later (their core logic is that work):
-	#   restore_item_charges  — needs per-item max_charges content lookup
 	#   elemental_synergy / sacred_ground / combustible_oil — omen mechanics (T5.4) + content
 	return pipeline
 

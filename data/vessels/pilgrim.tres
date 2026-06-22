@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VesselData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/vessel_data.gd" id="1_h34oc"]
+
+[resource]
+script = ExtResource("1_h34oc")
+vessel_id = "pilgrim"
+display_name = "The Pilgrim"
+max_hp = 24
+default_strike_id = "throw_rock"
+ability_ids = Array[String](["read_the_road", "good_as_new"])
+starting_item_ids = Array[String](["walking_staff", "spoiled_potion", "worn_map"])
+omen_contributions = Array[String](["stillness", "stillness"])
