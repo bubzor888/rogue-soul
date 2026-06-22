@@ -1112,11 +1112,18 @@ func _resolve_standard_action(action: Dictionary, game_state: GameState) -> Game
 		push_error("resolve_player_action: unknown content id '%s'" % content_id)
 		return game_state
 
-	# Run the handler chain over a shared context.
+	# Run the handler chain over a shared context. Inject the current omen cycle's
+	# remaining ticks so status-applying handlers (e.g. Spoiled Potion → Poisoned)
+	# last the cycle duration rather than expiring at the next tick — mirrors the
+	# enemy-intent path (_execute_intent). Handlers that ignore remaining_ticks
+	# (deal_damage, restore_item_charges, …) are unaffected.
 	var ctx := AbilityContext.new(game_state, "player", str(action.get("target_id", "")))
 	ctx.content = _content
 	ctx.rng = _rng
 	if _pipeline != null:
+		var ticks := _cycle_remaining_ticks(game_state)
+		for config in data.handlers:
+			config.params["remaining_ticks"] = ticks
 		_pipeline.execute(data.handlers, ctx)
 
 	_emit_results(action, ctx.results)

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_4pdgn"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_qonlw"]
+
+[sub_resource type="Resource" id="Resource_eb8q0"]
+script = ExtResource("1_4pdgn")
+handler_id = "apply_status"
+params = {
+"magnitude": 2,
+"status_id": "poisoned"
+}
+
+[resource]
+script = ExtResource("2_qonlw")
+ability_id = "spoiled_potion"
+display_name = "Spoiled Potion"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 15
+handlers = Array[ExtResource("1_4pdgn")]([SubResource("Resource_eb8q0")])

@@ -898,13 +898,27 @@ with it (`restore_item_charges`, `elemental_synergy`/`sacred_ground`, the Combus
   Floor-3 enemies, the Judge) land; T8.1's "run exercises it" is satisfied by the boot validation +
   content-load tests.
 
-### T8.2 — Pilgrim starting items
+### T8.2 — Pilgrim starting items  ✅ **Done**
 **Three** starting items per `LLD-ITEMS-004`: Walking Staff (attack durability), Spoiled Potion
 (consumable, Poisoned), Worn Map (support durability / encounter-countdown), each with precomputed
 `score` per `LLD-ITEMS-011`.
 - ✅ **Resolved** (change `fix-pilgrim-burden-init`): `LLD-ARCH-017`'s burden-init scenario now agrees
   with `LLD-ITEMS-004` — the Pilgrim has **3** starting items → `item_burden_score` initializes to **3**
-  (1 per starting item per `HLD-RUN-007`). Use 3 when setting the initial value in T6.4.
+  (1 per starting item per `HLD-RUN-007`). Used in T6.4 (`_build_initial_state` sets burden =
+  `starting_item_ids.size()`, now 3 for the real Pilgrim).
+- ✅ Three item `.tres` in `data/items/` (items are `AbilityData` with `breaks_at_zero` — scanned into the
+  shared ability index): `walking_staff.tres` (attack, 6 charges, `deal_damage{base_damage:6}`, **score
+  42**); `spoiled_potion.tres` (consumable, 1 charge, `apply_status{poisoned, magnitude:2}` — X=2, **score
+  15**); `worn_map.tres` (support, 3 charges, `is_encounter_countdown`, `triggered_room_type="companion"`,
+  no active handler, **score 28**). Scores per `LLD-IR-011`.
+- ✅ **Engine gap fixed (TDD):** player status-applying actions now inherit the current omen cycle's
+  `remaining_ticks` (Spoiled Potion authored without `remaining_ticks` per spec would otherwise expire at
+  the next tick before dealing damage). `_resolve_standard_action` injects `_cycle_remaining_ticks` into
+  the handler params before executing, mirroring the enemy-intent path (`_execute_intent`); handlers that
+  ignore it (deal_damage, restore_item_charges, …) are unaffected. `tests/test_player_action.gd` +1.
+- ✅ `tests/test_pilgrim_items_content.gd` — 4 cases reading the shipped `.tres` through `ContentRegistry`
+  (shapes/effects/scores; all three Pilgrim starting items now resolve and their handlers are known to
+  the pipeline). Full suite **300/300**. The Pilgrim run now builds with 3 real items + burden 3.
 
 ### T8.3 — Floor 3 enemies (non-boss)
 Skeleton, Zombie, Plague Rat, Wolf, Bear, Fire/Ice/Lightning Elementals, Low/High HP Fanatics,
