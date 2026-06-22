@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-Soul Protocol is a turn-based roguelite built in Godot 4 (GDScript). The spec system lives in `openspec/specs/` and is the source of truth for design decisions. The design docs in `docs/` are the original source material; the specs supersede them where they conflict.
+Soul Protocol is a turn-based roguelite built in Godot 4 (GDScript). The spec system lives in `docs/openspec/specs/` and is the source of truth for design decisions. The original design docs in `docs/archived/` are the source material; the specs supersede them where they conflict.
+
+> **OpenSpec CLI note:** the OpenSpec home is `docs/openspec/`. Run all `openspec` commands from the `docs/` directory (e.g. `cd docs && openspec ...`) — run from the repo root, the CLI can't find the specs and will create a stray `openspec/` at the root.
 
 ---
 
@@ -82,7 +84,7 @@ func build_anomaly_outcome() -> EncounterResult:
 
 ## Spec Conventions
 
-- All `[OPEN]` items must be tagged with an MVP target: `[OPEN·MVP1]`, `[OPEN·MVP2]`, `[OPEN·MVP3]`, or `[OPEN·MVP4]`. An untagged `[OPEN]` means the MVP assignment is pending. See `openspec/specs/project-scope/spec.md` for milestone definitions.
+- All `[OPEN]` items must be tagged with an MVP target: `[OPEN·MVP1]`, `[OPEN·MVP2]`, `[OPEN·MVP3]`, or `[OPEN·MVP4]`. An untagged `[OPEN]` means the MVP assignment is pending. See `docs/openspec/specs/project-scope/spec.md` for milestone definitions.
 - HLD specs use requirement IDs like `HLD-COMBAT-001`. LLD specs use IDs like `LLD-ITEMS-004`. Project scope uses `SCOPE-001`.
 - When a spec references another spec's details, use a cross-reference (`see LLD-ITEMS-004`) rather than duplicating the content.
 - Items, enemies, and vessels are LLD concerns. Don't add their specific values or names to HLD specs.
@@ -98,4 +100,4 @@ func build_anomaly_outcome() -> EncounterResult:
 | MVP3 | Floor 2 + Tier 2 vessels (Drifter, Hedge Knight) |
 | MVP4 | Floor 1 + Tier 3 vessels (Paladin, Battle Wizard, Shaman, Ranger) |
 
-Full definitions: `openspec/specs/project-scope/spec.md`
+Full definitions: `docs/openspec/specs/project-scope/spec.md`

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="FloorProfile" format=3]
+
+[ext_resource type="Script" path="res://src/domain/floor_profile.gd" id="1_jnx5s"]
+
+[resource]
+script = ExtResource("1_jnx5s")
+floor_id = "floor_3"
+floor_number = 3
+pre_elite_rooms = 4
+post_elite_rooms = 4
+boss_enemy_id = "the_judge"
+normal_enemy_pool = Array[String](["skeleton", "zombie", "plague_rat", "wolf", "fire_elemental", "ice_elemental"])
+elite_enemy_pool = Array[String](["bear", "lightning_elemental"])
+normal_durability_pool = Array[String](["cracked_cudgel", "rope_flail", "battered_sword", "ember_shard", "spark_rod", "frost_sliver", "small_amethyst"])
+normal_consumable_pool = Array[String](["fire_bomb", "ointment", "combustible_oil", "hardening_resin", "frost_shard"])
+elite_durability_pool = Array[String](["iron_maul", "spiked_chain", "soldiers_blade", "smoldering_brand", "arc_wand", "glacial_brand", "medium_amethyst"])
+elite_consumable_pool = Array[String](["poultice", "brittle_charm", "fulminating_powder"])
+temporary_companion_pool = Array[String](["raven", "shadow", "life_mote"])

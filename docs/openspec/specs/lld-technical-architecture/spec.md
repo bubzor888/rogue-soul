@@ -72,9 +72,9 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 
 **`ACCEPT_OPTION_1` / `ACCEPT_OPTION_2` actions:** Legal only in `NON_COMBAT_EVENT` phase when `event_type` is `"mf_cat_c"`. `DECLINE_TRADE` is NOT legal in this event type — the player must choose one option (see `HLD-MF-005`). `ACCEPT_OPTION_1` resolves the bad deal (player pays the cost item, receives the reward item from Option 1). `ACCEPT_OPTION_2` resolves cutting losses (player pays the loss from Option 2, receives nothing). After either resolves, RunController transitions to `NAVIGATION`.
 
-**`CHOOSE_LOOT` action:** Legal only in `LOOT_SELECTION` phase. `item_id` must be one of the two item_ids in `navigation_state.loot_offers`. Resolving the action adds the chosen item to the player's inventory (incrementing `item_burden_score` by 2; see `HLD-RUN-007`), emits `SignalBus.item_acquired`, clears `loot_offers`, and RunController transitions to `NAVIGATION`. If the inventory has no free slot, the item cannot be picked — `get_legal_actions()` excludes that offer (only `DECLINE_LOOT` is returned).
+**`CHOOSE_LOOT` action:** Legal only in `LOOT_SELECTION` phase. `item_id` must be one of the two item_ids in `navigation_state.loot_offers`. Resolving the action adds the chosen item to the player's inventory (incrementing `item_burden_score` by 2; see `HLD-RUN-007`), emits `SignalBus.item_acquired`, clears `loot_offers`, and RunController transitions to `NAVIGATION`. There is **no inventory cap** (see `HLD-ITEMS-001`): both offers are always selectable regardless of how many items are already held — `get_legal_actions()` never withholds a `CHOOSE_LOOT` offer for a "full" inventory, and there is no auto-decline.
 
-**`DECLINE_LOOT` action:** Legal in `LOOT_SELECTION` phase. The player walks away from both loot options with nothing. RunController clears `loot_offers` and transitions to `NAVIGATION`.
+**`DECLINE_LOOT` action:** Legal in `LOOT_SELECTION` phase. The player **voluntarily** walks away from both loot options with nothing. RunController clears `loot_offers` and transitions to `NAVIGATION`. Declining is a meaningful strategic choice rather than a fallback: skipping loot keeps `item_burden_score` from rising (+2 per acquired item; see `HLD-RUN-007`), which matters for burden-sensitive encounters such as the Judge.
 
 #### Scenario: Illegal action safety
 - **WHEN** an illegal action is submitted to ActionInjector
@@ -108,9 +108,9 @@ All game decisions SHALL be serialisable Dictionary commands. ActionInjector is 
 - **WHEN** the game is in `NON_COMBAT_EVENT` with `event_type: "mf_cat_c"`
 - **THEN** `get_legal_actions()` returns only `ACCEPT_OPTION_1` and `ACCEPT_OPTION_2`; `DECLINE_TRADE` is not included
 
-#### Scenario: CHOOSE_LOOT with full inventory
-- **WHEN** the player is in `LOOT_SELECTION` and all 3 inventory slots are occupied
-- **THEN** `get_legal_actions()` returns only `DECLINE_LOOT`; no `CHOOSE_LOOT` actions are included
+#### Scenario: CHOOSE_LOOT is never withheld for inventory size
+- **WHEN** the player is in `LOOT_SELECTION` with a large inventory (e.g. all three starting slots already occupied)
+- **THEN** `get_legal_actions()` still returns a `CHOOSE_LOOT` action for each offer plus `DECLINE_LOOT`; no offer is auto-excluded (no inventory cap — see `HLD-ITEMS-001`)
 
 #### Scenario: DECLINE_LOOT — walk away empty-handed
 - **WHEN** the player submits `DECLINE_LOOT` in `LOOT_SELECTION` phase
@@ -243,6 +243,13 @@ SignalBus SHALL be an Infrastructure autoload. Domain code emits on SignalBus fo
 
 **`item_discarded` vs `item_broken`:** `item_broken` is emitted by ActionInjector when charge exhaustion destroys an item (the item's remaining_charges reached 0 and `breaks_at_zero: true`). `item_discarded` is emitted by CombatResolver when a player deliberately discards an item via Repent (see `LLD-OMEN-CARD-020`). Both trigger a burden score decrement of −1 (see `HLD-RUN-007`), but they are semantically distinct events logged under different EventLog entries. Neither event replaces the other.
 
+**Payload typing convention:** The Payload column above names the *logical data carried* by each signal, not the declared GDScript parameter type. Because SignalBus is an Infrastructure autoload, it MUST NOT depend on the Domain layer (`LLD-ARCH-001`) — so signal parameters that carry domain types are declared with built-in base types instead:
+
+- enum payloads (`RunPhase` for `phase_changed`, `SaveType` for `save_requested`) are declared as `int`;
+- `CombatState` (for `combat_started`) is declared as `Resource`.
+
+Emitting domain code passes the concrete typed values; consumers cast to the domain type as needed. This keeps the bus dependency-free while preserving the catalogue's payload contract. Signals whose payloads are already built-in types (`String`, `int`, `Dictionary`, `Array[String]`) are declared with those types directly.
+
 #### Scenario: Domain-presentation decoupling
 - **WHEN** CombatResolver applies damage
 - **THEN** it emits `SignalBus.damage_dealt`; the presentation layer updates health bars without CombatResolver knowing any UI exists
@@ -259,7 +266,9 @@ SignalBus SHALL be an Infrastructure autoload. Domain code emits on SignalBus fo
 - **WHEN** an item breaks due to charge exhaustion (ActionInjector) and separately a Repent discard occurs (CombatResolver) in the same combat
 - **THEN** `item_broken` is emitted for the charge exhaustion; `item_discarded` is emitted for the Repent discard; no handler conflates the two
 
----
+#### Scenario: SignalBus declares no Domain-typed parameters
+- **WHEN** the SignalBus autoload script is implemented
+- **THEN** none of its signal parameters are typed as Domain classes (e.g. `RunPhase`, `SaveType`, `CombatState`); domain-carrying parameters use built-in base types (`int`, `Resource`) so the Infrastructure layer imports nothing from Domain
 
 ### Requirement: [LLD-ARCH-010] Save Format and Migration
 Save data SHALL be stored as JSON for debuggability and forward compatibility. GameConfig.SAVE_VERSION is written to every save. Version mismatch on load triggers a migration path.
@@ -474,7 +483,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 |---|---|---|
 | `run_seed` | int | Base seed for all RNG streams |
 | `vessel_state` | VesselState | Current vessel runtime state |
-| `inventory` | Array[ItemInstance] | Up to 3 slots; null entries are empty slots |
+| `inventory` | Array[ItemInstance] | Starts at 3 slots; null entries are empty slots. No hard cap (`HLD-ITEMS-001`) — acquisition fills a null slot or appends, so the array may grow past 3 |
 | `bound_companion` | CompanionState | Null if vessel has no bound companion |
 | `temporary_companion` | CompanionState | Null if no temporary companion active |
 | `floor_number` | int | Current floor (3 for MVP1) |
@@ -483,7 +492,7 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 | `combat_state` | CombatState | Null when not in COMBAT phase |
 | `item_burden_score` | int | Whole-run accumulated item burden (see HLD-RUN-007); initialized from vessel starting items at run start; updated by RunController (acquisition, run start), ActionInjector (item_broken), and CombatResolver (Repent discard) |
 
-**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`, `is_evading: bool` (true when the vessel chose Evade this turn; resets to false at the start of each player turn before any action is processed), `is_stunned: bool` (true when the vessel has been stunned by a Shocked shift trigger; blocks the Action bucket for the next player turn; resets to false at the start of resolve_player_action)
+**VesselState fields:** `vessel_id: String`, `hp: int`, `max_hp: int`, `ability_states: Array[AbilityState]`, `active_statuses: Array[StatusInstance]`, `is_evading: bool` (true when the vessel chose Evade this turn; reset to false by `begin_player_turn` at the start of each player turn, so it persists through the following enemy turns), `is_stunned: bool` (true when the vessel has been stunned by a Shocked shift trigger; blocks the Action bucket for the next player turn; set at the omen shift and cleared by `end_player_turn` after the turn it suppressed — `begin_player_turn` does NOT reset it)
 
 **AbilityState fields:** `ability_id: String`, `remaining_charges: int`
 
@@ -497,13 +506,13 @@ GameState SHALL be a `Resource` subclass in `src/domain/` composed of typed sub-
 
 **DoorData fields:** `room_type: String` (RoomType enum value), `encounter_id: String` (enemy_id for combat; event_id for non-combat), `room_id: String` (unique per-run identifier for logging)
 
-**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`), `read_the_road_active: bool` (set to `true` by the `peek_omen_deck` handler immediately after `assemble_omen_deck` completes; cleared to `false` by `resolve_player_action` when `READ_THE_ROAD_COMMIT` is processed; default `false`; when `true`, `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; see `LLD-ARCH-019`)
+**CombatState fields:** `enemies: Array[EnemyState]`, `turn_number: int`, `omen_deck: OmenDeckState`, `current_cycle: OmenCycleState` (null between cycles), `pending_repent_slots: Array[int]` (slot indices in `GameState.inventory` revealed by Repent and awaiting player discard choice; empty array when no Repent choice is pending; set by `resolve_omen_cycle_start` when Repent fires on player side with items present; cleared by `resolve_player_action` on `REPENT_DISCARD` resolution; see `LLD-ARCH-019`), `read_the_road_active: bool` (set to `true` by the `peek_omen_deck` handler immediately after `assemble_omen_deck` completes; cleared to `false` by `resolve_player_action` when `READ_THE_ROAD_COMMIT` is processed; default `false`; when `true`, `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`; see `LLD-ARCH-019`), `pending_vulnerable_units: Array[String]` (default `[]`; units marked by an Exposed shift at cycle start, consumed by `CHOOSE_OMEN`; see `LLD-ARCH-024`), `is_action_used: bool` / `is_support_used: bool` / `is_consumable_used: bool` (per-turn HLD-COMBAT-001 action buckets, default `false`; reset by `begin_player_turn`; set by `resolve_player_action` when the matching bucket resolves; `get_legal_combat_actions()` excludes a bucket's options once its flag is set — the Action bucket is also excluded while `is_stunned`; see `LLD-ARCH-019`)
 
-**EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally), `is_evading: bool` (true when this enemy chose Evade on its turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `is_stunned: bool` (true when this enemy has been stunned by a Shocked shift trigger; the enemy skips its action this turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns)
+**EnemyState fields:** `enemy_id: String`, `instance_id: String` (unique per-combat, e.g. `"skeleton_0"` and `"skeleton_1"` for two Skeletons — enables individual targeting), `hp: int`, `max_hp: int`, `active_statuses: Array[StatusInstance]`, `current_intent: String` (intent type ID set at start of each enemy turn; empty string if not yet set), `last_intent_id: String` (intent type ID selected on the previous turn; empty string at combat start), `intent_streak: int` (number of consecutive turns the current intent has been selected; resets to 1 on intent change, increments on repeat; 0 at combat start), `is_charging: bool` (true when a Charge→Release intent is in the charge phase; the release fires on the next turn unconditionally), `is_evading: bool` (true when this enemy chose Evade on its turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `is_stunned: bool` (true when this enemy has been stunned by a Shocked shift trigger; the enemy skips its action this turn; resets to false at the start of that enemy's resolution in resolve_enemy_turns), `turns_alive: int` (per-enemy turn counter; starts at 1 when the enemy enters combat — at combat start or via mid-combat summon — and increments each of that enemy's turns in resolve_enemy_turns; the `turn_number:N` IntentConditional is evaluated against this, not the global `CombatState.turn_number` — see the IntentConditional `condition` notes below)
 
 **OmenDeckState fields:** `draw_pile: Array[Dictionary]`, `discard_pile: Array[Dictionary]`. Each entry is `{ "card_id": String, "timer_value": int }`. Timer values are assigned once when the deck is assembled at combat start (see `LLD-OMEN-MECH-009`) and do not change on reshuffle — the discard pile preserves the originally-assigned values.
 
-**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the timer card), `sides_assigned: bool`
+**OmenCycleState fields:** `drawn_cards: Array[Dictionary]` (exactly 3 entries, same `{ card_id, timer_value }` format as the deck), `player_choice_index: int` (-1 = not yet chosen), `random_assignment_index: int` (-1 = not yet assigned), `timer_index: int` (index into drawn_cards for the leftover timer card; -1 = not yet assigned — derived only after `player_choice_index` and `random_assignment_index` are set, so read it only when `sides_assigned` is true), `sides_assigned: bool`, `ticks_remaining: int` (default `0`; the live per-cycle countdown — set to the timer card's value when sides are assigned and decremented once per `resolve_omen_tick`; at `0` the cycle expires and the round driver calls `resolve_omen_cycle_start`; this is the precise mid-cycle remaining-tick source used for enemy-applied status durations)
 
 #### Scenario: Two enemies are individually targetable
 - **WHEN** a combat contains two Skeletons
@@ -632,6 +641,8 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `score` | int | Precomputed item score from LLD-IR-011 (Durability or Consumable scale as applicable); 0 for vessel abilities, which are not traded. Set by the designer when authoring the `.tres` file using the LLD-IR formulas as a worksheet; never derived at runtime. |
 | `replenish_triggers` | Array[String] | Event IDs from ReplenishEvents constants |
 | `handlers` | Array[HandlerConfig] | Ordered chain; executed left to right |
+| `is_encounter_countdown` | bool | Encounter-countdown item (HLD-ITEMS-003); when this (Support durability) item's charges reach 0 from the per-encounter decrement it forces the next room rather than breaking plainly. Default false |
+| `triggered_room_type` | String | Room type forced when an encounter-countdown item triggers (e.g. `"companion"` for the Worn Map). Empty otherwise |
 
 **HandlerConfig:**
 
@@ -882,15 +893,29 @@ resolve_player_action(action: Dictionary, game_state: GameState) -> GameState
       - Return updated GameState. Do NOT reset vessel_state.is_evading or is_stunned here
         (these only reset at the start of a standard action, not Repent resolution).
     Otherwise (standard action):
-      Resets vessel_state.is_evading and vessel_state.is_stunned to false at the start of
-      resolution (clears flags from the prior turn).
-      If the action is Evade: sets vessel_state.is_evading to true and returns immediately.
-      For all other actions: runs the handler chain via AbilityPipeline.
+      Per-turn flag resets are NOT done here — they belong to begin_player_turn (see
+      below), because a turn may contain several bucket actions (HLD-COMBAT-001).
+      If the action is Evade: sets vessel_state.is_evading to true, marks the Action
+      bucket used, and returns immediately.
+      For all other actions: runs the handler chain via AbilityPipeline, then marks the
+      action's HLD-COMBAT-001 bucket used (attack→is_action_used, support→is_support_used,
+      consumable→is_consumable_used).
       For attack actions against evading targets: per-hit miss roll (35% via COMBAT stream).
       Charge preservation: if ALL hits missed, weapon item charges are not decremented.
       Applies vulnerability, resistance, and damage modifier rules from hld-combat-system.
       If the resolved action used a companion's granted_ability_id and departure_trigger is
       "ability_used", the companion departs as part of this resolution.
+
+begin_player_turn(game_state: GameState) -> void
+    Starts a player turn (HLD-COMBAT-001): resets is_action_used/is_support_used/
+    is_consumable_used and vessel_state.is_evading to false. Does NOT reset is_stunned —
+    a Shocked stun set at the omen shift must block the Action bucket for this turn.
+
+end_player_turn(game_state: GameState) -> void
+    Ends a player turn: clears vessel_state.is_stunned (Shocked suppresses exactly one
+    turn). is_evading is left set so it applies during the following enemy turns and is
+    reset by the next begin_player_turn. The round driver (RunController) calls this
+    before resolve_enemy_turns.
 
 resolve_enemy_turns(game_state: GameState) -> GameState
     Resolves all living enemies' turns in order.
@@ -954,6 +979,8 @@ resolve_omen_tick(game_state: GameState) -> GameState
         Poisoned escalation, Mending heal, Hardened absorption, Bleed decay).
       - trigger: "shift" statuses: do NOT fire; remaining_ticks decrements only.
     Decrements remaining_ticks on ALL active StatusInstances.
+    Also decrements current_cycle.ticks_remaining (the per-cycle countdown) so the round
+    driver knows when the cycle has expired and resolve_omen_cycle_start must run.
     Clears only trigger: "tick" StatusInstances whose remaining_ticks has reached 0.
     Shift-triggered StatusInstances at 0 are NOT cleared here — they are processed in
     resolve_omen_cycle_start.
@@ -1320,4 +1347,56 @@ Any future shift-trigger statuses not listed here are processed after `exposed` 
 #### Scenario: Death Mark does not affect other units' shift statuses
 - **WHEN** enemy A has `death_mark` and enemy B has `shocked`, both at remaining_ticks == 0
 - **THEN** enemy A dies from `death_mark`; enemy B's `shocked` processes normally and sets `is_stunned = true` on enemy B
+
+### Requirement: [LLD-ARCH-024] Omen Choice Action
+The player's omen-card choice (`HLD-OMEN-001` — pick one of the three drawn cards and a side) SHALL be expressed as a first-class `CHOOSE_OMEN` action submitted through `ActionInjector`, not as a hidden engine side effect. This makes the choice drivable by the AI (MVP1) and the UI (MVP2) through the same `get_legal_actions()` / `submit_action()` path as all other decisions.
+
+**Action command** (extends the `LLD-ARCH-003` command set):
+
+```
+{ "type": "CHOOSE_OMEN", "card_index": N, "side": "player" | "enemy" }
+```
+
+`card_index` is an index (0–2) into `OmenCycleState.drawn_cards`; `side` is the side the chosen card is applied to.
+
+**State** (extends the `LLD-ARCH-017` `CombatState`): `CombatState` SHALL have a `pending_vulnerable_units: Array[String]` field (default `[]`). The Exposed shift trigger writes the affected unit ids here at cycle start; `CHOOSE_OMEN` consumes and clears it. The field exists because `GameState` MUST remain JSON-serialisable between the cycle draw and the choice (the deferred Vulnerable cannot be applied until the new cycle timer is known, which is only after the choice).
+
+**Gating** (extends `LLD-ARCH-019` `get_legal_combat_actions()`): the priority-ordered gating becomes:
+1. `combat_state.read_the_road_active` → only `READ_THE_ROAD_COMMIT`.
+2. **Omen choice pending** — `combat_state.current_cycle != null` and `current_cycle.sides_assigned == false` → only `CHOOSE_OMEN` actions, one per `card_index` (0–2) × `side` (`"player"`, `"enemy"`). At least one action is always returned.
+3. `combat_state.pending_repent_slots` non-empty → only `REPENT_DISCARD` actions.
+4. Otherwise the standard action set.
+
+Omen choice precedes Repent because `pending_repent_slots` is only set *during* the played-card application that `CHOOSE_OMEN` triggers (Repent steered to the player side), so the two gates never compete at the same instant.
+
+**Resolution** (extends `LLD-ARCH-019` `resolve_player_action()`): on a `CHOOSE_OMEN` action:
+- Validate `current_cycle` exists and `sides_assigned == false`; `card_index` in `[0, drawn_cards.size()-1]`; `side` in `{"player","enemy"}`. On any failure, log an error and return state unchanged (per `LLD-ARCH-003`).
+- Set `current_cycle.player_choice_index = card_index` and record the chosen side.
+- Randomly select one of the other two indices via the COMBAT stream as `random_assignment_index`; it is applied to the opposite side.
+- The remaining index becomes `timer_index`; the new cycle timer is `drawn_cards[timer_index].timer_value`.
+- Apply the deferred Vulnerable: for each unit id in `combat_state.pending_vulnerable_units`, apply `"vulnerable:physical"` with `remaining_ticks = new cycle timer` (this is `resolve_omen_cycle_start` Step 4, deferred until the timer is known); then clear `pending_vulnerable_units`.
+- Apply the two played cards (the existing `resolve_omen_cycle_start` Step 5: tag filtering, magnitude rules, `OmenCardData.handlers`, Type Convert replacement, and Repent special handling).
+- Set `current_cycle.sides_assigned = true`.
+
+**Cycle-start restructure** (modifies `LLD-ARCH-019` `resolve_omen_cycle_start()`): it SHALL fire shift-triggered statuses (`LLD-ARCH-023`), clear expired statuses, draw 3 cards into a new `OmenCycleState` (with `player_choice_index = -1`, `sides_assigned = false`), record the Exposed-marked unit ids into `combat_state.pending_vulnerable_units`, and then return — pausing for the `CHOOSE_OMEN` action. Steps 4 (deferred Vulnerable) and 5 (apply played cards) are no longer performed inline; they move to `CHOOSE_OMEN` resolution because the new cycle timer is the leftover card and is unknown until the choice.
+
+#### Scenario: Omen choice pending returns only CHOOSE_OMEN actions
+- **WHEN** `combat_state.current_cycle` is non-null with `sides_assigned == false` and `read_the_road_active` is false
+- **THEN** `get_legal_combat_actions()` returns only `CHOOSE_OMEN` actions — one per `card_index` (0–2) and `side` (`"player"`, `"enemy"`) — and no standard or Repent actions
+
+#### Scenario: read_the_road_active takes priority over omen choice
+- **WHEN** both `read_the_road_active` is true and an omen choice is pending
+- **THEN** `get_legal_combat_actions()` returns only `READ_THE_ROAD_COMMIT`
+
+#### Scenario: CHOOSE_OMEN assigns sides and derives the timer
+- **WHEN** the player submits `CHOOSE_OMEN` with `card_index: 1, side: "enemy"` and `drawn_cards` has three entries
+- **THEN** `player_choice_index` is 1 (applied to the enemy side); one of indices `{0, 2}` is chosen via the COMBAT stream as `random_assignment_index` (applied to the player side); the remaining index becomes `timer_index`; the new cycle timer is that card's `timer_value`; `sides_assigned` is set to true
+
+#### Scenario: Deferred Vulnerable applied with the new cycle timer
+- **WHEN** an Exposed status fired at cycle start (recording a unit in `pending_vulnerable_units`) and the player then submits `CHOOSE_OMEN`
+- **THEN** a `"vulnerable:physical"` StatusInstance is applied to that unit with `remaining_ticks` equal to the new cycle timer; `pending_vulnerable_units` is cleared
+
+#### Scenario: Invalid CHOOSE_OMEN leaves state unchanged
+- **WHEN** `submit_action()` receives a `CHOOSE_OMEN` with `card_index` out of range or when no omen choice is pending
+- **THEN** an error is logged and the GameState is returned unchanged; no exception is raised
 
