@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_6q52s"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_spijm"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_nm4i8"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_ivscd"]
+
+[sub_resource type="Resource" id="Resource_vh08y"]
+script = ExtResource("1_6q52s")
+condition = "turn_number:1"
+intent_id = "spark_dormant"
+
+[sub_resource type="Resource" id="Resource_va4xb"]
+script = ExtResource("1_6q52s")
+condition = "turn_number:2"
+intent_id = "spark_surge_1"
+
+[sub_resource type="Resource" id="Resource_o1sjn"]
+script = ExtResource("1_6q52s")
+condition = "turn_number:3"
+intent_id = "spark_surge_2"
+
+[sub_resource type="Resource" id="Resource_n8t7o"]
+script = ExtResource("2_spijm")
+intent_id = "spark_dormant"
+
+[sub_resource type="Resource" id="Resource_1jsun"]
+script = ExtResource("2_spijm")
+intent_id = "spark_surge_1"
+damage_min = 1
+damage_max = 2
+
+[sub_resource type="Resource" id="Resource_2f3eo"]
+script = ExtResource("2_spijm")
+intent_id = "spark_surge_2"
+damage_min = 2
+damage_max = 4
+
+[sub_resource type="Resource" id="Resource_6l2np"]
+script = ExtResource("2_spijm")
+intent_id = "spark_surge_3"
+weight = 100
+damage_min = 3
+damage_max = 5
+
+[resource]
+script = ExtResource("4_ivscd")
+enemy_id = "lightning_spark"
+display_name = "Lightning Spark"
+max_hp = 6
+damage_type = "lightning"
+resistances = Array[String](["lightning"])
+enemy_tags = Array[String](["elemental", "elemental_lightning"])
+intent_weights = Array[ExtResource("2_spijm")]([SubResource("Resource_n8t7o"), SubResource("Resource_1jsun"), SubResource("Resource_2f3eo"), SubResource("Resource_6l2np")])
+intent_conditionals = Array[ExtResource("1_6q52s")]([SubResource("Resource_vh08y"), SubResource("Resource_va4xb"), SubResource("Resource_o1sjn")])

@@ -13,8 +13,10 @@ extends RefCounted
 ## Re-application adds to existing magnitude (HLD-COMBAT-018).
 const MAGNITUDE_ADDITIVE := ["burning", "poisoned", "bleed"]
 
-## Re-application keeps the higher magnitude (HLD-COMBAT-019).
-const MAX_WINS := ["hardened", "emboldened", "mending"]
+## Re-application keeps the higher magnitude (HLD-COMBAT-019). Frenzied is a
+## composite (Vulnerable Physical + Emboldened Physical) applied as one status and
+## follows max-wins on its magnitude (HLD-COMBAT-006 / LLD-ENEMIES-017).
+const MAX_WINS := ["hardened", "emboldened", "mending", "frenzied"]
 
 ## Re-application is a no-op (HLD-COMBAT-015).
 const IDEMPOTENT := ["chilled"]

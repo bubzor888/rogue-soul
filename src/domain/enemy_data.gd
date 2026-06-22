@@ -18,8 +18,19 @@ extends Resource
 ## Damage type IDs this enemy resists (x0.5).
 @export var resistances: Array[String] = []
 
+## Damage type IDs this enemy is innately vulnerable to (x1.5). Innate vulnerability
+## is an additional source to the item-applied Vulnerable status (HLD-COMBAT-007):
+## both produce x1.5, do not double-stack, and cancel with same-type resistance.
+@export var vulnerabilities: Array[String] = []
+
 ## Tags used by omen card filtering/effects, e.g. ["undead"], ["beast"].
 @export var enemy_tags: Array[String] = []
+
+## How many copies of this enemy spawn in a pre-elite / post-elite combat room
+## (LLD-ENEMIES-002, authoritative per-enemy counts). Elite-gate and boss encounters
+## spawn 1 (elites are solo; the boss composition is handled separately). Defaults 1.
+@export var pre_elite_count: int = 1
+@export var post_elite_count: int = 1
 
 ## Card IDs added to the deck while this enemy is alive.
 @export var omen_contributions: Array[String] = []

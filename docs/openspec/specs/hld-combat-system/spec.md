@@ -165,17 +165,19 @@ Elemental statuses (Burning, Chilled) do **not** co-apply a Vulnerable status. V
 - **THEN** the fire StatusInstance is replaced; the player's attacks now deal ice damage
 
 ### Requirement: [HLD-COMBAT-007] Vulnerability
-Vulnerable SHALL be a status effect that amplifies all damage of a specific type dealt to the affected target by ×1.5. It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
+Vulnerable SHALL amplify all damage of a specific type dealt to the affected target by ×1.5. It has two sources that behave identically:
 
-Vulnerable can be applied by:
-- Items directly (e.g., Combustible Oil → Vulnerable (Fire), Brittle Charm → Vulnerable (Physical), Frost Shard → Vulnerable (Ice), Fulminating Powder → Vulnerable (Lightning))
+- **Vulnerable status** — applied by items directly (e.g., Combustible Oil → Vulnerable (Fire), Brittle Charm → Vulnerable (Physical), Frost Shard → Vulnerable (Ice), Fulminating Powder → Vulnerable (Lightning)). It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
+- **Innate enemy vulnerability** — a permanent property of an enemy archetype declared in its data (`EnemyData.vulnerabilities`, see `LLD-ARCH-018`). It is always active and is not a status (no timer; never cleared). Examples: Skeleton ×1.5 fire, Fire Elemental ×1.5 ice, Ice Elemental ×1.5 fire (see `LLD-ENEMIES`).
 
-Two sources of the same Vulnerable type on one target do not stack — still ×1.5, not ×2.25.
+A target's vulnerability to a given damage type is a single boolean condition: if **either** source applies, the multiplier is ×1.5. The two sources do **not** stack — an enemy that is both innately vulnerable and has the Vulnerable status of the same type still takes ×1.5, not ×2.25 (this generalises the existing "two sources do not stack" rule).
 
-**Resistance + Vulnerable cancellation:** If a unit has both Resistance (×0.5) and Vulnerable (×1.5) to the same damage type, they cancel out. The unit takes normal (×1.0) damage of that type. Resistance and Vulnerable do not produce a net benefit together.
+**Resistance + Vulnerable cancellation:** If a unit has both Resistance (×0.5) and Vulnerable (×1.5) to the same damage type — from any combination of sources — they cancel out. The unit takes normal (×1.0) damage of that type. Resistance and Vulnerable do not produce a net benefit together.
+
+Poison has no vulnerability (see `HLD-COMBAT-005`): no innate or status Vulnerable (Poison) exists.
 
 #### Scenario: No vulnerability stacking
-- **WHEN** a unit has Vulnerable (Fire) from two separate sources
+- **WHEN** a unit has Vulnerable (Fire) from two separate sources (e.g. innate vulnerability plus an item-applied Vulnerable status)
 - **THEN** fire damage is multiplied by ×1.5 once, not ×2.25
 
 #### Scenario: Vulnerable clears independently
@@ -186,7 +188,13 @@ Two sources of the same Vulnerable type on one target do not stack — still ×1
 - **WHEN** a Fire Elemental (Resistance: Fire ×0.5) has Vulnerable (Fire) ×1.5 applied to it
 - **THEN** the Fire Elemental takes normal fire damage (×1.0) — the resistance and vulnerability cancel out
 
----
+#### Scenario: Innate enemy vulnerability amplifies without a status
+- **WHEN** the player deals fire damage to a Skeleton (innate Fire vulnerability) with no Vulnerable status applied
+- **THEN** that fire damage is multiplied by ×1.5
+
+#### Scenario: Innate vulnerability cancels with same-type resistance
+- **WHEN** an enemy both resists and is innately vulnerable to the same damage type
+- **THEN** the resistance (×0.5) and vulnerability (×1.5) cancel to ×1.0
 
 ### Requirement: [HLD-COMBAT-008] Omen System
 All combat in Soul Protocol SHALL be governed by the omen system. Every combat turn three omen cards are drawn from a shared deck; the player chooses one card to apply to a side; one is applied randomly to the other side; the third sets the cycle duration. Full mechanics are defined in `hld-omen-system`. Confirmed omen cards are defined in `lld-omen-cards`.
@@ -295,12 +303,12 @@ Elite combats SHALL follow the same post-combat loot format as standard combats 
 ---
 
 ### Requirement: [HLD-COMBAT-014] Charge→Release Multi-Turn Intent Pattern
-An enemy intent MAY be designated as Charge→Release. This pattern spans exactly two turns:
+An enemy intent MAY be designated as Charge→Release. When so designated, the pattern SHALL span exactly two turns:
 
-- **Charge turn:** The enemy telegraphs the incoming attack but deals no damage and applies no status. The player has one complete turn of normal actions before the attack resolves.
-- **Release turn:** The intent executes unconditionally. The release is not re-rolled and is not subject to consecutive limiting — it fires regardless of any roll or streak check. The release delivers its full payload as specified in `lld-enemies`.
+- **Charge turn:** The enemy telegraphs the incoming attack but SHALL deal no damage and apply no status. The player has one complete turn of normal actions before the attack resolves.
+- **Release turn:** The intent SHALL execute unconditionally. The release is not re-rolled and is not subject to consecutive limiting — it fires regardless of any roll or streak check. The release delivers its full payload as specified in `lld-enemies`.
 
-If the enemy is killed or stunned (Shocked) during the charge turn, the release never fires.
+If the enemy is killed or stunned (Shocked) during the charge turn, the release SHALL NOT fire.
 
 #### Scenario: Charge turn deals no damage
 - **WHEN** an enemy begins a Charge→Release intent

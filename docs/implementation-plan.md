@@ -720,10 +720,10 @@ maintains `item_burden_score`; wires loot selection. Communicates only via Signa
   `SaveType` enum (BACKGROUND/CHECKPOINT) is owned by RunController (it has a `class_name`, unlike the
   no-`class_name` autoloads); **SaveManager (T6.5)** consumes `RunController.SaveType` rather than redefining it. (3) **MVP1 single floor** — `_floor_transition` (HP restore +
   temp-companion departure + `floor_transitioned`, HLD-RUN-006) is implemented and unit-tested but only fired
-  by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ⚠️ **One enemy per encounter** — EnemyData
-  has no encounter-count and FloorProfile no boss composition, so a combat spawns a single enemy. Multi-enemy
-  encounters (3 Wolves; the Judge + 2 Witnesses, `LLD-ENEMIES-021/-022`) need an encounter-composition schema
-  — flagged for a deliberate decision before content tuning (T8). The round loop is roster-size agnostic. (5)
+  by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ✅ **One enemy per encounter — RESOLVED
+  in T8.3:** `EnemyData.pre_elite_count`/`post_elite_count` + `RunController._encounter_count` now spawn N
+  same-type enemies (3 Plague Rats, 2–3 Wolves, …). *Mixed*-composition encounters (the Judge + 2 Witnesses)
+  are still pending — that's **T8.4** (boss composition). The round loop is roster-size agnostic. (5)
   **unit_died for status-tick kills** isn't emitted (only the resolver's damage-path emits it); minor logging
   gap, state is correct. (6) `NON_COMBAT_EVENT` is unused in MVP1 (MF/WS deferred); the Worn Map single-door
   beat is **T6.6**. (7) **Rest-on-elite-path** (room 6, `LLD-FLOOR-BEATS-006`) still not modelled — the door
@@ -920,10 +920,45 @@ with it (`restore_item_charges`, `elemental_synergy`/`sacred_ground`, the Combus
   (shapes/effects/scores; all three Pilgrim starting items now resolve and their handlers are known to
   the pipeline). Full suite **300/300**. The Pilgrim run now builds with 3 real items + burden 3.
 
-### T8.3 — Floor 3 enemies (non-boss)
+### T8.3 — Floor 3 enemies (non-boss)  ✅ **Done**
 Skeleton, Zombie, Plague Rat, Wolf, Bear, Fire/Ice/Lightning Elementals, Low/High HP Fanatics,
 Buff/Absorption Totems (`LLD-ENEMIES-004`–`-008`, `-014`–`-020`), plus encounter structure
 (`LLD-ENEMIES-009`).
+- ✅ **13 enemy `.tres`** in `data/enemies/` (generated via `ResourceSaver`, generator removed): skeleton,
+  zombie, plague_rat, wolf, bear, fire_elemental, ice_elemental, lightning_elemental, lightning_spark,
+  low_hp_fanatic, high_hp_fanatic, buff_totem, absorption_totem — HP/damage type/resistances/
+  vulnerabilities/tags/encounter counts/intents/conditionals/on-death all per the LLD-ENEMIES tables
+  (Zombie Slam charge→release, Wolf pack/lone `ally_count` conditionals + Howl summon, Bear `turn_number:1`
+  sleeping + 2-hit swipe + self-frenzy, the two-phase Lightning Elemental → 2 Sparks with turn-gated
+  escalation, Totem `status_target:"allies"` buffs).
+- ✅ **Two approved engine additions (both TDD):**
+  - **Innate elemental vulnerability** — `EnemyData.vulnerabilities: Array[String]` (mirrors `resistances`);
+    `DamageCalculator` OR-combines innate + status Vulnerable (single ×1.5, no double-stack, cancels with
+    resistance). Reconciled `HLD-COMBAT-007` via OpenSpec change `add-innate-enemy-vulnerability`
+    (archived `2026-06-22`); `EnemyData` schema field added to `LLD-ARCH-018` by direct consistency edit
+    (T5.5 precedent). `tests/test_damage.gd` +4.
+  - **Multi-enemy encounters** (resolves the T6.4 "one enemy per encounter" flag) — `EnemyData.
+    pre_elite_count`/`post_elite_count` (`LLD-ENEMIES-002`, added to `LLD-ARCH-018`); `RunController.
+    _enter_combat` spawns N distinct instances (`<id>_<i>`) via `_encounter_count` (elite-gate/boss → 1;
+    normal rooms → pre/post count by whether the elite gate is passed). The round loop was already
+    roster-agnostic. `tests/test_run_controller.gd` +3.
+  - **Frenzied composite** (needed by Bear, in the elite pool; also Fanatics) — `DamageCalculator` now
+    treats a `frenzied` status as both Emboldened (Physical) flat (attacker) and Vulnerable (Physical) ×1.5
+    (target); added to `StatusRules.MAX_WINS`. This implements the existing `HLD-COMBAT-006` Frenzied
+    definition (no spec change). `tests/test_damage.gd` +3.
+- ✅ `tests/test_floor3_enemies_content.gd` — 10 cases reading the shipped `.tres` through `ContentRegistry`
+  (per-enemy spec fidelity + every Floor 3 pool enemy resolves; boss correctly still null pending T8.4).
+  ContentRegistry boots clean with all 13. Full suite **320/320**.
+- **Decisions / flags:** (1) **Fanatics/Totems authored but not yet in the Floor 3 pool** — pool
+  finalization is **T8.6**; the Totems additionally need *mixed-composition* encounters (Fanatic+Totem),
+  which is `[OPEN·MVP3]` (current multi-enemy support spawns N of the *same* type). (2) **Plague Rat poison
+  immunity** (`LLD-ENEMIES-006`) is not modelled — `EnemyData` has no immunity field; flagged (low impact —
+  rats die in 1–2 hits; the only MVP1 poison source is the Spoiled Potion). (3) **Bear frenzy magnitude**
+  set to 2 (spec omits it; needed for the Emboldened-physical half of Frenzied) — flagged for tuning.
+  (4) The boss + Witnesses (mixed composition) are **T8.4**. (5) Pre-existing strict-validation error in
+  `hld-combat-system` (a requirement lacking SHALL/MUST, unrelated to this change) required `--no-validate`
+  to archive — flagged for a future spec-hygiene pass, not fixed here (it would alter an unrelated
+  requirement's normative wording).
 
 ### T8.4 — The Judge boss + Witnesses
 `the_judge.tres` (`LLD-ENEMIES-010`) — the fixed final-floor boss (`HLD-RUN-004`), Witness of Mercy /

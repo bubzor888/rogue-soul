@@ -238,13 +238,16 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	combat.omen_deck = OmenDeckState.new()
 	var ed: EnemyData = _content.get_enemy(encounter_id)
 	if ed != null:
-		var e := EnemyState.new()
-		e.enemy_id = encounter_id
-		e.instance_id = "%s_0" % encounter_id
-		e.hp = ed.max_hp
-		e.max_hp = ed.max_hp
-		e.turns_alive = 1
-		combat.enemies.append(e)
+		# Encounter size per LLD-ENEMIES-002: pre/post-elite counts for normal rooms;
+		# elite gate and boss spawn one (elites are solo; boss composition is T8.4).
+		for i in _encounter_count(ed, room_type):
+			var e := EnemyState.new()
+			e.enemy_id = encounter_id
+			e.instance_id = "%s_%d" % [encounter_id, i]
+			e.hp = ed.max_hp
+			e.max_hp = ed.max_hp
+			e.turns_alive = 1
+			combat.enemies.append(e)
 	game_state.combat_state = combat
 
 	_fire_replenish(ReplenishEvents.ENCOUNTER_START)
@@ -256,6 +259,18 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	# Assemble the deck and open the first omen cycle (pauses for CHOOSE_OMEN).
 	_resolver.assemble_omen_deck(_omen_sources(), game_state)
 	_resolver.resolve_omen_cycle_start(game_state)
+
+
+# Number of enemies to spawn for an encounter (LLD-ENEMIES-002). Elite-gate and boss
+# rooms spawn one; normal combat rooms use the enemy's pre- or post-elite count
+# based on whether the elite gate has been passed. @Spec: LLD-ENEMIES-002, LLD-ENEMIES-009
+func _encounter_count(ed: EnemyData, room_type: String) -> int:
+	if room_type != NavigationModel.ROOM_COMBAT:
+		return 1  # elite gate (solo) / boss
+	var profile := _profile()
+	var gate := profile.elite_gate_room() if profile != null else 0
+	var post_elite := game_state.navigation_state.rooms_completed_this_floor >= gate
+	return maxi(ed.post_elite_count if post_elite else ed.pre_elite_count, 1)
 
 
 func _omen_sources() -> Array:

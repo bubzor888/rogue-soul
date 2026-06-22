@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_ri0no"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_bbgej"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_e4h27"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_2ptjq"]
+
+[sub_resource type="Resource" id="Resource_7gf57"]
+script = ExtResource("2_bbgej")
+intent_id = "fire_strike"
+weight = 50
+damage_min = 4
+damage_max = 6
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_aqrdv"]
+script = ExtResource("2_bbgej")
+intent_id = "kindle"
+weight = 50
+max_consecutive = 2
+status_apply = "burning"
+status_magnitude = 2
+
+[resource]
+script = ExtResource("4_2ptjq")
+enemy_id = "fire_elemental"
+display_name = "Fire Elemental"
+max_hp = 14
+damage_type = "fire"
+resistances = Array[String](["fire"])
+vulnerabilities = Array[String](["ice"])
+enemy_tags = Array[String](["elemental", "elemental_fire"])
+post_elite_count = 2
+omen_contributions = Array[String](["elemental_synergy_fire", "burning"])
+intent_weights = Array[ExtResource("2_bbgej")]([SubResource("Resource_7gf57"), SubResource("Resource_aqrdv")])

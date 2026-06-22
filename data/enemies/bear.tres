@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_p5bir"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_b6kfb"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_qt0i4"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_st1ih"]
+
+[sub_resource type="Resource" id="Resource_4r03n"]
+script = ExtResource("1_p5bir")
+condition = "turn_number:1"
+intent_id = "sleeping"
+
+[sub_resource type="Resource" id="Resource_aks50"]
+script = ExtResource("2_b6kfb")
+intent_id = "sleeping"
+max_consecutive = 1
+
+[sub_resource type="Resource" id="Resource_3w8c7"]
+script = ExtResource("2_b6kfb")
+intent_id = "bite"
+weight = 40
+damage_min = 4
+damage_max = 6
+
+[sub_resource type="Resource" id="Resource_b0d81"]
+script = ExtResource("2_b6kfb")
+intent_id = "swipe"
+weight = 40
+damage_min = 3
+damage_max = 5
+hit_count = 2
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_2qk1o"]
+script = ExtResource("2_b6kfb")
+intent_id = "frenzy"
+weight = 20
+max_consecutive = 1
+status_apply = "frenzied"
+status_magnitude = 2
+status_target = "self"
+
+[resource]
+script = ExtResource("4_st1ih")
+enemy_id = "bear"
+display_name = "Bear"
+max_hp = 22
+damage_type = "physical"
+enemy_tags = Array[String](["beast"])
+omen_contributions = Array[String](["thick_hide", "exposed"])
+intent_weights = Array[ExtResource("2_b6kfb")]([SubResource("Resource_aks50"), SubResource("Resource_3w8c7"), SubResource("Resource_b0d81"), SubResource("Resource_2qk1o")])
+intent_conditionals = Array[ExtResource("1_p5bir")]([SubResource("Resource_4r03n")])
