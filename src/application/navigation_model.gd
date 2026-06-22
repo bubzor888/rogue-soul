@@ -28,6 +28,7 @@ const STREAM_NAVIGATION := 0
 
 const ROOM_COMBAT := "combat"
 const ROOM_ELITE_COMBAT := "elite_combat"
+const ROOM_COMPANION := "companion"
 
 var _rng
 
@@ -53,6 +54,18 @@ func generate_doors(game_state: GameState, profile: FloorProfile) -> Array:
 # @Spec: HLD-RUN-004, LLD-FLOOR-BEATS-005
 func is_boss_next(game_state: GameState, profile: FloorProfile) -> bool:
 	return game_state.navigation_state.rooms_completed_this_floor >= profile.total_rooms()
+
+
+# A forced single-door beat that REPLACES the next room (HLD-DOOR-001, HLD-ITEMS-003).
+# MVP1 instance: the Worn Map's temporary-companion beat — one door whose encounter is
+# a companion drawn from the floor's temporary_companion_pool on the NAVIGATION stream.
+# @Spec: HLD-DOOR-001, HLD-ITEMS-003, LLD-FLOOR-BEATS-003, LLD-MF-009
+func generate_triggered_beat(room_type: String, game_state: GameState, profile: FloorProfile) -> Array:
+	var encounter_id := ""
+	if room_type == ROOM_COMPANION:
+		encounter_id = _pick_one(profile.temporary_companion_pool)
+	var room := game_state.navigation_state.rooms_completed_this_floor + 1
+	return [_make_door(room_type, encounter_id, profile.floor_number, room, 0)]
 
 
 ## --- Door builders ----------------------------------------------------------

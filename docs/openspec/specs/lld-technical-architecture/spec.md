@@ -641,6 +641,8 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `score` | int | Precomputed item score from LLD-IR-011 (Durability or Consumable scale as applicable); 0 for vessel abilities, which are not traded. Set by the designer when authoring the `.tres` file using the LLD-IR formulas as a worksheet; never derived at runtime. |
 | `replenish_triggers` | Array[String] | Event IDs from ReplenishEvents constants |
 | `handlers` | Array[HandlerConfig] | Ordered chain; executed left to right |
+| `is_encounter_countdown` | bool | Encounter-countdown item (HLD-ITEMS-003); when this (Support durability) item's charges reach 0 from the per-encounter decrement it forces the next room rather than breaking plainly. Default false |
+| `triggered_room_type` | String | Room type forced when an encounter-countdown item triggers (e.g. `"companion"` for the Worn Map). Empty otherwise |
 
 **HandlerConfig:**
 

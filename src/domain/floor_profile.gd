@@ -43,6 +43,10 @@ extends Resource
 @export var elite_durability_pool: Array[String] = []    # LLD-ITEMS-006
 @export var elite_consumable_pool: Array[String] = []    # LLD-ITEMS-008
 
+## Temporary companions that can appear in this floor's companion beats (the Worn
+## Map encounter-countdown trigger, LLD-FLOOR-BEATS-003 / LLD-MF-009).
+@export var temporary_companion_pool: Array[String] = []
+
 
 # Total navigable rooms before the boss: pre-elite + the Elite Gate + post-elite
 # (LLD-FLOOR-STRUCT-006). @Spec: LLD-FLOOR-STRUCT-001, LLD-FLOOR-STRUCT-006

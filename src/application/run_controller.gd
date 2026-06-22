@@ -49,6 +49,7 @@ var floors_completed: int = 0
 var _current_elite: bool = false  # active combat draws elite loot?
 var _in_boss: bool = false        # active combat is the floor boss?
 var _dead_processed: Dictionary = {}  # enemy instance_ids whose death was resolved
+var _pending_triggered_room_type: String = ""  # encounter-countdown trigger (HLD-ITEMS-003)
 
 
 # Inject dependencies and build the collaborators. Call once before start_run.
@@ -142,6 +143,14 @@ func _build_companion(companion_id: String) -> CompanionState:
 ## --- Navigation -------------------------------------------------------------
 
 func _generate_doors() -> void:
+	# A pending encounter-countdown trigger (e.g. the Worn Map) replaces the next room
+	# with a forced single-door beat instead of the normal two-door choice (HLD-ITEMS-003).
+	if _pending_triggered_room_type != "":
+		var room_type := _pending_triggered_room_type
+		_pending_triggered_room_type = ""
+		game_state.navigation_state.doors_ahead.assign(
+			_nav.generate_triggered_beat(room_type, game_state, _profile()))
+		return
 	game_state.navigation_state.doors_ahead.assign(_nav.generate_doors(game_state, _profile()))
 
 
@@ -168,7 +177,10 @@ func _post_navigation(action: Dictionary) -> void:
 	# Background save the moment the door is confirmed (LLD-ARCH-016).
 	_emit_save(SaveType.BACKGROUND)
 	game_state.navigation_state.doors_ahead.assign([])
-	_enter_combat(door.encounter_id, door.room_type)
+	if door.room_type == NavigationModel.ROOM_COMPANION:
+		_enter_companion_beat(door.encounter_id)
+	else:
+		_enter_combat(door.encounter_id, door.room_type)
 
 
 func _find_door(room_id: String) -> DoorData:
@@ -176,6 +188,45 @@ func _find_door(room_id: String) -> DoorData:
 		if d.room_id == room_id:
 			return d
 	return null
+
+
+# Resolve a forced temporary-companion beat (HLD-ITEMS-003 / LLD-FLOOR-BEATS-003): the
+# companion joins (one-temp-companion limit, HLD-COMPANION-004 — a new one replaces any
+# existing), the floor's companion offer is marked used, and the beat consumes a room
+# slot (rooms_completed++, total floor count unchanged). No combat, no loot — control
+# returns to NAVIGATION (or the boss if this was the last room).
+# @Spec: HLD-COMPANION-001, HLD-COMPANION-004, HLD-DOOR-001, LLD-FLOOR-BEATS-003
+func _enter_companion_beat(companion_id: String) -> void:
+	game_state.temporary_companion = _build_companion(companion_id)
+	game_state.navigation_state.companion_offered_this_floor = true
+	if _signal_bus != null:
+		_signal_bus.room_entered.emit(NavigationModel.ROOM_COMPANION, companion_id)
+	game_state.navigation_state.rooms_completed_this_floor += 1
+	_complete_encounter()
+	if _nav.is_boss_next(game_state, _profile()):
+		_enter_boss()
+	else:
+		_set_phase(RunPhase.NAVIGATION)
+		_generate_doors()
+
+
+# Per-encounter bookkeeping run after any completed non-boss encounter (HLD-ITEMS-003):
+# decrement Support (durability) items once (ChargeManager), then finalise any that
+# reached 0 — an encounter-countdown item (Worn Map) sets the pending triggered room
+# and is removed; an ordinary support item breaks (item_broken). Both decrement burden
+# (item fully spent, HLD-RUN-007). @Spec: HLD-ITEMS-003, HLD-ITEMS-005, HLD-RUN-007
+func _complete_encounter() -> void:
+	for slot in _charges.decrement_support_items(game_state):
+		var item: ItemInstance = game_state.inventory[slot]
+		if item == null:
+			continue
+		var data: AbilityData = _content.get_ability(item.item_id)
+		game_state.inventory[slot] = null
+		game_state.item_burden_score = maxi(game_state.item_burden_score - 1, 0)
+		if data != null and data.is_encounter_countdown:
+			_pending_triggered_room_type = data.triggered_room_type
+		elif _signal_bus != null:
+			_signal_bus.item_broken.emit(item.item_id, slot)
 
 
 ## --- Combat entry & round loop ----------------------------------------------
@@ -243,8 +294,14 @@ func _begin_player_turn() -> void:
 	turn_count += 1
 
 
-# Enemy turn → omen tick → (new cycle | next player turn), with death/end checks.
+# Companion turn_end → enemy turn → omen tick → (new cycle | next player turn), with
+# death/end checks. Companions act at the end of the player's turn, before the enemies
+# (HLD-COMPANION-003).
 func _run_enemy_phase() -> void:
+	_resolver.resolve_companion_trigger("turn_end", game_state)
+	_process_deaths()
+	if _check_combat_end():
+		return
 	_resolver.end_player_turn(game_state)
 	_resolver.resolve_enemy_turns(game_state)
 	_process_deaths()
@@ -319,8 +376,10 @@ func _end_combat(victory: bool) -> void:
 		_finish_floor()
 		return
 
-	# Standard/elite combat room completed → loot.
+	# Standard/elite combat room completed → encounter bookkeeping (Support decrement /
+	# Worn Map trigger), then loot.
 	game_state.navigation_state.rooms_completed_this_floor += 1
+	_complete_encounter()
 	game_state.navigation_state.loot_offers.assign(_loot.generate_loot_offers(game_state, _current_elite))
 	_set_phase(RunPhase.LOOT_SELECTION)
 
@@ -347,6 +406,9 @@ func _enter_boss() -> void:
 
 func _finish_floor() -> void:
 	floors_completed += 1
+	# A temporary companion whose departure condition never fired departs after the boss
+	# (HLD-COMPANION-001 / HLD-RUN-006).
+	game_state.temporary_companion = null
 	# MVP1 is a single floor: the Judge's defeat completes the run. The multi-floor
 	# transition processing (HLD-RUN-006) lives in _floor_transition() for MVP3+.
 	_end_run("completion")

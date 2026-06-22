@@ -760,7 +760,7 @@ subscription wiring exists.
   registers the active run. (3) BACKGROUND resumes silently; only CHECKPOINT trips the Resume/Start-Over
   prompt (a UI concern surfaced via `has_checkpoint()` for MVP2).
 
-### T6.6 — Encounter-countdown system + Worn Map companion beat
+### T6.6 — Encounter-countdown system + Worn Map companion beat  ✅ **Done**
 Implement the **encounter-countdown item system** (`HLD-ITEMS-003`): counter decrements 1 per
 completed encounter (combat/non-combat; boss slot never triggers), replaces the *next* regular room
 with the triggered encounter when it hits 0 (no extra room — total stays fixed), removes the item
@@ -771,6 +771,43 @@ companion beat (`HLD-DOOR-001`). Temporary companion is floor-scoped (departs at
 - **@Spec:** `HLD-ITEMS-003`, `HLD-COMPANION-001`, `-003`, `-004`, `HLD-DOOR-001`, `HLD-RUN-006`, `LLD-ITEMS-004`, `LLD-FLOOR-BEATS-003`
 - **DoD:** counter decrements on all non-boss encounters; next room replaced (not appended) at 0;
   item removed after trigger; beat fires once per floor; companion acts on turn_end; departs correctly.
+- ✅ **Key reuse:** the Worn Map is a Support (durability) item, so its "counter" is just its charges —
+  already decremented per-encounter by `ChargeManager.decrement_support_items` (T3.1). T6.6 adds only the
+  *break-behaviour* difference (trigger a beat vs. plain break) and wires the per-encounter decrement into
+  RunController.
+- ✅ Schema: `AbilityData` gained `is_encounter_countdown: bool` + `triggered_room_type: String`
+  (HLD-ITEMS-003; synced to `LLD-ARCH-018`). `FloorProfile` gained `temporary_companion_pool: Array[String]`;
+  `data/floors/floor_3.tres` regenerated with `["raven","shadow","life_mote"]` (`LLD-MF-009`).
+- ✅ `NavigationModel.generate_triggered_beat(room_type, …)` — a forced **single-door** beat
+  (HLD-DOOR-001), companion drawn from `temporary_companion_pool` on the NAVIGATION stream.
+- ✅ RunController wiring: `_complete_encounter()` runs after each non-boss encounter (combat victory +
+  the beat itself) — decrements Support items, and on a 0-charge break either sets the pending triggered
+  room (encounter-countdown → Worn Map removed, burden −1) or emits `item_broken` (ordinary support break).
+  `_generate_doors` emits the single-door beat when a trigger is pending (replacing the next room — total
+  count fixed, since the beat consumes a room slot). `_post_navigation` routes a `"companion"` door to
+  `_enter_companion_beat` (adds the temp companion under the one-temp limit, sets
+  `companion_offered_this_floor`, `rooms_completed++`, back to NAVIGATION). `_run_enemy_phase` now fires
+  `resolve_companion_trigger("turn_end")` **before** enemy turns (HLD-COMPANION-003). `_finish_floor` clears
+  any unused temporary companion (departs after the boss, HLD-COMPANION-001).
+- ✅ `tests/test_run_controller.gd` +5 (per-encounter decrement; trigger→single-door beat + Worn Map
+  removed; beat adds temp companion + offer flag + room count; turn_end fire + timer_exhausted departure;
+  boss does **not** decrement the countdown). Full suite **276/276**.
+- **Decisions / flags:** (1) ⚠️ **Loot-acquisition constraint deferred** — HLD-ITEMS-003's "acquirable only
+  when enough non-boss encounters remain" applies only when an encounter-countdown item is offered as
+  *loot*; the only MVP1 instance (Worn Map) is a starting item, so no MVP1 loot path offers one. The
+  ActionInjector get_legal/acquire guard is deferred to when such items enter a loot pool (post-MVP1) —
+  flagged rather than written as dead code. (2) The Worn Map trigger removes the item + burden −1 (fully
+  spent, HLD-RUN-007) but does **not** emit `item_broken` (it triggered, it didn't break). (3) The beat is
+  resolved synchronously within NAVIGATION (no combat/loot); `NON_COMBAT_EVENT` phase stays unused in MVP1.
+  (4) Worn Map `.tres` + Pilgrim/companion content are **Phase 8** — T6.6 is engine + stub-content tests.
+
+---
+
+**Phase 6 complete.** ✅ Application orchestration (ActionInjector, NavigationModel, LootGenerator,
+RunController, SaveManager/ScreenManager, encounter-countdown/Worn Map) all landed; full suite 276/276.
+Next: **Phase 7** — AIPlayerAgent (T7.1) + the full headless determinism integration gate (T7.2), which
+also wires RunController → SaveManager and exercises the loop end-to-end (needs Phase 8 content for a real
+run; the determinism gate can run on stub content first).
 
 ---
 

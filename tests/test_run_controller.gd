@@ -312,6 +312,112 @@ func test_floor_transition_restores_hp_and_drops_temp_companion() -> void:
 	assert_array(transitions).is_equal([[3, 4]])
 
 
+# --- Encounter-countdown / Worn Map beat (T6.6) -----------------------------
+
+func _companion_data(id: String, trigger: String, departure: String, timer: int = 0) -> CompanionData:
+	var c := CompanionData.new()
+	c.companion_id = id
+	c.trigger = trigger
+	c.departure_trigger = departure
+	c.initial_timer = timer
+	return c
+
+
+# Content where the Pilgrim also carries the Worn Map (encounter-countdown support
+# item) and the floor's temporary-companion pool / data are available.
+func _content_worn_map() -> StubContent:
+	var c := _content()
+	c.vessels["pilgrim"].starting_item_ids.assign(["staff", "worn_map"])
+	var wm := _ability("worn_map", "support", [], 3)
+	wm.breaks_at_zero = true
+	wm.is_encounter_countdown = true
+	wm.triggered_room_type = "companion"
+	c.abilities["worn_map"] = wm
+	c.floors["floor_3"].temporary_companion_pool.assign(["raven"])
+	c.companions["raven"] = _companion_data("raven", "turn_end", "timer_exhausted", 1)
+	c.enemies["skeleton"] = _enemy_data("skeleton", 4)  # dies to one 5-dmg strike
+	return c
+
+
+func _worn_map(rc: RunController) -> ItemInstance:
+	for item in rc.game_state.inventory:
+		if item != null and item.item_id == "worn_map":
+			return item
+	return null
+
+
+# A Support (durability) item decrements once per completed non-boss encounter.
+func test_worn_map_decrements_per_encounter() -> void:
+	var rc := _rc(_content_worn_map())
+	_into_first_turn(rc)
+	assert_int(_worn_map(rc).remaining_charges).is_equal(3)
+	rc.submit_action(_find(rc.get_legal_actions(), "USE_ABILITY"))  # win room 1
+	assert_int(_worn_map(rc).remaining_charges).is_equal(2)         # −1 for the encounter
+
+
+# At 0 charges the Worn Map triggers: it is removed, and the NEXT room becomes a
+# forced single-door companion beat (not an appended room).
+func test_worn_map_triggers_companion_beat_at_zero() -> void:
+	var rc := _rc(_content_worn_map())
+	_into_first_turn(rc)
+	_worn_map(rc).remaining_charges = 1                              # next encounter trips it
+	rc.submit_action(_find(rc.get_legal_actions(), "USE_ABILITY"))  # win → countdown hits 0
+	assert_object(_worn_map(rc)).is_null()                          # removed after trigger
+	rc.submit_action({"type": "DECLINE_LOOT"})                      # leave loot → next room
+	var doors := rc.game_state.navigation_state.doors_ahead
+	assert_int(doors.size()).is_equal(1)                           # single-door beat
+	assert_str(doors[0].room_type).is_equal("companion")
+
+
+# Entering the beat adds the temporary companion, marks the floor's offer used, counts
+# as one room, and returns to a normal two-door choice.
+func test_companion_beat_adds_temp_companion() -> void:
+	var rc := _rc(_content_worn_map())
+	_into_first_turn(rc)
+	_worn_map(rc).remaining_charges = 1
+	rc.submit_action(_find(rc.get_legal_actions(), "USE_ABILITY"))  # win → trigger
+	rc.submit_action({"type": "DECLINE_LOOT"})                      # → companion beat door
+	var rooms_before: int = rc.game_state.navigation_state.rooms_completed_this_floor
+	rc.submit_action(rc.get_legal_actions()[0])                     # enter the beat
+	assert_object(rc.game_state.temporary_companion).is_not_null()
+	assert_str(rc.game_state.temporary_companion.companion_id).is_equal("raven")
+	assert_bool(rc.game_state.navigation_state.companion_offered_this_floor).is_true()
+	assert_int(rc.game_state.navigation_state.rooms_completed_this_floor).is_equal(rooms_before + 1)
+	assert_int(rc.game_state.run_phase).is_equal(RunPhase.NAVIGATION)
+	assert_int(rc.game_state.navigation_state.doors_ahead.size()).is_equal(2)  # back to normal
+
+
+# A turn_end companion acts at END_TURN (before enemies); a timer_exhausted companion
+# at timer 1 fires once and departs — proving both the trigger and departure wiring.
+func test_companion_acts_on_turn_end_and_departs() -> void:
+	var content := _content_worn_map()
+	content.enemies["skeleton"] = _enemy_data("skeleton", 99, 1, 1)  # survives so the turn ends
+	var rc := _rc(content)
+	_into_first_turn(rc)
+	rc.game_state.temporary_companion = rc._build_companion("raven")  # timer 1, turn_end
+	rc.submit_action(_find(rc.get_legal_actions(), "USE_ABILITY"))  # use Action bucket
+	rc.submit_action(_find(rc.get_legal_actions(), "END_TURN"))     # companion fires → departs
+	assert_object(rc.game_state.temporary_companion).is_null()
+
+
+# The boss encounter never decrements an encounter-countdown counter (HLD-ITEMS-003).
+func test_boss_does_not_decrement_countdown() -> void:
+	var content := _content_worn_map()
+	content.enemies["the_judge"] = _enemy_data("the_judge", 4)
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	rc.game_state.run_phase = RunPhase.LOOT_SELECTION
+	rc.game_state.navigation_state.rooms_completed_this_floor = 9
+	rc.game_state.navigation_state.loot_offers.assign(["staff"])
+	rc.submit_action({"type": "DECLINE_LOOT"})                      # → boss combat
+	_worn_map(rc).remaining_charges = 2
+	rc.submit_action(rc.get_legal_actions()[0])                     # CHOOSE_OMEN
+	rc.submit_action(_find(rc.get_legal_actions(), "USE_ABILITY"))  # kill boss
+	assert_str(rc.outcome).is_equal("completion")                   # boss beaten → run ends
+	# The boss encounter ran no _complete_encounter, so the countdown never decremented.
+	assert_int(_worn_map(rc).remaining_charges).is_equal(2)
+
+
 # --- Helpers ----------------------------------------------------------------
 
 func _action_types(actions: Array) -> Array:

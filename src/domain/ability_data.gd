@@ -34,3 +34,13 @@ extends Resource
 
 ## Ordered handler chain; executed left to right.
 @export var handlers: Array[HandlerConfig] = []
+
+## Encounter-countdown item (HLD-ITEMS-003): when this (Support durability) item's
+## charges reach 0 from the per-encounter decrement, instead of a plain break it
+## forces the next room to be `triggered_room_type` and is removed. The Worn Map
+## (LLD-ITEMS-004) is the MVP1 instance. Default false = ordinary break behaviour.
+@export var is_encounter_countdown: bool = false
+
+## The room type forced when an encounter-countdown item triggers (e.g. "companion"
+## for the Worn Map's temporary-companion beat). Empty for non-countdown items.
+@export var triggered_room_type: String = ""
