@@ -87,6 +87,14 @@ func file_exists(path: String) -> bool:
 	return FileAccess.file_exists(path)
 
 
+# Delete a file if it exists (e.g. SaveManager "Start Over" clearing a checkpoint).
+# Returns true if the file is gone afterwards. @Spec: LLD-ARCH-007
+func delete_file(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	return DirAccess.remove_absolute(path) == OK
+
+
 # List filenames (not full paths) in a directory, optionally filtered by extension
 # (without the dot, e.g. "tres"). Returns empty if the directory does not exist.
 # Used by ContentRegistry for boot-time content discovery. @Spec: LLD-ARCH-006

@@ -22,6 +22,8 @@ SignalBus="*res://src/infrastructure/signal_bus.gd"
 PersistenceService="*res://src/infrastructure/persistence_service.gd"
 EventLog="*res://src/infrastructure/event_log.gd"
 ContentRegistry="*res://src/application/content_registry.gd"
+SaveManager="*res://src/application/save_manager.gd"
+ScreenManager="*res://src/application/screen_manager.gd"
 
 [editor_plugins]
 

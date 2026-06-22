@@ -717,8 +717,8 @@ maintains `item_burden_score`; wires loot selection. Communicates only via Signa
   `test_combat_resolver`/`test_enemy_death` updated for the new turn model. Full suite **261/261**.
 - **Decisions / flags:** (1) **RunController is the agent surface** — it exposes get/submit that delegate to
   ActionInjector (LLD-ARCH-003 honored) and then advance phases; the AIPlayerAgent (T7.1) talks to it. (2)
-  `SaveType` enum (BACKGROUND/CHECKPOINT) defined on RunController for now; **SaveManager (T6.5)** will own
-  the canonical enum and consume these ints. (3) **MVP1 single floor** — `_floor_transition` (HP restore +
+  `SaveType` enum (BACKGROUND/CHECKPOINT) is owned by RunController (it has a `class_name`, unlike the
+  no-`class_name` autoloads); **SaveManager (T6.5)** consumes `RunController.SaveType` rather than redefining it. (3) **MVP1 single floor** — `_floor_transition` (HP restore +
   temp-companion departure + `floor_transitioned`, HLD-RUN-006) is implemented and unit-tested but only fired
   by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ⚠️ **One enemy per encounter** — EnemyData
   has no encounter-count and FloorProfile no boss composition, so a combat spawns a single enemy. Multi-enemy
@@ -729,13 +729,36 @@ maintains `item_burden_score`; wires loot selection. Communicates only via Signa
   beat is **T6.6**. (7) **Rest-on-elite-path** (room 6, `LLD-FLOOR-BEATS-006`) still not modelled — the door
   choice at room 5 isn't yet read post-resolution to force a rest at room 6 (flagged in T6.2; revisit with MF/WS).
 
-### T6.5 — `SaveManager` + `ScreenManager` (headless-appropriate) 
+### T6.5 — `SaveManager` + `ScreenManager` (headless-appropriate)  ✅ **Done**
 `SaveManager` autoload reacts to `save_requested`, coordinates JSON save/load via
 PersistenceService, offers resume/start-over on existing CHECKPOINT. `ScreenManager` autoload
 reacts to `phase_changed` — **no-op/headless-safe for MVP1** (real scenes are MVP2) but the
 subscription wiring exists.
 - **@Spec:** `LLD-ARCH-007`, `LLD-ARCH-016`, `LLD-ARCH-010`
 - **DoD:** background + checkpoint saves written and reloadable; resume/start-over branch works headlessly.
+- ✅ `src/application/save_manager.gd` (`SaveManager`, autoload #9, no `class_name`). Single MVP1 save slot
+  (`user://saves/run.json`, overridable via `save_path` for tests). `save(game_state, save_type)` writes
+  `{save_type, state}` through `PersistenceService.write_save` (version-stamped, LLD-ARCH-010);
+  `load_run()`/`resume()` rebuild the GameState via `read_save` (runs migrations); `has_save()`/
+  `has_checkpoint()` (CHECKPOINT-only → the Resume/Start-Over gate); `start_over()` clears the slot.
+  Signal path: `connect_to_bus(bus)` wires `save_requested` → `_on_save_requested`, which serialises the
+  state RunController registers via `set_active_state` (the signal carries only the SaveType, so the
+  payload is supplied out-of-band — RunController → SaveManager, never the reverse).
+- ✅ `src/application/screen_manager.gd` (`ScreenManager`, autoload #10). `connect_to_bus(bus)` wires
+  `phase_changed` → tracks `current_phase`; under `GameConfig.HEADLESS` (MVP1) it does no scene work
+  (the only `HEADLESS` check, per LLD-ARCH-002). Real scene switching is MVP2.
+- ✅ `PersistenceService.delete_file(path)` added (start-over needs deletion; stays the sole FileAccess/
+  DirAccess owner). Both autoloads registered in `project.godot` (#9, #10).
+- ✅ `tests/test_save_manager.gd` (8 cases — save/load round-trip, missing→null, checkpoint vs background
+  detection, resume, start-over clears, signal-path save, no-active-state no-op) + `tests/
+  test_screen_manager.gd` (2 — phase tracked, headless safe). Engine boots with both autoloads. Full
+  suite **271/271**.
+- **Decisions / flags:** (1) `connect_to_bus(bus)` takes the bus explicitly (mirrors `EventLog`) so tests
+  use a fresh `SignalBus`; `_ready` passes the global. (2) **RunController→SaveManager wiring deferred to
+  T7's run bootstrap:** RunController does not itself call `SaveManager.set_active_state` (keeps it
+  decoupled and avoids save side-effects in RunController unit tests) — the AIPlayerAgent/headless bootstrap
+  registers the active run. (3) BACKGROUND resumes silently; only CHECKPOINT trips the Resume/Start-Over
+  prompt (a UI concern surfaced via `has_checkpoint()` for MVP2).
 
 ### T6.6 — Encounter-countdown system + Worn Map companion beat
 Implement the **encounter-countdown item system** (`HLD-ITEMS-003`): counter decrements 1 per
