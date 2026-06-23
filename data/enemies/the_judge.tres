@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_tpp63"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_jcvs4"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_vorlq"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_dwkwp"]
+
+[sub_resource type="Resource" id="Resource_a01f6"]
+script = ExtResource("1_tpp63")
+condition = "hp_percent_lte:30"
+intent_id = "pass_judgment"
+
+[sub_resource type="Resource" id="Resource_a8ho8"]
+script = ExtResource("2_jcvs4")
+intent_id = "strike"
+weight = 50
+damage_min = 3
+damage_max = 5
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_xngmr"]
+script = ExtResource("2_jcvs4")
+intent_id = "suffer"
+weight = 30
+max_consecutive = 2
+status_apply = "bleed"
+status_magnitude = 3
+
+[sub_resource type="Resource" id="Resource_5ha2f"]
+script = ExtResource("2_jcvs4")
+intent_id = "ponder"
+weight = 20
+is_evade = true
+max_consecutive = 1
+
+[sub_resource type="Resource" id="Resource_c7arj"]
+script = ExtResource("2_jcvs4")
+intent_id = "pass_judgment"
+damage_min = 5
+damage_max = 7
+is_charge_release = true
+
+[resource]
+script = ExtResource("4_dwkwp")
+enemy_id = "the_judge"
+display_name = "The Judge"
+max_hp = 30
+damage_type = "physical"
+enemy_tags = Array[String](["judge"])
+direct_omen_contributions = Array[String](["repent", "repent", "repent"])
+accompanied_by = Array[String](["witness_of_mercy", "witness_of_vengeance"])
+ends_combat_on_death = true
+intent_weights = Array[ExtResource("2_jcvs4")]([SubResource("Resource_a8ho8"), SubResource("Resource_xngmr"), SubResource("Resource_5ha2f"), SubResource("Resource_c7arj")])
+intent_conditionals = Array[ExtResource("1_tpp63")]([SubResource("Resource_a01f6")])

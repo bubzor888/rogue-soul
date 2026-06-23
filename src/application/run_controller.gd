@@ -239,15 +239,14 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	var ed: EnemyData = _content.get_enemy(encounter_id)
 	if ed != null:
 		# Encounter size per LLD-ENEMIES-002: pre/post-elite counts for normal rooms;
-		# elite gate and boss spawn one (elites are solo; boss composition is T8.4).
+		# elite gate and boss spawn one (elites are solo).
 		for i in _encounter_count(ed, room_type):
-			var e := EnemyState.new()
-			e.enemy_id = encounter_id
-			e.instance_id = "%s_%d" % [encounter_id, i]
-			e.hp = ed.max_hp
-			e.max_hp = ed.max_hp
-			e.turns_alive = 1
-			combat.enemies.append(e)
+			_spawn_into(combat, encounter_id, "%s_%d" % [encounter_id, i])
+		# Mixed composition (LLD-ENEMIES-010): the primary's escorts (e.g. the Judge's
+		# two Witnesses) spawn after it, so the primary is enemies[0] (the target the
+		# Witnesses' "allies" intents heal/buff first).
+		for escort_id in ed.accompanied_by:
+			_spawn_into(combat, str(escort_id), "%s_0" % escort_id)
 	game_state.combat_state = combat
 
 	_fire_replenish(ReplenishEvents.ENCOUNTER_START)
@@ -259,6 +258,20 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	# Assemble the deck and open the first omen cycle (pauses for CHOOSE_OMEN).
 	_resolver.assemble_omen_deck(_omen_sources(), game_state)
 	_resolver.resolve_omen_cycle_start(game_state)
+
+
+# Spawn one enemy instance at full HP into the combat roster.
+func _spawn_into(combat: CombatState, enemy_id: String, instance_id: String) -> void:
+	var ed: EnemyData = _content.get_enemy(enemy_id)
+	if ed == null:
+		return
+	var e := EnemyState.new()
+	e.enemy_id = enemy_id
+	e.instance_id = instance_id
+	e.hp = ed.max_hp
+	e.max_hp = ed.max_hp
+	e.turns_alive = 1
+	combat.enemies.append(e)
 
 
 # Number of enemies to spawn for an encounter (LLD-ENEMIES-002). Elite-gate and boss
@@ -360,9 +373,21 @@ func _check_combat_end() -> bool:
 			_end_combat(false)
 			return true
 		return false
-	if _living_enemy_count() == 0:
+	# Victory when every enemy is dead, OR a required-kill enemy died (the Judge ends
+	# the fight regardless of living Witnesses — LLD-ENEMIES-010).
+	if _living_enemy_count() == 0 or _required_kill_dead():
 		_end_combat(true)
 		return true
+	return false
+
+
+# True if any enemy flagged ends_combat_on_death (the Judge) is dead.
+func _required_kill_dead() -> bool:
+	for enemy in game_state.combat_state.enemies:
+		if enemy.hp <= 0:
+			var ed: EnemyData = _content.get_enemy(enemy.enemy_id)
+			if ed != null and ed.ends_combat_on_death:
+				return true
 	return false
 
 

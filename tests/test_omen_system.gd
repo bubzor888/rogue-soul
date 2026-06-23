@@ -144,6 +144,18 @@ func test_assemble_family_only_no_type_card() -> void:
 	assert_int(_count_card(gs.combat_state.omen_deck.draw_pile, "thick_hide")).is_equal(1)
 
 
+# The Judge's direct_omen_contributions inject verbatim (per instance) outside the
+# two-tier model — 3 Repent for one Judge. @Spec: LLD-OMEN-CARD-020, HLD-OMEN-006
+func test_assemble_direct_contributions_bypass_two_tier() -> void:
+	var content := StubContent.new()
+	var judge := _enemy_data("the_judge", [])  # no two-tier contributions
+	judge.direct_omen_contributions.assign(["repent", "repent", "repent"])
+	content.enemies["the_judge"] = judge
+	var gs := _gs_with_enemies(content, [{"enemy_id": "the_judge", "instance_id": "the_judge_0"}])
+	_resolver(content, StubRng.new()).assemble_omen_deck([], gs)
+	assert_int(_count_card(gs.combat_state.omen_deck.draw_pile, "repent")).is_equal(3)
+
+
 # --- Timer distribution (25/50/25) ------------------------------------------
 
 # A 4-card deck splits 1/2/1 across timer values 1/2/3 (nearest whole-number).

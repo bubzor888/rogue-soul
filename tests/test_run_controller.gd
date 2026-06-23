@@ -247,6 +247,43 @@ func test_elite_gate_spawns_one() -> void:
 	assert_int(rc.game_state.combat_state.enemies.size()).is_equal(1)
 
 
+# --- Boss mixed composition (LLD-ENEMIES-010) -------------------------------
+
+func _judge_content() -> StubContent:
+	var content := _content()
+	var judge := _enemy_data("the_judge", 30, 3, 5)
+	judge.accompanied_by.assign(["witness_mercy", "witness_vengeance"])
+	judge.ends_combat_on_death = true
+	content.enemies["the_judge"] = judge
+	content.enemies["witness_mercy"] = _enemy_data("witness_mercy", 10)
+	content.enemies["witness_vengeance"] = _enemy_data("witness_vengeance", 10)
+	return content
+
+
+# The boss encounter spawns the Judge plus its two Witnesses, with the Judge first.
+func test_boss_spawns_judge_and_witnesses() -> void:
+	var rc := _rc(_judge_content())
+	rc.start_run(42, "pilgrim")
+	rc._enter_combat("the_judge", "boss")
+	var enemies := rc.game_state.combat_state.enemies
+	assert_int(enemies.size()).is_equal(3)
+	assert_str(enemies[0].enemy_id).is_equal("the_judge")          # primary first
+	assert_str(enemies[1].enemy_id).is_equal("witness_mercy")
+	assert_str(enemies[2].enemy_id).is_equal("witness_vengeance")
+
+
+# Killing the Judge ends the fight in victory even with both Witnesses alive.
+func test_judge_death_ends_combat_with_living_witnesses() -> void:
+	var rc := _rc(_judge_content())
+	rc.start_run(42, "pilgrim")
+	rc._enter_boss()                                               # _in_boss + judge+witnesses
+	var enemies := rc.game_state.combat_state.enemies
+	enemies[0].hp = 0                                              # Judge dies; Witnesses alive
+	rc._process_deaths()
+	assert_bool(rc._check_combat_end()).is_true()
+	assert_str(rc.outcome).is_equal("completion")                 # boss victory completes the run
+
+
 # --- Combat victory → loot --------------------------------------------------
 
 func test_combat_victory_goes_to_loot() -> void:

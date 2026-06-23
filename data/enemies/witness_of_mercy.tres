@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_xv8y3"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_ckr1d"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_guk2n"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_m8kq3"]
+
+[sub_resource type="Resource" id="Resource_ilp0k"]
+script = ExtResource("3_guk2n")
+handler_id = "apply_mending_by_burden_tier"
+params = {
+"tiers": [{
+"magnitude": 1,
+"max": 7
+}, {
+"magnitude": 3,
+"max": 13
+}, {
+"magnitude": 5,
+"max": -1
+}]
+}
+
+[sub_resource type="Resource" id="Resource_271tl"]
+script = ExtResource("2_ckr1d")
+intent_id = "testify_mercy"
+weight = 100
+status_target = "allies"
+handlers = Array[ExtResource("3_guk2n")]([SubResource("Resource_ilp0k")])
+
+[resource]
+script = ExtResource("4_m8kq3")
+enemy_id = "witness_of_mercy"
+display_name = "Witness of Mercy"
+max_hp = 10
+damage_type = "physical"
+enemy_tags = Array[String](["judge_witness"])
+intent_weights = Array[ExtResource("2_ckr1d")]([SubResource("Resource_271tl")])
+on_death_apply_to_player = "vulnerable:physical"

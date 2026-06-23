@@ -159,6 +159,19 @@ func test_mending_no_downgrade_mid_cycle() -> void:
 	assert_int(gs.combat_state.enemies[0].active_statuses[0].magnitude).is_equal(5)
 
 
+# With a status_id param the handler applies that (colon-encoded) status by tier —
+# the Witness of Vengeance's tier-based Emboldened (Physical). @Spec: LLD-ENEMIES-022
+func test_burden_tier_applies_configured_status() -> void:
+	var tiers := [{"max": 7, "magnitude": 1}, {"max": 13, "magnitude": 2}, {"max": -1, "magnitude": 3}]
+	var gs := _judge_gs(20)  # High tier
+	ApplyMendingByBurdenTierHandler.new().apply(
+		_ctx(gs, "judge_0", {"status_id": "emboldened:physical", "tiers": tiers, "remaining_ticks": 2}))
+	var s: StatusInstance = gs.combat_state.enemies[0].active_statuses[0]
+	assert_str(s.status_id).is_equal("emboldened")
+	assert_str(s.string_param).is_equal("physical")
+	assert_int(s.magnitude).is_equal(3)
+
+
 # --- registration -----------------------------------------------------------
 
 func test_handlers_registered_with_derived_ids() -> void:

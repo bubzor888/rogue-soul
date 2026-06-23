@@ -960,10 +960,38 @@ Buff/Absorption Totems (`LLD-ENEMIES-004`–`-008`, `-014`–`-020`), plus encou
   to archive — flagged for a future spec-hygiene pass, not fixed here (it would alter an unrelated
   requirement's normative wording).
 
-### T8.4 — The Judge boss + Witnesses
+### T8.4 — The Judge boss + Witnesses  ✅ **Done**
 `the_judge.tres` (`LLD-ENEMIES-010`) — the fixed final-floor boss (`HLD-RUN-004`), Witness of Mercy /
 Vengeance (`LLD-ENEMIES-021/-022`), Repent card (`LLD-OMEN-CARD-020`). Verifies burden-tier handler
 (T4.2) and Pass Judgment phase trigger.
+- ✅ **4 `.tres`** authored (generator removed): `data/enemies/the_judge.tres` (HP 30, physical, `judge`
+  tag; strike 50% / suffer→Bleed +3 30% / ponder→evade 20%; **Pass Judgment** `pass_judgment`
+  charge→release forced by `hp_percent_lte:30` conditional), `witness_of_mercy.tres` + `witness_of_vengeance.tres`
+  (HP 10, `judge_witness`), `data/omen_cards/repent.tres`.
+- ✅ **Engine additions (all TDD):**
+  - **Mixed-composition encounters** — `EnemyData.accompanied_by` (the Judge spawns its two Witnesses,
+    primary first so the Witnesses' `allies` intents target the Judge) + `ends_combat_on_death` (the Judge
+    is the only required kill — `RunController._required_kill_dead` ends combat in victory regardless of
+    living Witnesses). `RunController._enter_combat` now spawns primary + escorts via `_spawn_into`.
+    `tests/test_run_controller.gd` +2.
+  - **Direct omen contributions** — `EnemyData.direct_omen_contributions` injects cards verbatim per
+    instance, bypassing the two-tier model (the Judge's Repent ×3, `LLD-OMEN-CARD-020`).
+    `CombatResolver._enemy_card_contributions` appends them. `tests/test_omen_system.gd` +1.
+  - **Burden-tier handler generalized** — `apply_mending_by_burden_tier` gained an optional `status_id`
+    param (default `mending`): Mercy applies tier-based Mending (1/3/5), Vengeance tier-based
+    Emboldened (Physical) (1/2/3) via the same handler. The handler id is unchanged (the spec names it for
+    Mercy). `tests/test_handlers.gd` +1.
+  - The Witnesses' kill consequences use `on_death_apply_to_player` (Mercy → `vulnerable:physical`,
+    Vengeance → `frenzied` mag 2). Pass Judgment's charge→release rides the existing intent engine (no
+    new code). All four new `EnemyData` fields added to `LLD-ARCH-018` by direct consistency edit.
+- ✅ `tests/test_judge_content.gd` — 6 cases (composition/required-kill, Repent ×3, intents + Pass
+  Judgment conditional, both Witnesses' tier handlers, boss now resolves). The earlier T8.3 "boss is null"
+  assertion updated to "resolves". ContentRegistry boots clean; full suite **330/330**.
+- **Decisions / flags:** (1) `accompanied_by` + `ends_combat_on_death` generalise mixed composition —
+  reusable for the MVP3 Fanatic+Totem pairing. (2) Vengeance's tier handler reuses the Mercy-named handler
+  with a `status_id` param (spec leaves Vengeance's handler unnamed); the name is a slight misnomer for the
+  Emboldened case — documented on the handler. (3) Bear frenzy / Witness-of-Vengeance Frenzied magnitudes
+  both 2 (consistent with the Fanatic taunt; spec omits explicit values) — flagged for tuning.
 
 ### T8.5 — Omen cards (floor / enemy / shared)
 Floor 3 default deck (`LLD-OMEN-CARD-008`), Exposed floor card (`-019`), enemy family/type cards

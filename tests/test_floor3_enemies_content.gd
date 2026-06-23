@@ -115,5 +115,6 @@ func test_floor3_pool_enemies_resolve() -> void:
 	for id in profile.normal_enemy_pool + profile.elite_enemy_pool:
 		assert_object(ContentRegistry.get_enemy(id)) \
 			.override_failure_message("Floor 3 pool enemy '%s' did not resolve" % id).is_not_null()
+	# The boss is authored in T8.4.
 	assert_object(ContentRegistry.get_enemy(profile.boss_enemy_id)) \
-		.override_failure_message("Boss '%s' not yet authored (T8.4)" % profile.boss_enemy_id).is_null()
+		.override_failure_message("Boss '%s' did not resolve" % profile.boss_enemy_id).is_not_null()

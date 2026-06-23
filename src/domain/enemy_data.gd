@@ -32,8 +32,25 @@ extends Resource
 @export var pre_elite_count: int = 1
 @export var post_elite_count: int = 1
 
-## Card IDs added to the deck while this enemy is alive.
+## Card IDs added to the deck while this enemy is alive, via the two-tier model
+## (HLD-OMEN-006): index 0 = family card (per instance), index 1 = type card (once
+## per type).
 @export var omen_contributions: Array[String] = []
+
+## Card IDs injected verbatim (once per instance) bypassing the two-tier family/type
+## model — a fixed contribution unique to an encounter. The Judge uses this for its
+## 3 Repent cards (LLD-OMEN-CARD-020). [] = none.
+@export var direct_omen_contributions: Array[String] = []
+
+## Other enemy IDs spawned alongside this enemy when it is the encounter primary
+## (mixed composition, e.g. The Judge spawns its two Witnesses). One of each, after
+## the primary. [] = none.
+@export var accompanied_by: Array[String] = []
+
+## When true, this enemy's death ends combat in victory regardless of other living
+## enemies — it is the only required kill (the Judge; LLD-ENEMIES-010). Default false
+## (every enemy must die to win).
+@export var ends_combat_on_death: bool = false
 
 ## Weighted random intent pool (evaluated if no conditional matches, or restricted
 ## by a matching conditional's intent_ids).

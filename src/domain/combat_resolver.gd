@@ -393,11 +393,15 @@ func _enemy_card_contributions(game_state: GameState) -> Array:
 	var types_seen: Dictionary = {}
 	for enemy in game_state.combat_state.enemies:
 		var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
-		if data == null or data.omen_contributions.is_empty():
+		if data == null:
 			continue
-		ids.append(str(data.omen_contributions[0]))  # Tier 1: per instance
-		if data.omen_contributions.size() > 1 and not types_seen.has(enemy.enemy_id):
-			ids.append(str(data.omen_contributions[1]))  # Tier 2: per type
+		if not data.omen_contributions.is_empty():
+			ids.append(str(data.omen_contributions[0]))  # Tier 1: per instance
+			if data.omen_contributions.size() > 1 and not types_seen.has(enemy.enemy_id):
+				ids.append(str(data.omen_contributions[1]))  # Tier 2: per type
+		# Fixed per-instance contributions outside the two-tier model (Judge's Repent).
+		for direct in data.direct_omen_contributions:
+			ids.append(str(direct))
 		types_seen[enemy.enemy_id] = true
 	return ids
 

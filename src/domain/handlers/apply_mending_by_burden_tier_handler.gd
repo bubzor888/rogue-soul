@@ -7,7 +7,9 @@
 # downgrade an active higher Mending — StatusRules enforces this.
 #
 # Tier brackets are data-driven (authored on the Witness intent .tres, LLD-ENEMIES-
-# 021), keeping the LLD values out of the engine. Params:
+# 021/-022), keeping the LLD values out of the engine. Params:
+#   status_id (String, default "mending") — the (colon-encoded) status applied by
+#     tier. Mercy uses the default Mending; Vengeance passes "emboldened:physical".
 #   tiers (Array of { max: int, magnitude: int }) — ordered low→high; the first
 #     tier whose `max` >= burden (or max < 0 = unbounded) wins.
 #   remaining_ticks (int) — supplied by the resolver from the omen cycle (T5.4).
@@ -19,8 +21,9 @@ func apply(ctx: AbilityContext) -> void:
 	var burden := ctx.game_state.item_burden_score
 	var magnitude := _tier_magnitude(burden, ctx.params.get("tiers", []))
 	var remaining_ticks := int(ctx.params.get("remaining_ticks", 0))
+	var status_id := str(ctx.params.get("status_id", "mending"))
 	var statuses := StatusRules.resolve_statuses(ctx.game_state, ctx.target_id)
-	StatusRules.apply_to_unit(statuses, "mending", magnitude, remaining_ticks)
+	StatusRules.apply_to_unit(statuses, status_id, magnitude, remaining_ticks)
 
 
 func _tier_magnitude(burden: int, tiers: Array) -> int:
