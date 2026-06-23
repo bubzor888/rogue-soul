@@ -98,6 +98,7 @@ func _floor(pre: int = 4, post: int = 4) -> FloorProfile:
 	p.normal_consumable_pool.assign(["bomb"])
 	p.elite_durability_pool.assign(["maul"])
 	p.elite_consumable_pool.assign(["poultice"])
+	p.ambient_omen_cards.assign(["floor_ambient"])
 	return p
 
 
@@ -245,6 +246,22 @@ func test_elite_gate_spawns_one() -> void:
 	rc.start_run(42, "pilgrim")
 	rc._enter_combat("bear", NavigationModel.ROOM_ELITE_COMBAT)
 	assert_int(rc.game_state.combat_state.enemies.size()).is_equal(1)
+
+
+# The floor's ambient omen cards (LLD-OMEN-CARD-008) are shuffled into every
+# combat deck alongside vessel/enemy cards. @Spec: HLD-OMEN-004, LLD-OMEN-CARD-008
+func test_floor_ambient_cards_in_deck() -> void:
+	var content := _content()
+	content.enemies["skeleton"] = _enemy_data("skeleton", 12)
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	rc.submit_action(rc.get_legal_actions()[0])  # CHOOSE_DOOR → combat (deck assembled)
+	var pile := rc.game_state.combat_state.omen_deck.draw_pile
+	var found := false
+	for card in pile:
+		if card.get("card_id", "") == "floor_ambient":
+			found = true
+	assert_bool(found).is_true()
 
 
 # --- Boss mixed composition (LLD-ENEMIES-010) -------------------------------

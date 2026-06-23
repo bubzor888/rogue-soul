@@ -16,3 +16,4 @@ normal_consumable_pool = Array[String](["fire_bomb", "ointment", "combustible_oi
 elite_durability_pool = Array[String](["iron_maul", "spiked_chain", "soldiers_blade", "smoldering_brand", "arc_wand", "glacial_brand", "medium_amethyst"])
 elite_consumable_pool = Array[String](["poultice", "brittle_charm", "fulminating_powder"])
 temporary_companion_pool = Array[String](["raven", "shadow", "life_mote"])
+ambient_omen_cards = Array[String](["burning", "shocked", "chilled", "vulnerable_fire", "vulnerable_lightning", "vulnerable_ice", "emboldened_fire", "emboldened_lightning", "emboldened_ice", "mending", "emboldened_physical", "exposed"])

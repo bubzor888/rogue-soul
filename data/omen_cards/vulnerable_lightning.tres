@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="OmenCardData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_teq6r"]
+[ext_resource type="Script" path="res://src/domain/omen_card_data.gd" id="2_m6uln"]
+
+[resource]
+script = ExtResource("2_m6uln")
+card_id = "vulnerable_lightning"
+display_name = "Vulnerable (Lightning)"
+status_id = "vulnerable:lightning"

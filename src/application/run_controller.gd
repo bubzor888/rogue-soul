@@ -286,8 +286,14 @@ func _encounter_count(ed: EnemyData, room_type: String) -> int:
 	return maxi(ed.post_elite_count if post_elite else ed.pre_elite_count, 1)
 
 
+# The non-enemy omen sources shuffled into every combat deck (HLD-OMEN-004): the
+# floor's ambient cards (LLD-OMEN-CARD-008), the vessel's cards, and the bound
+# companion's. Enemy contributions are derived by the resolver (two-tier + direct).
 func _omen_sources() -> Array:
 	var ids: Array = []
+	var profile := _profile()
+	if profile != null:
+		ids.append_array(profile.ambient_omen_cards)
 	var vd: VesselData = _content.get_vessel(game_state.vessel_state.vessel_id)
 	if vd != null:
 		ids.append_array(vd.omen_contributions)

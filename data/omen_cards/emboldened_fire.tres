@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="OmenCardData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_gqa3c"]
+[ext_resource type="Script" path="res://src/domain/omen_card_data.gd" id="2_ae5yf"]
+
+[resource]
+script = ExtResource("2_ae5yf")
+card_id = "emboldened_fire"
+display_name = "Emboldened (Fire)"
+status_id = "emboldened:fire"

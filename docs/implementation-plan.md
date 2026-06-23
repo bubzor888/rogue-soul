@@ -993,11 +993,37 @@ Vengeance (`LLD-ENEMIES-021/-022`), Repent card (`LLD-OMEN-CARD-020`). Verifies 
   Emboldened case — documented on the handler. (3) Bear frenzy / Witness-of-Vengeance Frenzied magnitudes
   both 2 (consistent with the Fanatic taunt; spec omits explicit values) — flagged for tuning.
 
-### T8.5 — Omen cards (floor / enemy / shared)
+### T8.5 — Omen cards (floor / enemy / shared)  ✅ **Done**
 Floor 3 default deck (`LLD-OMEN-CARD-008`), Exposed floor card (`-019`), enemy family/type cards
 (`-011` Grave Knit, `-012` Thick Hide, `-013` Elemental Synergy, `-014` Sacred Ground), status
 cards (Burning, Shocked, Chilled, Emboldened ×2, Vulnerable ×3, Mending — `-001`..`-005`, `-015`..`-018`),
 number distribution (`LLD-OMEN-MECH-008`).
+- ✅ **18 omen-card `.tres`** in `data/omen_cards/` (generator removed): status cards `burning`(mag 5),
+  `shocked`, `chilled`(mag 2), `mending`(mag 3), `emboldened_physical`(mag 2), `emboldened_{fire,lightning,ice}`,
+  `vulnerable_{fire,lightning,ice}`, `exposed`; enemy cards `grave_knit`(mending 5, tag undead),
+  `thick_hide`(hardened 3, tag beast), `elemental_synergy_{fire,ice,lightning}`(type_convert), `sacred_ground`.
+  All effects ride existing engine mechanics (StatusRules + DamageCalculator + the shift/tick resolvers) —
+  **no new handlers** (Stillness/Repent were done in T8.1/T8.4).
+- ✅ **Floor ambient deck wired** — `FloorProfile.ambient_omen_cards` (the 12 `LLD-OMEN-CARD-008` cards) +
+  `RunController._omen_sources` now shuffles the floor's ambient cards into every combat deck alongside the
+  vessel/companion/enemy sources (`HLD-OMEN-004`). `floor_3.tres` updated with the 12 ambient ids.
+  `tests/test_run_controller.gd` +1.
+- ✅ **Number distribution** (`LLD-OMEN-MECH-008`) was already implemented (`_timer_value_pool` 25/50/25) and
+  is covered by `test_omen_system.gd` — timers are assigned at deck assembly, not authored on cards.
+- ✅ `tests/test_omen_cards_content.gd` — 7 cases reading the shipped `.tres` (status/magnitude/tag/
+  type-convert fidelity, the 12-card ambient deck resolves, and **every** Floor 3 enemy + Judge omen
+  contribution now resolves to a real card). ContentRegistry boots clean. Full suite **338/338**.
+- **Decisions / flags:** (1) **Thick Hide → `hardened`** — the spec names a distinct "Thick Hide" status but
+  its mechanic (−3 per hit) is identical to Hardened, so the card applies `hardened` (mag 3) to beasts,
+  reusing the tested absorption path. No functional difference in MVP1 (nothing distinguishes them); a
+  dedicated status would only matter if a future cleanse/interaction must tell them apart. (2) **Chilled
+  per-tick step** — card authored with starting magnitude 2 (`LLD-OMEN-CARD-003` wants 2→4 across ticks),
+  but the engine increments by the `CHILLED_TICK_STEP=1` const (the T5.3 single-field limitation), so it
+  escalates 2→3 not 2→4. Functional (reduction increases, never to 0) but not the exact cadence — flagged;
+  exact per-card steps need a `StatusInstance` step field. (3) **Sacred Ground** authored as an **inert
+  placeholder** (no status/handler) — its Totem-aura doubling needs the `sacred_ground` handler + totem
+  auras, both MVP3; no totems are in the MVP1 Floor 3 pool, so it never meaningfully fires. Keeps boot clean
+  (no unregistered handler) and lets the Fanatic family-card reference resolve.
 
 ### T8.6 — Item drop pools + Floor 3 profile
 Normal/elite durability and consumable pools (`LLD-ITEMS-005`–`-008`) and the Floor 3 `FloorProfile`
