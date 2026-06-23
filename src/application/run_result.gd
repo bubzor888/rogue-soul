@@ -11,6 +11,7 @@ var vessel_id: String = ""
 var floors_completed: int = 0
 var outcome: String = ""          # "death" | "completion"
 var turn_count: int = 0
+var rooms_cleared: int = 0        # rooms completed on the final floor (progress metric)
 
 
 # Field-by-field equality — the determinism gate compares whole results.
@@ -21,7 +22,8 @@ func equals(other: RunResult) -> bool:
 		and vessel_id == other.vessel_id \
 		and floors_completed == other.floors_completed \
 		and outcome == other.outcome \
-		and turn_count == other.turn_count
+		and turn_count == other.turn_count \
+		and rooms_cleared == other.rooms_cleared
 
 
 func to_dict() -> Dictionary:
@@ -31,4 +33,5 @@ func to_dict() -> Dictionary:
 		"floors_completed": floors_completed,
 		"outcome": outcome,
 		"turn_count": turn_count,
+		"rooms_cleared": rooms_cleared,
 	}

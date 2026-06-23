@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_pvmos"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_fyg8x"]
+
+[sub_resource type="Resource" id="Resource_5672r"]
+script = ExtResource("1_pvmos")
+handler_id = "deal_damage"
+params = {
+"arc_damage": 4,
+"arc_targets": 1,
+"base_damage": 9,
+"damage_type": "lightning",
+"mode": "arc"
+}
+
+[resource]
+script = ExtResource("2_fyg8x")
+ability_id = "arc_wand"
+display_name = "Arc Wand"
+action_bucket = "attack"
+max_charges = 8
+breaks_at_zero = true
+score = 108
+handlers = Array[ExtResource("1_pvmos")]([SubResource("Resource_5672r")])

@@ -23,6 +23,28 @@ func _vessel_statuses(gs: GameState) -> Array:
 
 # --- apply_status -----------------------------------------------------------
 
+# An offensive consumable (e.g. Fire Bomb) is a non-targeted action — the handler
+# auto-targets the first living enemy when target is "target" with no target_id.
+# @Spec: LLD-ITEMS-007, HLD-COMBAT-006
+func test_apply_status_auto_targets_first_living_enemy() -> void:
+	var gs := GameState.new()
+	gs.vessel_state = VesselState.new()
+	gs.combat_state = CombatState.new()
+	var dead := EnemyState.new()
+	dead.instance_id = "skeleton_0"
+	dead.hp = 0
+	var alive := EnemyState.new()
+	alive.instance_id = "skeleton_1"
+	alive.hp = 10
+	gs.combat_state.enemies.assign([dead, alive])
+	# "player" source, no target_id given.
+	var ctx := AbilityContext.new(gs, "player", "")
+	ctx.params = {"status_id": "burning", "magnitude": 5, "remaining_ticks": 2}
+	ApplyStatusHandler.new().apply(ctx)
+	assert_int(alive.active_statuses.size()).is_equal(1)        # first LIVING enemy
+	assert_int(dead.active_statuses.size()).is_equal(0)
+
+
 func test_apply_status_colon_split() -> void:
 	var gs := _gs_with_vessel()
 	ApplyStatusHandler.new().apply(_ctx(gs, "player", {"status_id": "vulnerable:fire", "remaining_ticks": 2}))

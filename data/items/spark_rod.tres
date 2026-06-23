@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_rfu7e"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_1t38u"]
+
+[sub_resource type="Resource" id="Resource_j33kp"]
+script = ExtResource("1_rfu7e")
+handler_id = "deal_damage"
+params = {
+"base_damage": 7,
+"damage_type": "lightning"
+}
+
+[resource]
+script = ExtResource("2_1t38u")
+ability_id = "spark_rod"
+display_name = "Spark Rod"
+action_bucket = "attack"
+max_charges = 3
+breaks_at_zero = true
+score = 39
+handlers = Array[ExtResource("1_rfu7e")]([SubResource("Resource_j33kp")])

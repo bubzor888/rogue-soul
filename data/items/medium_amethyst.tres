@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_5voh6"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_qe0t2"]
+
+[sub_resource type="Resource" id="Resource_4r6gf"]
+script = ExtResource("1_5voh6")
+handler_id = "cleanse_status"
+params = {
+"clears": [{
+"status_id": "shocked"
+}, {
+"status_id": "chilled"
+}, {
+"status_id": "vulnerable",
+"string_param": "physical"
+}]
+}
+
+[resource]
+script = ExtResource("2_qe0t2")
+ability_id = "medium_amethyst"
+display_name = "Medium Amethyst"
+action_bucket = "support"
+max_charges = 2
+breaks_at_zero = true
+score = 28
+handlers = Array[ExtResource("1_5voh6")]([SubResource("Resource_4r6gf")])

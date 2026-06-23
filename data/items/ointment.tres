@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_iefeq"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_2n4w5"]
+
+[sub_resource type="Resource" id="Resource_rfkab"]
+script = ExtResource("1_iefeq")
+handler_id = "cleanse_status"
+params = {
+"clears": [{
+"status_id": "burning"
+}, {
+"status_id": "poisoned"
+}]
+}
+
+[resource]
+script = ExtResource("2_2n4w5")
+ability_id = "ointment"
+display_name = "Ointment"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 10
+handlers = Array[ExtResource("1_iefeq")]([SubResource("Resource_rfkab")])

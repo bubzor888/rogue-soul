@@ -1025,9 +1025,45 @@ number distribution (`LLD-OMEN-MECH-008`).
   auras, both MVP3; no totems are in the MVP1 Floor 3 pool, so it never meaningfully fires. Keeps boot clean
   (no unregistered handler) and lets the Fanatic family-card reference resolve.
 
-### T8.6 — Item drop pools + Floor 3 profile
+### T8.6 — Item drop pools + Floor 3 profile  ✅ **Done**
 Normal/elite durability and consumable pools (`LLD-ITEMS-005`–`-008`) and the Floor 3 `FloorProfile`
 data (`lld-floor`). Confirm LootGenerator draws the right tiers.
+- ✅ **22 loot-item `.tres`** in `data/items/` (generator removed): normal/elite durability weapons
+  (Cracked Cudgel, Rope Flail [all], Battered Sword, Ember Shard, Spark Rod, Frost Sliver / Iron Maul,
+  Spiked Chain [all], Soldier's Blade, Smoldering Brand, Arc Wand [arc], Glacial Brand), the two Amethysts
+  (cleanse), and the consumables (Fire Bomb, Ointment, Combustible Oil, Hardening Resin, Frost Shard /
+  Poultice, Brittle Charm, Fulminating Powder). Buckets/charges/effects per `LLD-ITEMS-005..-008`,
+  authored `score` per `LLD-IR-011`. The Floor 3 loot pools were already on `floor_3.tres` (T6.3); every id
+  now resolves.
+- ✅ **Enemy pool finalized** (resolves the T8.3 flag) — added Low/High HP Fanatic to `normal_enemy_pool`
+  per the authoritative `LLD-ENEMIES-002` normal table (they're standalone-capable; their inert Sacred
+  Ground + Mending cards resolve). Totems stay out — they require mixed-composition Fanatic+Totem pairing
+  (`[OPEN·MVP3]`). The real-content run still completes deterministically with Fanatics in rotation.
+- ✅ **Engine additions (all TDD):**
+  - **Offensive-consumable targeting** — `ApplyStatusHandler` auto-targets the first living enemy when the
+    action is non-targeted (Fire Bomb / Frost Shard / Brittle Charm / Fulminating Powder are single
+    non-targeted actions; real per-target choice is MVP2 UI). `tests/test_handlers.gd` +1.
+  - **`combustible_oil` handler** (the last deferred MVP1 handler) — branching: Vulnerable (Fire), or a
+    6-fire burst if the target is already Burning. Registered. `tests/test_combustible_oil.gd` (4 cases).
+  - **Arc damage** — `deal_damage` gained an `arc_damage` param (Arc Wand: 9 primary + 4 arc); defaults to
+    `base_damage` so other modes are unchanged. `tests/test_damage.gd` +1.
+- ✅ `tests/test_floor3_loot_content.gd` — 6 cases (every pool item resolves + handlers known; weapon/
+  consumable/Amethyst/Arc-Wand fidelity; **LootGenerator draws one durability + one consumable from the
+  correct tier** against real content).
+- ✅ **MVP1 integration capstone** — `tests/test_mvp1_real_run.gd` (3 cases): `AIPlayerAgent` drives a full
+  Pilgrim Floor 3 run against the **real** `ContentRegistry` + `RNGService`, start → Judge → `RUN_END`,
+  deterministically (the stub-free `SCOPE-001` gate). A 30-seed progress check confirms rooms are cleared
+  (enemies take damage and die, loot/navigation advance). `RunResult` gained `rooms_cleared` for this.
+  Full suite **352/352**.
+- **Decisions / flags:** (1) **Random agent doesn't win the floor** — across 30 seeds, runs clear ~2 rooms
+  then die (diagnostics confirmed enemies die / the loop advances; not a bug). A purely random policy can't
+  clear 9 rooms + the Judge with the Pilgrim's low damage; winnability needs a smarter agent — the MVP1
+  gate is *deterministic completion*, not random victory. (2) **Frost Shard → Chilled** per `LLD-ITEMS-007`
+  (its explicit scenario), which conflicts with a stale `HLD-COMBAT-007` example listing Frost Shard →
+  Vulnerable (Ice); authored per the LLD, flagged (part of the spec-hygiene debt). (3) **Small/Medium
+  Amethyst** are Support (durability) so they auto-decrement per encounter (1/2 charges) — a single-
+  encounter cleanse window, consistent with `LLD-ITEMS-002`. (4) Offensive-consumable auto-targeting is an
+  MVP1 simplification (MVP2 adds real target selection).
 
 ### T8.7 — Item score table sanity pass
 Verify every MVP1 item's authored `score` matches `LLD-ITEMS-011` / `LLD-IR` formulas.

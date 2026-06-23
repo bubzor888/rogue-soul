@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_6wnxx"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_myp8d"]
+
+[sub_resource type="Resource" id="Resource_l3x7x"]
+script = ExtResource("1_6wnxx")
+handler_id = "deal_damage"
+params = {
+"base_damage": 9,
+"damage_type": "fire"
+}
+
+[resource]
+script = ExtResource("2_myp8d")
+ability_id = "smoldering_brand"
+display_name = "Smoldering Brand"
+action_bucket = "attack"
+max_charges = 8
+breaks_at_zero = true
+score = 89
+handlers = Array[ExtResource("1_6wnxx")]([SubResource("Resource_l3x7x")])

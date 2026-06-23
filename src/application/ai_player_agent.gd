@@ -69,6 +69,8 @@ func run_to_completion(seed: int, vessel_id: String) -> RunResult:
 	result.floors_completed = rc.floors_completed
 	result.outcome = rc.outcome
 	result.turn_count = rc.turn_count
+	if rc.game_state != null and rc.game_state.navigation_state != null:
+		result.rooms_cleared = rc.game_state.navigation_state.rooms_completed_this_floor
 
 	# RunController is a Node created outside the scene tree; free it explicitly
 	# (it only queue_free()s itself when inside the tree).

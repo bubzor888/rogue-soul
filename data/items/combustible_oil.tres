@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_ebw38"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_ngnof"]
+
+[sub_resource type="Resource" id="Resource_n0dwa"]
+script = ExtResource("1_ebw38")
+handler_id = "combustible_oil"
+params = {
+"burst_damage": 6
+}
+
+[resource]
+script = ExtResource("2_ngnof")
+ability_id = "combustible_oil"
+display_name = "Combustible Oil"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 17
+handlers = Array[ExtResource("1_ebw38")]([SubResource("Resource_n0dwa")])

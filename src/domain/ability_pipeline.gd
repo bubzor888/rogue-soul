@@ -50,8 +50,9 @@ static func with_default_handlers() -> AbilityPipeline:
 	pipeline.register(PeekOmenDeckHandler.new())
 	pipeline.register(ApplyMendingByBurdenTierHandler.new())
 	pipeline.register(RestoreItemChargesHandler.new())  # T8.1 — Good as New (content lookup via ctx.content)
-	# Still sequenced to later (their core logic is that work):
-	#   elemental_synergy / sacred_ground / combustible_oil — omen mechanics (T5.4) + content
+	pipeline.register(CombustibleOilHandler.new())      # T8.6 — branching fire consumable
+	# elemental_synergy is status-only (type_convert, no handler). sacred_ground (Totem
+	# aura doubling) is MVP3 — its card is an inert placeholder until then.
 	return pipeline
 
 

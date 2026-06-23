@@ -51,6 +51,26 @@ func _enemy(gs: GameState) -> EnemyState:
 	return gs.combat_state.enemies[0]
 
 
+# --- deal_damage arc mode (Arc Wand: 9 primary + 4 arc) ---------------------
+
+func test_deal_damage_arc_uses_arc_damage_for_secondary() -> void:
+	var gs := _gs("skeleton", 50)
+	var e2 := EnemyState.new()
+	e2.enemy_id = "skeleton"
+	e2.instance_id = "enemy_1"
+	e2.hp = 50
+	e2.max_hp = 50
+	gs.combat_state.enemies.append(e2)
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [])
+	var ctx := AbilityContext.new(gs, "player", "enemy_0")
+	ctx.content = content
+	ctx.params = {"base_damage": 9, "damage_type": "lightning", "mode": "arc", "arc_targets": 1, "arc_damage": 4}
+	DealDamageHandler.new().apply(ctx)
+	assert_int(gs.combat_state.enemies[0].hp).is_equal(41)  # primary 9
+	assert_int(gs.combat_state.enemies[1].hp).is_equal(46)  # arc 4
+
+
 # --- Innate (enemy) vulnerability -------------------------------------------
 
 # A Skeleton's innate Fire vulnerability amplifies fire damage ×1.5 with no

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_iwjmg"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_dr0wj"]
+
+[sub_resource type="Resource" id="Resource_3jn5a"]
+script = ExtResource("1_iwjmg")
+handler_id = "apply_status"
+params = {
+"status_id": "vulnerable:physical"
+}
+
+[resource]
+script = ExtResource("2_dr0wj")
+ability_id = "brittle_charm"
+display_name = "Brittle Charm"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 18
+handlers = Array[ExtResource("1_iwjmg")]([SubResource("Resource_3jn5a")])
