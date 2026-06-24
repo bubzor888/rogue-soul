@@ -1089,11 +1089,36 @@ winnability.
 
 ## Phase 9 — MVP1 Debug Affordances (light)
 
-### T9.1 — Headless debug hooks gated on `GameConfig.DEBUG`
+### T9.1 — Headless debug hooks gated on `GameConfig.DEBUG`  ✅ **Done**
 Minimal for headless: seed display/override, RNG stream call-count monitor, force-enemy-intent,
 force-loot-drop, set-HP — exposed as code-path hooks (no UI yet). All gated on `DEBUG`.
 - **@Spec:** `LLD-ARCH-014`
 - **DoD:** hooks active only when `DEBUG`; off by default; no separate build.
+- ✅ `src/application/debug_hooks.gd` (`DebugHooks`, static toolkit, Application layer) — every method is a
+  no-op unless `GameConfig.DEBUG`: `set_unit_hp` (force-set HP on **any** unit — player or enemy, clamped),
+  `keep_player_alive` (full-restore the vessel), `force_enemy_intent`, `force_loot_offers`,
+  `rng_stream_counts` (the RNG monitor, via `RNGService.get_call_count`), `active_seed` (seed display). The
+  toolkit is called by the harness / a future debug UI; the engine never calls into it, so normal play is
+  unaffected.
+- ✅ Supporting changes: `GameConfig.DEBUG` is now a settable `var` (still the single flag — the spec's
+  "set … for export" wording implies settable; also lets tests toggle debug paths). `CombatResolver` gained
+  an inert `debug_forced_intent` field (set only via the DEBUG-gated `force_enemy_intent`) honored at the top
+  of `_select_intent` — Domain stays autoload-free.
+- ✅ `tests/test_debug_hooks.gd` — 7 cases (inert when DEBUG off; set-HP player+enemy+clamp; keep-alive;
+  force-loot; force-intent overrides the roll; RNG counts + seed). Plus `test_mvp1_real_run.gd`
+  `test_invincible_run_clears_whole_floor`: with `keep_player_alive` each turn the random agent traverses
+  all 9 rooms and **beats the Judge** (`outcome == "completion"`) — the "keep the player alive to exercise
+  every room" use case, proving the whole floor is reachable/clearable. Full suite **363/363**.
+
+---
+
+**Phase 9 complete — MVP1 is done.** ✅ `AIPlayerAgent.run_to_completion(seed, "pilgrim")` executes a full,
+deterministic, headless Floor 3 run start → Judge → `RUN_END` on the real content registry, all systems
+(combat, omen, status, loot, navigation, burden, companion, debug) functional and unit-tested (363 green).
+This satisfies the MVP1 definition of done (`SCOPE-001`). Carry-forward (none block MVP1; MVP2/MVP3 + a
+spec-hygiene pass): Chilled per-tick step cadence, Sacred Ground/Totem doubling + Fanatic-Totem mixed
+encounters, item/ability target *selection* UI, the 9-spec SHALL/MUST lint debt, and a non-random agent
+for unaided winnability.
 
 ---
 

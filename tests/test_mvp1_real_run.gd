@@ -14,6 +14,10 @@ func _agent() -> AIPlayerAgent:
 	return AIPlayerAgent.new(RNGService, ContentRegistry, auto_free(SignalBusScript.new()))
 
 
+func after_test() -> void:
+	GameConfig.DEBUG = false
+
+
 func test_real_content_run_completes() -> void:
 	for seed in [1, 42, 99, 777, 2024]:
 		var r: RunResult = _agent().run_to_completion(seed, "pilgrim")
@@ -42,3 +46,26 @@ func test_runs_make_combat_progress() -> void:
 		total_rooms += _agent().run_to_completion(seed, "pilgrim").rooms_cleared
 	assert_int(total_rooms).override_failure_message(
 		"0 rooms cleared across 30 runs — enemies may be unkillable").is_greater(5)
+
+
+# With the DebugHooks.keep_player_alive hook (LLD-ARCH-014), an invincible random
+# agent traverses all 9 rooms and beats the Judge — proving every room/enemy on the
+# floor is reachable and clearable. This is the "keep the player alive to test all
+# rooms" use case. @Spec: LLD-ARCH-014, SCOPE-001
+func test_invincible_run_clears_whole_floor() -> void:
+	GameConfig.DEBUG = true
+	RNGService.seed_run(42)
+	var agent := AIPlayerAgent.new(RNGService, ContentRegistry, auto_free(SignalBusScript.new()))
+	agent.ai_rng.seed = 42
+	var rc := RunController.new()
+	rc.configure(RNGService, ContentRegistry, auto_free(SignalBusScript.new()))
+	rc.start_run(42, "pilgrim")
+	var guard := 0
+	while not rc.is_finished() and guard < 1_000_000:
+		DebugHooks.keep_player_alive(rc.game_state)   # never die
+		agent.play_turn(rc)
+		guard += 1
+	# Invincible → cannot die → the run can only end by clearing the floor.
+	assert_str(rc.outcome).is_equal("completion")
+	assert_int(rc.floors_completed).is_equal(1)
+	rc.free()

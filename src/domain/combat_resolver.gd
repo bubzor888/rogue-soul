@@ -51,6 +51,12 @@ var _content
 var _pipeline
 var _signal_bus
 
+## Debug override (LLD-ARCH-014): when non-empty, every enemy that owns an intent
+## with this id selects it, overriding conditionals and the weighted roll. Set only
+## via DebugHooks.force_enemy_intent (itself GameConfig.DEBUG-gated); "" in normal
+## play, so this is inert unless debug tooling sets it. No autoload access here.
+var debug_forced_intent: String = ""
+
 
 # rng: RNGService; content: provider with get_vessel(id)/get_ability(id);
 # pipeline: AbilityPipeline; signal_bus: SignalBus (the one autoload the resolver
@@ -783,6 +789,12 @@ func _select_intent(enemy: EnemyState, game_state: GameState) -> IntentWeight:
 	var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
 	if data == null:
 		return null
+
+	# Debug override (LLD-ARCH-014): force a specific intent if this enemy owns it.
+	if debug_forced_intent != "":
+		var forced := _find_intent(enemy, debug_forced_intent, game_state)
+		if forced != null:
+			return forced
 
 	var pool: Array = data.intent_weights
 	for cond in data.intent_conditionals:
