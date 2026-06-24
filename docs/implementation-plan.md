@@ -1065,9 +1065,25 @@ data (`lld-floor`). Confirm LootGenerator draws the right tiers.
   encounter cleanse window, consistent with `LLD-ITEMS-002`. (4) Offensive-consumable auto-targeting is an
   MVP1 simplification (MVP2 adds real target selection).
 
-### T8.7 — Item score table sanity pass
+### T8.7 — Item score table sanity pass  ✅ **Done**
 Verify every MVP1 item's authored `score` matches `LLD-ITEMS-011` / `LLD-IR` formulas.
 - **@Spec (schema/validator):** `LLD-ARCH-018`, `HLD-ITEMS-006`/`-007`/`-008`, `LLD-ITEMS-011`
+- ✅ `tests/test_item_scores.gd` — 3 cases pinning all **25** MVP1 items' shipped `score` (read via
+  ContentRegistry) to the canonical `LLD-IR-011` values, asserting every item is `breaks_at_zero`, and that
+  the three vessel abilities (throw_rock / read_the_road / good_as_new) carry `score` 0 and are not items.
+  All authored scores match the spec table (no drift). Full suite **355/355**.
+
+---
+
+**Phase 8 complete.** ✅ All MVP1 content authored and validated: the Pilgrim + abilities (T8.1), starting
+items (T8.2), 13 Floor 3 enemies (T8.3), the Judge + Witnesses (T8.4), 18 omen cards (T8.5), 22 loot items
++ pool finalization (T8.6), and the score sanity pass (T8.7). The **MVP1 definition of done is met**:
+`AIPlayerAgent.run_to_completion(seed, "pilgrim")` executes a full, deterministic, headless Floor 3 run
+against the real content registry (`tests/test_mvp1_real_run.gd`). Remaining: the light **Phase 9** debug
+hooks. Outstanding flags (none block MVP1): Chilled per-tick step cadence (T5.3/T8.5), Sacred Ground /
+Totem aura doubling + Fanatic-Totem mixed encounters (MVP3), offensive-consumable + Good-as-New target
+selection (MVP2 UI), spec-hygiene SHALL/MUST debt in 9 specs, and a smarter (non-random) agent for
+winnability.
 
 ---
 
