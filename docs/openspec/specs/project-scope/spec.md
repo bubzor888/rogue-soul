@@ -1,3 +1,7 @@
+## Purpose
+Defines the MVP milestones and what is in and out of scope for each.
+
+## Requirements
 
 ### Requirement: [SCOPE-001] MVP1 — Headless Single Floor
 The game SHALL be playable end-to-end on a single floor (Floor 3 — The Threshold) with The Pilgrim in headless mode. No UI is required. The core game loop must be fully functional and testable via `AIPlayerAgent`.

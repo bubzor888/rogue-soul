@@ -35,7 +35,7 @@ See `HLD-MF-003` for the category mechanic (both options revealed, walk away ava
 ---
 
 ### Requirement: [LLD-MF-009] Companion Encounter Pool (Floor 3)
-The Companion Encounter pool for Floor 3 contains three temporary companions. When a companion encounter fires on Floor 3, one companion is drawn at random from this pool using the NAVIGATION RNG stream and offered to the player. See `HLD-MF-004` for the mandatory acceptance rule and one-per-floor limit.
+The Companion Encounter pool for Floor 3 SHALL contain three temporary companions. When a companion encounter fires on Floor 3, one companion is drawn at random from this pool using the NAVIGATION RNG stream and offered to the player. See `HLD-MF-004` for the mandatory acceptance rule and one-per-floor limit.
 
 All three companions are defined in `lld-companions` (`LLD-COMP-001`, `LLD-COMP-002`, `LLD-COMP-003`).
 

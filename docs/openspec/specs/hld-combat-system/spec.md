@@ -167,7 +167,7 @@ Elemental statuses (Burning, Chilled) do **not** co-apply a Vulnerable status. V
 ### Requirement: [HLD-COMBAT-007] Vulnerability
 Vulnerable SHALL amplify all damage of a specific type dealt to the affected target by ×1.5. It has two sources that behave identically:
 
-- **Vulnerable status** — applied by items directly (e.g., Combustible Oil → Vulnerable (Fire), Brittle Charm → Vulnerable (Physical), Frost Shard → Vulnerable (Ice), Fulminating Powder → Vulnerable (Lightning)). It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
+- **Vulnerable status** — applied by items directly (e.g., Combustible Oil → Vulnerable (Fire), Brittle Charm → Vulnerable (Physical), Fulminating Powder → Vulnerable (Lightning)). It is applied, tracked, and cleared using the same status mechanics as all other statuses (timer card duration, clears at omen reset — see `HLD-COMBAT-006` and `HLD-COMBAT-008`).
 - **Innate enemy vulnerability** — a permanent property of an enemy archetype declared in its data (`EnemyData.vulnerabilities`, see `LLD-ARCH-018`). It is always active and is not a status (no timer; never cleared). Examples: Skeleton ×1.5 fire, Fire Elemental ×1.5 ice, Ice Elemental ×1.5 fire (see `LLD-ENEMIES`).
 
 A target's vulnerability to a given damage type is a single boolean condition: if **either** source applies, the multiplier is ×1.5. The two sources do **not** stack — an enemy that is both innately vulnerable and has the Vulnerable status of the same type still takes ×1.5, not ×2.25 (this generalises the existing "two sources do not stack" rule).

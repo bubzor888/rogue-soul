@@ -955,10 +955,10 @@ Buff/Absorption Totems (`LLD-ENEMIES-004`–`-008`, `-014`–`-020`), plus encou
   immunity** (`LLD-ENEMIES-006`) is not modelled — `EnemyData` has no immunity field; flagged (low impact —
   rats die in 1–2 hits; the only MVP1 poison source is the Spoiled Potion). (3) **Bear frenzy magnitude**
   set to 2 (spec omits it; needed for the Emboldened-physical half of Frenzied) — flagged for tuning.
-  (4) The boss + Witnesses (mixed composition) are **T8.4**. (5) Pre-existing strict-validation error in
-  `hld-combat-system` (a requirement lacking SHALL/MUST, unrelated to this change) required `--no-validate`
-  to archive — flagged for a future spec-hygiene pass, not fixed here (it would alter an unrelated
-  requirement's normative wording).
+  (4) The boss + Witnesses (mixed composition) are **T8.4**. (5) ✅ **RESOLVED** — the pre-existing
+  `hld-combat-system` strict-validation error (and the wider SHALL/MUST + Purpose lint debt across 10 specs)
+  was cleared in a 2026-06-24 spec-hygiene pass; all 23 specs now pass `openspec validate --strict`, so
+  archive no longer needs `--no-validate`.
 
 ### T8.4 — The Judge boss + Witnesses  ✅ **Done**
 `the_judge.tres` (`LLD-ENEMIES-010`) — the fixed final-floor boss (`HLD-RUN-004`), Witness of Mercy /
@@ -1059,8 +1059,10 @@ data (`lld-floor`). Confirm LootGenerator draws the right tiers.
   then die (diagnostics confirmed enemies die / the loop advances; not a bug). A purely random policy can't
   clear 9 rooms + the Judge with the Pilgrim's low damage; winnability needs a smarter agent — the MVP1
   gate is *deterministic completion*, not random victory. (2) **Frost Shard → Chilled** per `LLD-ITEMS-007`
-  (its explicit scenario), which conflicts with a stale `HLD-COMBAT-007` example listing Frost Shard →
-  Vulnerable (Ice); authored per the LLD, flagged (part of the spec-hygiene debt). (3) **Small/Medium
+  (its explicit scenario). ✅ **Resolved** (2026-06-24): removed the stale Frost Shard → Vulnerable (Ice)
+  example from `HLD-COMBAT-007` and dropped Frost Shard from the Vulnerable (Ice) "pairs with" list in
+  `LLD-OMEN-CARD-016` — Chilled no longer co-applies Vulnerable, and Frost Shard only applies Chilled.
+  (3) **Small/Medium
   Amethyst** are Support (durability) so they auto-decrement per encounter (1/2 charges) — a single-
   encounter cleanse window, consistent with `LLD-ITEMS-002`. (4) Offensive-consumable auto-targeting is an
   MVP1 simplification (MVP2 adds real target selection).
@@ -1082,8 +1084,8 @@ items (T8.2), 13 Floor 3 enemies (T8.3), the Judge + Witnesses (T8.4), 18 omen c
 against the real content registry (`tests/test_mvp1_real_run.gd`). Remaining: the light **Phase 9** debug
 hooks. Outstanding flags (none block MVP1): Chilled per-tick step cadence (T5.3/T8.5), Sacred Ground /
 Totem aura doubling + Fanatic-Totem mixed encounters (MVP3), offensive-consumable + Good-as-New target
-selection (MVP2 UI), spec-hygiene SHALL/MUST debt in 9 specs, and a smarter (non-random) agent for
-winnability.
+selection (MVP2 UI), and a smarter (non-random) agent for winnability. *(The spec-hygiene SHALL/MUST +
+Purpose lint debt was cleared 2026-06-24 — all 23 specs pass `openspec validate --strict`.)*
 
 ---
 
@@ -1117,8 +1119,9 @@ deterministic, headless Floor 3 run start → Judge → `RUN_END` on the real co
 (combat, omen, status, loot, navigation, burden, companion, debug) functional and unit-tested (363 green).
 This satisfies the MVP1 definition of done (`SCOPE-001`). Carry-forward (none block MVP1; MVP2/MVP3 + a
 spec-hygiene pass): Chilled per-tick step cadence, Sacred Ground/Totem doubling + Fanatic-Totem mixed
-encounters, item/ability target *selection* UI, the 9-spec SHALL/MUST lint debt, and a non-random agent
-for unaided winnability.
+encounters, item/ability target *selection* UI, and a non-random agent for unaided winnability. *(The
+SHALL/MUST + Purpose spec-lint debt was cleared 2026-06-24 — all 23 specs pass `openspec validate
+--strict`.)*
 
 ---
 

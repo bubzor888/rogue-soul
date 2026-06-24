@@ -2,7 +2,7 @@
 Defines all items available in the game: their categories, durability rules, damage baselines, floor-specific drop pools, and starting loadouts per vessel.
 ## Requirements
 ### Requirement: [LLD-ITEMS-001] Item Categories
-> Canonical category rules defined in `HLD-ITEMS-004`. This requirement provides Floor 3 context and scenarios.
+> Canonical category rules are defined in `HLD-ITEMS-004` and SHALL apply on Floor 3; this requirement provides Floor 3 context and scenarios.
 
 Items SHALL belong to one of three functional categories determining their action bucket:
 
@@ -19,7 +19,7 @@ Items SHALL belong to one of three functional categories determining their actio
 ---
 
 ### Requirement: [LLD-ITEMS-002] Durability Decrement
-> Canonical durability rules defined in `HLD-ITEMS-005`. This requirement provides Floor 3 context and scenarios.
+> Canonical durability rules are defined in `HLD-ITEMS-005` and SHALL apply on Floor 3; this requirement provides Floor 3 context and scenarios.
 
 Durability items SHALL decrement charges according to their category:
 
@@ -226,7 +226,7 @@ The Hedge Knight SHALL start every run with these three items (defined per `LLD-
 ---
 
 ### Requirement: [LLD-ITEMS-011] Item Score Table
-> **Superseded by `LLD-IR-011` in `lld-item-ranking`.** The item scoring system is defined in full in the `lld-item-ranking` spec. All items have scores recorded in `LLD-IR-011`. This requirement is retained for cross-reference only.
+> **Superseded by `LLD-IR-011` in `lld-item-ranking`.** The item scoring system is defined in full in the `lld-item-ranking` spec; all items SHALL have scores recorded in `LLD-IR-011`. This requirement is retained for cross-reference only.
 
 The item score table in `LLD-IR-011` is used by the Wandering Soul trade generation system to enforce score-fair pairings (see `HLD-WS-006`, `HLD-ITEMS-009`) and by Memory Fragment scenario design to determine fair and unfair trade values (see `HLD-MF-003`, `HLD-MF-005`).
 

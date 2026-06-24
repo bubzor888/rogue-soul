@@ -20,7 +20,7 @@ Each combat turn, exactly three omen cards SHALL be drawn from the deck and reso
 - **THEN** the player must still choose one for their side — there is no option to skip; the choice becomes which effect is least damaging to absorb
 
 ### Requirement: [HLD-OMEN-002] Timer Card and Status Effect Interaction
-For **per-tick** status effects (Burning, Poisoned, Chilled, Mending, Hardened — see `HLD-COMBAT-006`), a higher timer card (3) is generally desirable — more ticks means more total value. For **shift-triggered** effects (Shocked, Exposed), a lower timer card (1) is desirable — the shift fires sooner, delivering the stun or the Vulnerable (Physical) faster. This creates different strategic priorities depending on what is active.
+The timer card value SHALL set the cycle duration and thereby the payoff timing of any active status effects. For **per-tick** status effects (Burning, Poisoned, Chilled, Mending, Hardened — see `HLD-COMBAT-006`), a higher timer card (3) is generally desirable — more ticks means more total value. For **shift-triggered** effects (Shocked, Exposed), a lower timer card (1) is desirable — the shift fires sooner, delivering the stun or the Vulnerable (Physical) faster. This creates different strategic priorities depending on what is active.
 
 #### Scenario: High timer with Burning
 - **WHEN** Burning is active and the timer card is 3
@@ -63,7 +63,7 @@ A fresh omen deck SHALL be assembled at the start of each combat from four sourc
 ---
 
 ### Requirement: [HLD-OMEN-005] Omen Application Model
-When an omen card is applied to a side, each eligible unit on that side receives its own individual StatusInstance. There is no shared whole-side state — every unit tracks its own status independently. Killing a unit removes only that unit's StatusInstances. Cleansing a unit removes only that unit's StatusInstances.
+When an omen card is applied to a side, each eligible unit on that side SHALL receive its own individual StatusInstance. There is no shared whole-side state — every unit tracks its own status independently. Killing a unit removes only that unit's StatusInstances. Cleansing a unit removes only that unit's StatusInstances.
 
 **Tag-conditional application:** Some omen cards specify a tag requirement. When such a card is applied, only units whose `enemy_tags` include the required tag receive a StatusInstance. Units that do not match receive nothing. If the card is steered to the player side and the player is not tagged, no effect is applied — this is always safe for the player with family-specific cards (e.g. Grave Knit, Thick Hide).
 
@@ -92,7 +92,7 @@ When an omen card is applied to a side, each eligible unit on that side receives
 - **THEN** only that specific enemy gains Burning — other enemies on the same side are unaffected
 
 ### Requirement: [HLD-OMEN-006] Two-Tier Enemy Omen Contribution Model
-Enemies contribute omen cards via two independent tiers. Each tier follows distinct copy-count and removal rules.
+Enemies SHALL contribute omen cards via two independent tiers. Each tier follows distinct copy-count and removal rules.
 
 **Tier 1 — Family card (per-instance):** Each individual enemy instance adds 1 copy of its family-specific omen card to the combat deck. When an enemy dies, its family card copy is removed immediately from the draw pile and discard pile. When an enemy is added to combat mid-fight via a summon effect (e.g. Wolf Howl), its family card copy is injected into the draw pile immediately following the same rule — it is removed on death like any other enemy instance.
 

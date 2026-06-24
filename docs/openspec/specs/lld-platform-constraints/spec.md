@@ -1,3 +1,7 @@
+## Purpose
+Defines the platform and presentation constraints — layout, resolution, input, and cross-platform parity — for the UI layer.
+
+## Requirements
 
 ### Requirement: [LLD-PLATFORM-001] Portrait-First Layout
 The game SHALL use a portrait-first layout. One layout system with two presentations: the action panel is permanently visible on the right side on desktop, and slides up or toggles as an overlay on mobile. The core play area MUST be identical across both platforms.
