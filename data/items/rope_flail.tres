@@ -7,7 +7,7 @@
 script = ExtResource("1_xgajj")
 handler_id = "deal_damage"
 params = {
-"base_damage": 4,
+"base_damage": 5,
 "damage_type": "physical",
 "mode": "all"
 }
@@ -19,5 +19,5 @@ display_name = "Rope Flail"
 action_bucket = "attack"
 max_charges = 6
 breaks_at_zero = true
-score = 42
+score = 61
 handlers = Array[ExtResource("1_xgajj")]([SubResource("Resource_eu6jc")])

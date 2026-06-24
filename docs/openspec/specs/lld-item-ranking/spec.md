@@ -107,7 +107,7 @@ Scope modifiers SHALL be applied to the per-use score before the charges multipl
 |---|---|---|
 | Single target | 1.0× | Baseline |
 | +1 target (arc / chain) | See below | Secondary hit scored separately at ×0.5 |
-| AoE (all enemies) | 1.5× | Scored at 2-enemy average; discounted for single-enemy encounters |
+| AoE (all enemies) | 1.75× | Scored at 2-enemy average; discounted for single-enemy encounters |
 
 **+1 target (arc / chain) method:**
 The primary hit is scored at single-target (1.0×). The secondary hit is scored at ×0.5 of its own damage contribution:
@@ -119,11 +119,11 @@ per_use_score   = primary_score + secondary_score
 
 The 0.5 multiplier rests on the same frequency assumption as the AoE modifier: encounters have a second valid target approximately 50% of the time. If floor design confirms a different ratio, both modifiers should be revised together.
 
-**AoE rationale:** Scoring at 1.5× rather than 2× accounts for single-enemy encounters where AoE provides no advantage over single target.
+**AoE rationale:** Scoring at 1.75× rather than 2× accounts for single-enemy encounters where AoE provides no advantage over single target. The 1.75× value was calibrated from pre-MVP2 headless benchmarks: AoE weapons outperformed equal-score single-target weapons by ~15%, correcting the previous 1.5× multiplier upward.
 
 #### Scenario: AoE scope applied
 - **WHEN** scoring an AoE weapon with 4 physical damage per hit
-- **THEN** per-use score = 4 × 2.0 × 1.5 = 12 (not 4 × 2.0 × 2.0 = 16)
+- **THEN** per-use score = 4 × 2.0 × 1.75 = 14 (not 4 × 2.0 × 2.0 = 16)
 
 #### Scenario: Arc secondary hit scored at 0.5
 - **WHEN** scoring a weapon with 9 primary lightning damage and a 4-damage lightning arc
@@ -321,7 +321,7 @@ All items in the game SHALL have an assigned score recorded in this table. Score
 |---|---|---|---|---|---|
 | Walking Staff | Pilgrim | D1 | (6 × 2.0 × 1.0) × 3.5 | 42 | Below — expected for starting weapon |
 | Worn Map | Pilgrim | D7 | 3-charge countdown; forces companion encounter; high run value | 28 | Below — utility item, acceptable |
-| Battered Sword | Hedge Knight | D1 | (7 × 2.0 × 1.0) × 4.1 | 57 | Above — expected for combat-forward vessel's starter |
+| Battered Sword | Hedge Knight | D1 | (7 × 2.0 × 1.0) × 3.5 | 49 | At ref — tuned to reference after pre-MVP2 benchmark |
 | Iron Pendant | Hedge Knight | D7 | Replaces active omen with Fortified; 2 charges; significant defensive swing | 30 | Below — reactive utility, acceptable |
 | Lucky Paw | Drifter | D7 | Passive evasion vs physical per combat; 2 encounter charges; pending evasion % `[OPEN·MVP3]` | 18 | Well below — may be undervalued; review once evasion % confirmed |
 
@@ -330,8 +330,8 @@ All items in the game SHALL have an assigned score recorded in this table. Score
 | Item | Method | Calculation | Score | vs Ref (49) |
 |---|---|---|---|---|
 | Cracked Cudgel | D1 | (9 × 2.0 × 1.0) × 2.3 | 41 | Slightly below — burst trade-off |
-| Rope Flail | D1 (AoE) | (4 × 2.0 × 1.5) × 3.5 | 42 | Slightly below — AoE compensates low damage |
-| Battered Sword | D1 | (7 × 2.0 × 1.0) × 4.1 | 57 | Above — high charges elevate score `[REVIEW]` |
+| Rope Flail | D1 (AoE) | (5 × 2.0 × 1.75) × 3.5 | 61 | Above ref — AoE premium after multiplier calibration |
+| Battered Sword | D1 | (7 × 2.0 × 1.0) × 3.5 | 49 | At ref — tuned to reference after pre-MVP2 benchmark |
 | Ember Shard | D1 (elemental) | (7 × 2.4 × 1.0) × 2.3 | 39 | Below — low charge count limits elemental upside |
 | Spark Rod | D1 (elemental) | (7 × 2.4 × 1.0) × 2.3 | 39 | Below — same as Ember Shard |
 | Frost Sliver | D1 (elemental) | (7 × 2.4 × 1.0) × 2.3 | 39 | Below — same as Ember Shard |
@@ -342,7 +342,7 @@ All items in the game SHALL have an assigned score recorded in this table. Score
 | Item | Method | Calculation | Score | vs Ref (49) |
 |---|---|---|---|---|
 | Iron Maul | D1 | (10 × 2.0 × 1.0) × 3.5 | 70 | Above — expected for elite |
-| Spiked Chain | D1 (AoE) | (6 × 2.0 × 1.5) × 4.1 | 74 | Above — expected for elite |
+| Spiked Chain | D1 (AoE) | (6 × 2.0 × 1.75) × 4.1 | 86 | Well above — expected for elite AoE |
 | Soldier's Blade | D1 | (9 × 2.0 × 1.0) × 4.7 | 85 | Well above — expected for elite |
 | Smoldering Brand | D1 (elemental) | (9 × 2.4 × 1.0) × 4.1 | 89 | Well above — expected for elite |
 | Arc Wand | D1 (+1 target) | ((9 × 2.4) + (4 × 2.4 × 0.5)) × 4.1 | 108 | Significantly above — premium unique-mechanic elite `[REVIEW]` |
@@ -389,3 +389,11 @@ All items in the game SHALL have an assigned score recorded in this table. Score
 #### Scenario: New item must be scored
 - **WHEN** a new item is added to the game
 - **THEN** it SHALL receive a score entry in this table before it can appear in trade generation or Memory Fragment scenarios
+
+#### Scenario: AoE item scored with 1.75× modifier
+- **WHEN** scoring Rope Flail (5 physical damage per hit, 6 charges, AoE)
+- **THEN** per-use score = 5 × 2.0 × 1.75 = 17.5; total score = 17.5 × 3.5 = 61
+
+#### Scenario: Battered Sword at reference score
+- **WHEN** scoring Battered Sword (7 physical damage, 6 charges)
+- **THEN** total score = (7 × 2.0 × 1.0) × 3.5 = 49 — at the normal-pool reference point

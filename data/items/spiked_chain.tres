@@ -19,5 +19,5 @@ display_name = "Spiked Chain"
 action_bucket = "attack"
 max_charges = 8
 breaks_at_zero = true
-score = 74
+score = 86
 handlers = Array[ExtResource("1_niwso")]([SubResource("Resource_8wwpc")])

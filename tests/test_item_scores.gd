@@ -12,12 +12,12 @@ const ITEM_SCORES := {
 	# Pilgrim starting items (LLD-ITEMS-004)
 	"walking_staff": 42, "spoiled_potion": 15, "worn_map": 28,
 	# Normal durability (LLD-ITEMS-005)
-	"cracked_cudgel": 41, "rope_flail": 42, "battered_sword": 57,
+	"cracked_cudgel": 41, "rope_flail": 61, "battered_sword": 49,
 	"ember_shard": 39, "spark_rod": 39, "frost_sliver": 39, "small_amethyst": 16,
 	# Normal consumable (LLD-ITEMS-007)
 	"fire_bomb": 14, "ointment": 10, "combustible_oil": 17, "hardening_resin": 12, "frost_shard": 12,
 	# Elite durability (LLD-ITEMS-006)
-	"iron_maul": 70, "spiked_chain": 74, "soldiers_blade": 85, "smoldering_brand": 89,
+	"iron_maul": 70, "spiked_chain": 86, "soldiers_blade": 85, "smoldering_brand": 89,
 	"arc_wand": 108, "glacial_brand": 89, "medium_amethyst": 28,
 	# Elite consumable (LLD-ITEMS-008)
 	"poultice": 13, "brittle_charm": 18, "fulminating_powder": 16,

@@ -48,7 +48,7 @@ All item damage values SHALL be set relative to the following reference:
 | Normal drop weapons | 7 |
 | Elite drop weapons | 9 |
 | Burst weapons (Cracked Cudgel / Iron Maul) | 9 / 10 |
-| AoE weapons (Rope Flail / Spiked Chain) | 4 / 6 per target |
+| AoE weapons (Rope Flail / Spiked Chain) | 5 / 6 per target |
 
 #### Scenario: Normal drop vs starting weapon
 - **WHEN** a player picks up a normal drop weapon
@@ -81,7 +81,7 @@ The following durability items SHALL be in the normal drop pool for Floor 3:
 | Item | Category | Type | Damage | Charges | Property |
 |---|---|---|---|---|---|
 | Cracked Cudgel | Attack | Physical | 9 | 3 | High burst |
-| Rope Flail | Attack | Physical | 4/hit | 6 | Hits all enemies |
+| Rope Flail | Attack | Physical | 5/hit | 6 | Hits all enemies |
 | Battered Sword | Attack | Physical | 7 | 8 | — |
 | Ember Shard | Attack | Fire | 7 | 3 | — |
 | Spark Rod | Attack | Lightning | 7 | 3 | — |
@@ -90,7 +90,7 @@ The following durability items SHALL be in the normal drop pool for Floor 3:
 
 #### Scenario: Rope Flail multi-target
 - **WHEN** the player uses the Rope Flail against two enemies
-- **THEN** both enemies take 4 physical damage simultaneously from a single charge
+- **THEN** both enemies take 5 physical damage simultaneously from a single charge
 
 #### Scenario: Ember Shard vs Burning enemy
 - **WHEN** the player uses Ember Shard against an enemy with the Burning status
@@ -197,7 +197,7 @@ The Drifter SHALL start every run with these three items (defined per `LLD-VESSE
 ### Requirement: [LLD-ITEMS-010] Starting Items — The Hedge Knight
 The Hedge Knight SHALL start every run with these three items (defined per `LLD-VESSELS-003`):
 
-**Battered Sword** — Attack (Durability), Physical, damage: 7, charges: 8. Effect chain: `deal_damage { base_damage: 7, damage_type: physical }`.
+**Battered Sword** — Attack (Durability), Physical, damage: 7, charges: 6. Effect chain: `deal_damage { base_damage: 7, damage_type: physical }`.
 
 **Iron Pendant** — Support (Durability), charges: 2, breaks_at_zero: true. Decrements 1 charge per encounter (per `LLD-ITEMS-002`). Effect: Replace the player's currently active fate omen with **Fortified** (take half damage from all attacks this omen cycle). The replaced omen is discarded. Fortified remains active for the rest of the current omen cycle. The Fortified omen is never placed in the fate deck — it only exists through pendant use. `[OPEN·MVP3]` exact damage reduction fraction and edge cases to be confirmed during playtesting.
 
@@ -213,7 +213,7 @@ The Hedge Knight SHALL start every run with these three items (defined per `LLD-
 
 #### Scenario: Battered Sword — charge count
 - **WHEN** the Hedge Knight starts a run
-- **THEN** the Battered Sword has exactly 8 charges
+- **THEN** the Battered Sword has exactly 6 charges
 
 #### Scenario: Cheap Flask — Emboldened Physical applied
 - **WHEN** the Hedge Knight uses the Cheap Flask
