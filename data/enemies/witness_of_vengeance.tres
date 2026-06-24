@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_4yqb5"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_jofvx"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_4a3wu"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_3iuj0"]
+
+[sub_resource type="Resource" id="Resource_kmahd"]
+script = ExtResource("3_4a3wu")
+handler_id = "apply_mending_by_burden_tier"
+params = {
+"status_id": "emboldened:physical",
+"tiers": [{
+"magnitude": 1,
+"max": 7
+}, {
+"magnitude": 2,
+"max": 13
+}, {
+"magnitude": 3,
+"max": -1
+}]
+}
+
+[sub_resource type="Resource" id="Resource_j5idv"]
+script = ExtResource("2_jofvx")
+intent_id = "testify_vengeance"
+weight = 100
+status_target = "allies"
+handlers = Array[ExtResource("3_4a3wu")]([SubResource("Resource_kmahd")])
+
+[resource]
+script = ExtResource("4_3iuj0")
+enemy_id = "witness_of_vengeance"
+display_name = "Witness of Vengeance"
+max_hp = 10
+damage_type = "physical"
+enemy_tags = Array[String](["judge_witness"])
+intent_weights = Array[ExtResource("2_jofvx")]([SubResource("Resource_j5idv")])
+on_death_apply_to_player = "frenzied"
+on_death_apply_magnitude = 2

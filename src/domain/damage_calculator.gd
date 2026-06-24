@@ -42,10 +42,15 @@ static func resolve_hit(game_state: GameState, attacker_id: String, target_id: S
 		type = type_convert.string_param
 	var value := float(base_damage)
 
-	# Step 2: Emboldened (physical) flat bonus.
-	var emb_physical := _find(attacker_statuses, "emboldened", "physical")
-	if emb_physical != null and type == "physical":
-		value += float(emb_physical.magnitude)
+	# Step 2: Emboldened (physical) flat bonus. Frenzied carries the same
+	# Emboldened (physical) effect as part of its composite (HLD-COMBAT-006).
+	if type == "physical":
+		var emb_physical := _find(attacker_statuses, "emboldened", "physical")
+		if emb_physical != null:
+			value += float(emb_physical.magnitude)
+		var frenzied_attacker := _find_by_id(attacker_statuses, "frenzied")
+		if frenzied_attacker != null:
+			value += float(frenzied_attacker.magnitude)
 
 	# Step 3: Last Stand ×1.5 (hook; MVP3 content).
 	if _find(attacker_statuses, "last_stand", "") != null:
@@ -59,8 +64,13 @@ static func resolve_hit(game_state: GameState, attacker_id: String, target_id: S
 		value *= 1.5
 
 	# Steps 5–7: Resistance ×0.5 / Vulnerability ×1.5, cancelling to ×1.0 if both.
+	# Vulnerability has two sources — the item-applied Vulnerable status and the
+	# enemy's innate vulnerability (HLD-COMBAT-007 / LLD-ENEMIES). They do not
+	# double-stack: either present → ×1.5 once.
 	var resists := _target_resists(target, type, content)
-	var vulnerable := _find(target_statuses, "vulnerable", type) != null
+	var vulnerable := _find(target_statuses, "vulnerable", type) != null \
+		or _target_innately_vulnerable(target, type, content) \
+		or (type == "physical" and _find_by_id(target_statuses, "frenzied") != null)
 	if resists and vulnerable:
 		pass  # cancel → ×1.0
 	elif resists:
@@ -114,6 +124,13 @@ static func _target_resists(target, damage_type: String, content) -> bool:
 		return false
 	var enemy_data = content.get_enemy(target.enemy_id)
 	return enemy_data != null and damage_type in enemy_data.resistances
+
+
+static func _target_innately_vulnerable(target, damage_type: String, content) -> bool:
+	if content == null or not (target is EnemyState):
+		return false
+	var enemy_data = content.get_enemy(target.enemy_id)
+	return enemy_data != null and damage_type in enemy_data.vulnerabilities
 
 
 static func _find(statuses: Array, status_id: String, string_param: String) -> StatusInstance:

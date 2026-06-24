@@ -1,5 +1,11 @@
+## Purpose
+Defines the vessel abilities (active and passive) and default strikes for each playable vessel.
+
+## Requirements
 
 ### Requirement: [LLD-ABILITIES-003] Pilgrim — Good as New
+Good as New SHALL behave as specified below.
+
 **Type:** Action — **Bucket:** Support (see `HLD-COMBAT-004`; does not consume the Attack bucket).
 **Charges:** 1, replenished at floor start.
 
@@ -16,6 +22,8 @@ Handler chain: targets one ItemInstance in the vessel's item slots; restores `re
 ---
 
 ### Requirement: [LLD-ABILITIES-004] Default Strike — Throw Rock
+Throw Rock SHALL behave as specified below.
+
 **Type:** Action — **Bucket:** Attack (see `HLD-COMBAT-004`; occupies the Attack bucket).
 **Charges:** None — always available.
 
@@ -28,6 +36,8 @@ Handler chain: `deal_damage { base_damage: 3, damage_type: physical }`. See `HLD
 ---
 
 ### Requirement: [LLD-ABILITIES-005] Pilgrim — Read the Road
+Read the Road SHALL behave as specified below.
+
 **Type:** Passive — triggers automatically at combat start; no bucket consumed.
 **Charges:** Passive — no charges.
 
@@ -54,6 +64,8 @@ Handler chain: `peek_omen_deck { "count": 3 }`. This handler sets `combat_state.
 ---
 
 ### Requirement: [LLD-ABILITIES-006] Drifter — Hardy
+Hardy SHALL behave as specified below.
+
 **Type:** Action — **Bucket:** Support (see `HLD-COMBAT-004`; does not consume the Attack bucket).
 **Charges:** 3, replenished at floor start.
 
@@ -73,6 +85,8 @@ Effect: clear one Hardy-clearable debuff or status effect from the vessel. Hardy
 ---
 
 ### Requirement: [LLD-ABILITIES-007] Hedge Knight — Last Stand
+Last Stand SHALL behave as specified below.
+
 **Type:** Passive — always active when condition is met; no bucket consumed.
 **Charges:** Passive — no charges.
 
@@ -91,6 +105,8 @@ Effect: while the vessel's HP is below 25% of their maximum, all attacks deal ×
 ---
 
 ### Requirement: [LLD-ABILITIES-008] Hedge Knight — Charge
+Charge SHALL behave as specified below.
+
 **Type:** Action — **Bucket:** Support (see `HLD-COMBAT-004`; does not consume the Attack bucket).
 **Charges:** `[OPEN·MVP3]` to be set during playtesting.
 

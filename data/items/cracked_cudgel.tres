@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_04t6y"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_bgo4w"]
+
+[sub_resource type="Resource" id="Resource_8xwdv"]
+script = ExtResource("1_04t6y")
+handler_id = "deal_damage"
+params = {
+"base_damage": 9,
+"damage_type": "physical"
+}
+
+[resource]
+script = ExtResource("2_bgo4w")
+ability_id = "cracked_cudgel"
+display_name = "Cracked Cudgel"
+action_bucket = "attack"
+max_charges = 3
+breaks_at_zero = true
+score = 41
+handlers = Array[ExtResource("1_04t6y")]([SubResource("Resource_8xwdv")])

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_1dcaf"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_q0vdx"]
+
+[sub_resource type="Resource" id="Resource_muclb"]
+script = ExtResource("1_1dcaf")
+handler_id = "deal_damage"
+params = {
+"base_damage": 9,
+"damage_type": "physical"
+}
+
+[resource]
+script = ExtResource("2_q0vdx")
+ability_id = "soldiers_blade"
+display_name = "Soldier's Blade"
+action_bucket = "attack"
+max_charges = 10
+breaks_at_zero = true
+score = 85
+handlers = Array[ExtResource("1_1dcaf")]([SubResource("Resource_muclb")])

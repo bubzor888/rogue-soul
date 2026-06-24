@@ -1,6 +1,10 @@
+## Purpose
+Defines the playable vessels — their stats, abilities, bound companions, starting items, and omen contributions.
+
+## Requirements
 
 ### Requirement: [LLD-VESSELS-001] The Pilgrim
-The Pilgrim is the default starting vessel — the most eroded form of the soul. He is elderly, traveling on foot, on a pilgrimage he cannot fully explain. He has no companion.
+The Pilgrim SHALL be the default starting vessel — the most eroded form of the soul. He is elderly, traveling on foot, on a pilgrimage he cannot fully explain. He has no companion.
 
 **Base stats:** HP: 24.
 
@@ -27,7 +31,7 @@ The Pilgrim is the default starting vessel — the most eroded form of the soul.
 ---
 
 ### Requirement: [LLD-VESSELS-002] The Drifter
-The Drifter is a vessel representing an earlier, less eroded soul state — the companion path Tier 2 vessel.
+The Drifter SHALL be a vessel representing an earlier, less eroded soul state — the companion path Tier 2 vessel.
 
 **Base stats:** HP: 28.
 
@@ -52,7 +56,7 @@ The Drifter is a vessel representing an earlier, less eroded soul state — the 
 ---
 
 ### Requirement: [LLD-VESSELS-003] The Hedge Knight
-The Hedge Knight is a vessel representing a combat-focused, solo soul state — the solo path Tier 2 vessel. No bound companion.
+The Hedge Knight SHALL be a vessel representing a combat-focused, solo soul state — the solo path Tier 2 vessel. No bound companion.
 
 **Base stats:** HP: 32.
 

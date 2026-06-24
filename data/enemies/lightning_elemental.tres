@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_ft1ws"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_2rkla"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_npm42"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_estdl"]
+
+[sub_resource type="Resource" id="Resource_15cb3"]
+script = ExtResource("1_ft1ws")
+condition = "turn_number:1"
+intent_id = "lightning_surge_1"
+
+[sub_resource type="Resource" id="Resource_ny78m"]
+script = ExtResource("1_ft1ws")
+condition = "turn_number:2"
+intent_id = "lightning_surge_2"
+
+[sub_resource type="Resource" id="Resource_r2qka"]
+script = ExtResource("1_ft1ws")
+condition = "turn_number:3"
+intent_id = "lightning_surge_3"
+
+[sub_resource type="Resource" id="Resource_lfghb"]
+script = ExtResource("2_2rkla")
+intent_id = "lightning_surge_1"
+damage_min = 1
+damage_max = 3
+
+[sub_resource type="Resource" id="Resource_skoh3"]
+script = ExtResource("2_2rkla")
+intent_id = "lightning_surge_2"
+damage_min = 3
+damage_max = 6
+
+[sub_resource type="Resource" id="Resource_nr6eg"]
+script = ExtResource("2_2rkla")
+intent_id = "lightning_surge_3"
+damage_min = 6
+damage_max = 9
+
+[sub_resource type="Resource" id="Resource_ib2k3"]
+script = ExtResource("2_2rkla")
+intent_id = "lightning_surge_4"
+weight = 100
+damage_min = 9
+damage_max = 12
+
+[resource]
+script = ExtResource("4_estdl")
+enemy_id = "lightning_elemental"
+display_name = "Lightning Elemental"
+max_hp = 18
+damage_type = "lightning"
+resistances = Array[String](["lightning"])
+enemy_tags = Array[String](["elemental", "elemental_lightning"])
+omen_contributions = Array[String](["elemental_synergy_lightning", "shocked"])
+intent_weights = Array[ExtResource("2_2rkla")]([SubResource("Resource_lfghb"), SubResource("Resource_skoh3"), SubResource("Resource_nr6eg"), SubResource("Resource_ib2k3")])
+intent_conditionals = Array[ExtResource("1_ft1ws")]([SubResource("Resource_15cb3"), SubResource("Resource_ny78m"), SubResource("Resource_r2qka")])
+on_death_summons = Array[String](["lightning_spark", "lightning_spark"])

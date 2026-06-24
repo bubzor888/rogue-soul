@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_qavif"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_mjoup"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_pbdml"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_bhrph"]
+
+[sub_resource type="Resource" id="Resource_wrorb"]
+script = ExtResource("2_mjoup")
+intent_id = "swipe"
+weight = 40
+damage_min = 2
+damage_max = 4
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_3wvtv"]
+script = ExtResource("2_mjoup")
+intent_id = "slam"
+weight = 40
+damage_min = 5
+damage_max = 7
+is_charge_release = true
+max_consecutive = 1
+
+[sub_resource type="Resource" id="Resource_al76y"]
+script = ExtResource("2_mjoup")
+intent_id = "shamble"
+weight = 20
+max_consecutive = 2
+
+[resource]
+script = ExtResource("4_bhrph")
+enemy_id = "zombie"
+display_name = "Zombie"
+max_hp = 16
+damage_type = "physical"
+enemy_tags = Array[String](["undead"])
+post_elite_count = 2
+omen_contributions = Array[String](["grave_knit", "emboldened_physical"])
+intent_weights = Array[ExtResource("2_mjoup")]([SubResource("Resource_wrorb"), SubResource("Resource_3wvtv"), SubResource("Resource_al76y")])

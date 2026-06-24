@@ -29,4 +29,17 @@ func _resolve_target_id(ctx: AbilityContext) -> String:
 		"source", "self":
 			return ctx.source_id
 		_:
-			return ctx.target_id
+			# Offensive consumables are non-targeted actions (no target_id); auto-target
+			# the first living enemy. Real per-target selection is an MVP2 UI concern.
+			if ctx.target_id != "":
+				return ctx.target_id
+			return _first_living_enemy(ctx.game_state)
+
+
+func _first_living_enemy(game_state: GameState) -> String:
+	if game_state == null or game_state.combat_state == null:
+		return ""
+	for enemy in game_state.combat_state.enemies:
+		if enemy.hp > 0:
+			return enemy.instance_id
+	return ""

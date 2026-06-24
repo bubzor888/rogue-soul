@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_esoeg"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_fhu83"]
+
+[sub_resource type="Resource" id="Resource_430yc"]
+script = ExtResource("1_esoeg")
+handler_id = "peek_omen_deck"
+params = {
+"count": 3
+}
+
+[resource]
+script = ExtResource("2_fhu83")
+ability_id = "read_the_road"
+display_name = "Read the Road"
+action_bucket = "passive"
+handlers = Array[ExtResource("1_esoeg")]([SubResource("Resource_430yc")])

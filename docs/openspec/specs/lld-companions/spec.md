@@ -2,6 +2,8 @@
 Defines all companions in the game — temporary and bound — as LLD data entries. Each entry specifies the companion's mechanics, trigger, granted ability (if any), omen contributions, departure condition, and flavour text introduction. System mechanics are defined in `hld-companion-system`.
 ## Requirements
 ### Requirement: [LLD-COMP-001] The Raven (Floor 3 Temporary Companion)
+The Raven SHALL be a Floor 3 temporary companion granting the Raven Mark ability, with the type, source, duration, and effects defined below.
+
 **Type:** Temporary. **Source:** Floor 3 companion pool (`LLD-MF-009`). **Duration:** Until the Raven Mark ability is used, then departs immediately. If the ability is never used, departs after the floor boss.
 
 **Granted ability — Raven Mark:**
@@ -48,6 +50,8 @@ Defines all companions in the game — temporary and bound — as LLD data entri
 ---
 
 ### Requirement: [LLD-COMP-002] The Shadow (Floor 3 Temporary Companion)
+The Shadow SHALL be a Floor 3 temporary companion, with the type, source, duration, and effects defined below.
+
 **Type:** Temporary. **Source:** Floor 3 companion pool (`LLD-MF-009`). **Duration:** Until cumulative drain total reaches 20 HP, then departs immediately (may be mid-combat). If the total is never reached, departs after the floor boss.
 
 **Passive ability — Vampiric Drain:**
@@ -87,6 +91,8 @@ Defines all companions in the game — temporary and bound — as LLD data entri
 ---
 
 ### Requirement: [LLD-COMP-003] The Life Mote (Floor 3 Temporary Companion)
+The Life Mote SHALL be a Floor 3 temporary companion that intercepts lethal damage, with the type, source, duration, and effects defined below.
+
 **Type:** Temporary. **Source:** Floor 3 companion pool (`LLD-MF-009`). **Duration:** Until the vessel's HP reaches 0 and the intercept fires. If this never occurs, departs after the floor boss.
 
 **Passive ability — Vital Intercept:**

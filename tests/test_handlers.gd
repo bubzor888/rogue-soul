@@ -23,6 +23,28 @@ func _vessel_statuses(gs: GameState) -> Array:
 
 # --- apply_status -----------------------------------------------------------
 
+# An offensive consumable (e.g. Fire Bomb) is a non-targeted action — the handler
+# auto-targets the first living enemy when target is "target" with no target_id.
+# @Spec: LLD-ITEMS-007, HLD-COMBAT-006
+func test_apply_status_auto_targets_first_living_enemy() -> void:
+	var gs := GameState.new()
+	gs.vessel_state = VesselState.new()
+	gs.combat_state = CombatState.new()
+	var dead := EnemyState.new()
+	dead.instance_id = "skeleton_0"
+	dead.hp = 0
+	var alive := EnemyState.new()
+	alive.instance_id = "skeleton_1"
+	alive.hp = 10
+	gs.combat_state.enemies.assign([dead, alive])
+	# "player" source, no target_id given.
+	var ctx := AbilityContext.new(gs, "player", "")
+	ctx.params = {"status_id": "burning", "magnitude": 5, "remaining_ticks": 2}
+	ApplyStatusHandler.new().apply(ctx)
+	assert_int(alive.active_statuses.size()).is_equal(1)        # first LIVING enemy
+	assert_int(dead.active_statuses.size()).is_equal(0)
+
+
 func test_apply_status_colon_split() -> void:
 	var gs := _gs_with_vessel()
 	ApplyStatusHandler.new().apply(_ctx(gs, "player", {"status_id": "vulnerable:fire", "remaining_ticks": 2}))
@@ -157,6 +179,19 @@ func test_mending_no_downgrade_mid_cycle() -> void:
 	gs.item_burden_score = 10  # drops to Medium
 	h.apply(_ctx(gs, "judge_0", {"tiers": _TIERS, "remaining_ticks": 2}))  # Medium -> 3, loses
 	assert_int(gs.combat_state.enemies[0].active_statuses[0].magnitude).is_equal(5)
+
+
+# With a status_id param the handler applies that (colon-encoded) status by tier —
+# the Witness of Vengeance's tier-based Emboldened (Physical). @Spec: LLD-ENEMIES-022
+func test_burden_tier_applies_configured_status() -> void:
+	var tiers := [{"max": 7, "magnitude": 1}, {"max": 13, "magnitude": 2}, {"max": -1, "magnitude": 3}]
+	var gs := _judge_gs(20)  # High tier
+	ApplyMendingByBurdenTierHandler.new().apply(
+		_ctx(gs, "judge_0", {"status_id": "emboldened:physical", "tiers": tiers, "remaining_ticks": 2}))
+	var s: StatusInstance = gs.combat_state.enemies[0].active_statuses[0]
+	assert_str(s.status_id).is_equal("emboldened")
+	assert_str(s.string_param).is_equal("physical")
+	assert_int(s.magnitude).is_equal(3)
 
 
 # --- registration -----------------------------------------------------------

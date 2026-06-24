@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_xm7dy"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_pn5k8"]
+
+[sub_resource type="Resource" id="Resource_kvy24"]
+script = ExtResource("1_xm7dy")
+handler_id = "apply_status"
+params = {
+"status_id": "shocked"
+}
+
+[resource]
+script = ExtResource("2_pn5k8")
+ability_id = "fulminating_powder"
+display_name = "Fulminating Powder"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 16
+handlers = Array[ExtResource("1_xm7dy")]([SubResource("Resource_kvy24")])

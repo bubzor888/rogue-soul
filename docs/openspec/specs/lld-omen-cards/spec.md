@@ -161,7 +161,7 @@ Enemy omen card contributions are **not** listed here. Each enemy's omen contrib
 ---
 
 ### Requirement: [LLD-OMEN-CARD-009] Hedge Knight Vessel Card
-`[OPEN·MVP3]` The Hedge Knight contributes one omen card to the fate deck as a vessel card — present in every combat on a Hedge Knight run. This is distinct from LLD-OMEN-CARD-007 (Fortified), which is an item card injected by the Iron Pendant on activation.
+`[OPEN·MVP3]` The Hedge Knight SHALL contribute one omen card to the fate deck as a vessel card — present in every combat on a Hedge Knight run. This is distinct from LLD-OMEN-CARD-007 (Fortified), which is an item card injected by the Iron Pendant on activation.
 
 **Design constraints:**
 - Should reflect the Hedge Knight's identity: discipline, endurance, the edge of collapse
@@ -177,7 +177,7 @@ Enemy omen card contributions are **not** listed here. Each enemy's omen contrib
 ---
 
 ### Requirement: [LLD-OMEN-CARD-010] Drifter Vessel Card — The Ferret
-`[OPEN·MVP3]` The Ferret contributes one omen card to the fate deck — present in every combat on a Drifter run (see `LLD-VESSELS-002`). When this card appears in a cycle it triggers a beneficial effect for the Drifter. The card is inert if it lands on the enemy side.
+`[OPEN·MVP3]` The Ferret SHALL contribute one omen card to the fate deck — present in every combat on a Drifter run (see `LLD-VESSELS-002`). When this card appears in a cycle it triggers a beneficial effect for the Drifter. The card is inert if it lands on the enemy side.
 
 **Known constraints:**
 - One copy in the deck
@@ -238,7 +238,7 @@ Thick Hide damage reduction per hit: **3**.
 ---
 
 ### Requirement: [LLD-OMEN-CARD-013] Elemental Synergy (Enemy Card — Elemental)
-Three Elemental Synergy omen cards exist — one per element (Fire, Ice, Lightning). Each card applies a Type Convert StatusInstance (see `HLD-COMBAT-006`) to each unit on the target side for the omen cycle, converting that unit's outgoing damage to the contributing elemental's type.
+Three Elemental Synergy omen cards exist — one per element (Fire, Ice, Lightning). Each card SHALL apply a Type Convert StatusInstance (see `HLD-COMBAT-006`) to each unit on the target side for the omen cycle, converting that unit's outgoing damage to the contributing elemental's type.
 
 **Card IDs and status_ids:**
 
@@ -294,7 +294,7 @@ When the Totem is killed, Sacred Ground becomes completely inert — it has no a
 ---
 
 ### Requirement: [LLD-OMEN-MECH-008] Card Number Distribution
-Timer values are assigned to all cards in the assembled deck at the start of each combat using the COMBAT RNG stream, with the following distribution applied across the whole deck:
+Timer values SHALL be assigned to all cards in the assembled deck at the start of each combat using the COMBAT RNG stream, with the following distribution applied across the whole deck:
 
 | Timer value | Probability |
 |---|---|
@@ -311,7 +311,7 @@ With rounding for odd deck sizes, the target is always the nearest whole-number 
 ---
 
 ### Requirement: [LLD-OMEN-MECH-009] Card Number — Randomised at Combat Start
-Card timer values are **randomised at combat start** (not fixed on the card). Each card in the assembled deck is assigned a timer value via the COMBAT RNG stream using the distribution in `LLD-OMEN-MECH-008`. The value is stored with the card entry in `OmenDeckState` (see `LLD-ARCH-017`) and persists for the entire combat — values are not re-rolled when the deck reshuffles.
+Card timer values SHALL be **randomised at combat start** (not fixed on the card). Each card in the assembled deck is assigned a timer value via the COMBAT RNG stream using the distribution in `LLD-OMEN-MECH-008`. The value is stored with the card entry in `OmenDeckState` (see `LLD-ARCH-017`) and persists for the entire combat — values are not re-rolled when the deck reshuffles.
 
 This means the same card (e.g. Burning) can be a fast cycle (1) or a slow one (3) depending on the run and the combat. Players cannot predict exact timer values, but can observe the current cycle's timer and plan around it.
 
@@ -360,7 +360,7 @@ Card timer value is assigned at combat start via the randomised distribution (se
 ### Requirement: [LLD-OMEN-CARD-017] Vulnerable (Ice) (Whole-Side Overall Omen)
 The Vulnerable (Ice) omen card SHALL apply a `"vulnerable:ice"` StatusInstance to all units on the target side for the cycle duration. Every ice damage hit against any affected unit is multiplied by ×1.5 (see `HLD-COMBAT-007`).
 
-**On enemy side:** all enemies become vulnerable to ice attacks. Pairs with Frost Sliver, Glacial Brand, Frost Shard.
+**On enemy side:** all enemies become vulnerable to ice attacks. Pairs with Frost Sliver, Glacial Brand.
 **On player side (forced):** player takes increased ice damage.
 
 Card timer value is assigned at combat start via the randomised distribution (see `LLD-OMEN-MECH-009`).
@@ -422,7 +422,7 @@ Low timer cards are desirable when Exposed is active on the enemy side — the o
 ---
 
 ### Requirement: [LLD-OMEN-CARD-020] Repent (Enemy Card — The Judge)
-The Repent omen card is contributed exclusively by The Judge — 3 copies are added to the omen deck at the start of the Judge encounter. It is the only omen contribution from The Judge or either Witness. The 3 copies are not subject to the standard Tier 1 / Tier 2 family/type model (see HLD-OMEN-006); they are a fixed contribution unique to this encounter.
+The Repent omen card SHALL be contributed exclusively by The Judge — 3 copies are added to the omen deck at the start of the Judge encounter. It is the only omen contribution from The Judge or either Witness. The 3 copies are not subject to the standard Tier 1 / Tier 2 family/type model (see HLD-OMEN-006); they are a fixed contribution unique to this encounter.
 
 **On Judge side:** No effect. Steering Repent to The Judge's side is always a legal option and produces no game-state change. The card still functions as a timer card if it is the leftover draw.
 

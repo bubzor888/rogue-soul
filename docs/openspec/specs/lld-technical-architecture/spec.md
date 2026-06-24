@@ -673,8 +673,14 @@ The following Resource subclasses SHALL define the schema for all `.tres` conten
 | `max_hp` | int | |
 | `damage_type` | String | Damage type ID shared by all damage intents of this enemy |
 | `resistances` | Array[String] | Damage type IDs this enemy resists (×0.5) |
+| `vulnerabilities` | Array[String] | Damage type IDs this enemy is innately vulnerable to (×1.5). Innate vulnerability is a second source of the Vulnerable multiplier alongside the item-applied Vulnerable status (see `HLD-COMBAT-007`): both yield ×1.5, do not double-stack, and cancel with same-type resistance. e.g. Skeleton `["fire"]`, Fire Elemental `["ice"]` |
 | `enemy_tags` | Array[String] | e.g. `["undead"]`, `["beast"]`, `["elemental_fire"]` — used by omen card tag filtering and omen card effects |
-| `omen_contributions` | Array[String] | Card IDs added to deck while this enemy is alive |
+| `pre_elite_count` | int | How many copies of this enemy spawn in a pre-elite combat room (authoritative per-enemy count, see `LLD-ENEMIES-002`). Defaults 1. Elite-gate and boss encounters spawn 1 regardless (elites are solo; boss composition is handled separately) |
+| `post_elite_count` | int | How many copies spawn in a post-elite combat room (see `LLD-ENEMIES-002`). Defaults 1 |
+| `omen_contributions` | Array[String] | Card IDs added to deck while this enemy is alive via the two-tier model (`HLD-OMEN-006`): index 0 = family card (per instance), index 1 = type card (once per type) |
+| `direct_omen_contributions` | Array[String] | Card IDs injected verbatim (once per instance) bypassing the two-tier family/type model — a fixed contribution unique to an encounter. The Judge uses this for its 3 Repent cards (`LLD-OMEN-CARD-020`). `[]` = none |
+| `accompanied_by` | Array[String] | Other enemy IDs spawned alongside this enemy when it is the encounter primary (mixed composition, e.g. The Judge spawns its two Witnesses); one of each, after the primary, so the primary is `enemies[0]`. `[]` = none (see `LLD-ENEMIES-010`) |
+| `ends_combat_on_death` | bool | When true, this enemy's death ends combat in victory regardless of other living enemies — it is the only required kill (The Judge; `LLD-ENEMIES-010`). Default false (every enemy must die to win) |
 | `intent_weights` | Array[IntentWeight] | Weighted random pool (evaluated if no conditional matches, or restricted by a matching conditional's `intent_ids`) |
 | `intent_conditionals` | Array[IntentConditional] | Evaluated first; first match short-circuits the roll |
 | `on_death_summons` | Array[String] | List of enemy IDs to spawn via `resolve_enemy_summon` when this enemy dies. Each ID in the array spawns one new enemy instance starting fresh (with `turns_alive: 1`). `resolve_enemy_death` SHALL process this array after the normal omen card removal logic. Empty array = no on-death spawn. Used by the Lightning Elemental to spawn two `lightning_spark` enemies on death. |

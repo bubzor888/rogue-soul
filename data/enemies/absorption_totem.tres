@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_koe4d"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_av4ic"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_nqdbk"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_uewkr"]
+
+[sub_resource type="Resource" id="Resource_r4qkf"]
+script = ExtResource("2_av4ic")
+intent_id = "harden_allies"
+weight = 100
+status_apply = "hardened"
+status_magnitude = 3
+status_target = "allies"
+
+[resource]
+script = ExtResource("4_uewkr")
+enemy_id = "absorption_totem"
+display_name = "Absorption Totem"
+max_hp = 10
+damage_type = "physical"
+enemy_tags = Array[String](["fanatic"])
+intent_weights = Array[ExtResource("2_av4ic")]([SubResource("Resource_r4qkf")])

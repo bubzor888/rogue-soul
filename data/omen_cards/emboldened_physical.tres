@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="OmenCardData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_drgtr"]
+[ext_resource type="Script" path="res://src/domain/omen_card_data.gd" id="2_0gymu"]
+
+[resource]
+script = ExtResource("2_0gymu")
+card_id = "emboldened_physical"
+display_name = "Emboldened (Physical)"
+status_id = "emboldened:physical"
+status_magnitude = 2

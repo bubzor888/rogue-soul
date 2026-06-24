@@ -238,13 +238,15 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	combat.omen_deck = OmenDeckState.new()
 	var ed: EnemyData = _content.get_enemy(encounter_id)
 	if ed != null:
-		var e := EnemyState.new()
-		e.enemy_id = encounter_id
-		e.instance_id = "%s_0" % encounter_id
-		e.hp = ed.max_hp
-		e.max_hp = ed.max_hp
-		e.turns_alive = 1
-		combat.enemies.append(e)
+		# Encounter size per LLD-ENEMIES-002: pre/post-elite counts for normal rooms;
+		# elite gate and boss spawn one (elites are solo).
+		for i in _encounter_count(ed, room_type):
+			_spawn_into(combat, encounter_id, "%s_%d" % [encounter_id, i])
+		# Mixed composition (LLD-ENEMIES-010): the primary's escorts (e.g. the Judge's
+		# two Witnesses) spawn after it, so the primary is enemies[0] (the target the
+		# Witnesses' "allies" intents heal/buff first).
+		for escort_id in ed.accompanied_by:
+			_spawn_into(combat, str(escort_id), "%s_0" % escort_id)
 	game_state.combat_state = combat
 
 	_fire_replenish(ReplenishEvents.ENCOUNTER_START)
@@ -258,8 +260,40 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	_resolver.resolve_omen_cycle_start(game_state)
 
 
+# Spawn one enemy instance at full HP into the combat roster.
+func _spawn_into(combat: CombatState, enemy_id: String, instance_id: String) -> void:
+	var ed: EnemyData = _content.get_enemy(enemy_id)
+	if ed == null:
+		return
+	var e := EnemyState.new()
+	e.enemy_id = enemy_id
+	e.instance_id = instance_id
+	e.hp = ed.max_hp
+	e.max_hp = ed.max_hp
+	e.turns_alive = 1
+	combat.enemies.append(e)
+
+
+# Number of enemies to spawn for an encounter (LLD-ENEMIES-002). Elite-gate and boss
+# rooms spawn one; normal combat rooms use the enemy's pre- or post-elite count
+# based on whether the elite gate has been passed. @Spec: LLD-ENEMIES-002, LLD-ENEMIES-009
+func _encounter_count(ed: EnemyData, room_type: String) -> int:
+	if room_type != NavigationModel.ROOM_COMBAT:
+		return 1  # elite gate (solo) / boss
+	var profile := _profile()
+	var gate := profile.elite_gate_room() if profile != null else 0
+	var post_elite := game_state.navigation_state.rooms_completed_this_floor >= gate
+	return maxi(ed.post_elite_count if post_elite else ed.pre_elite_count, 1)
+
+
+# The non-enemy omen sources shuffled into every combat deck (HLD-OMEN-004): the
+# floor's ambient cards (LLD-OMEN-CARD-008), the vessel's cards, and the bound
+# companion's. Enemy contributions are derived by the resolver (two-tier + direct).
 func _omen_sources() -> Array:
 	var ids: Array = []
+	var profile := _profile()
+	if profile != null:
+		ids.append_array(profile.ambient_omen_cards)
 	var vd: VesselData = _content.get_vessel(game_state.vessel_state.vessel_id)
 	if vd != null:
 		ids.append_array(vd.omen_contributions)
@@ -345,9 +379,21 @@ func _check_combat_end() -> bool:
 			_end_combat(false)
 			return true
 		return false
-	if _living_enemy_count() == 0:
+	# Victory when every enemy is dead, OR a required-kill enemy died (the Judge ends
+	# the fight regardless of living Witnesses — LLD-ENEMIES-010).
+	if _living_enemy_count() == 0 or _required_kill_dead():
 		_end_combat(true)
 		return true
+	return false
+
+
+# True if any enemy flagged ends_combat_on_death (the Judge) is dead.
+func _required_kill_dead() -> bool:
+	for enemy in game_state.combat_state.enemies:
+		if enemy.hp <= 0:
+			var ed: EnemyData = _content.get_enemy(enemy.enemy_id)
+			if ed != null and ed.ends_combat_on_death:
+				return true
 	return false
 
 

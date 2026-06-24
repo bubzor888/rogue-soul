@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_et6jm"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_ke6dg"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_mtmik"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_h7ohy"]
+
+[sub_resource type="Resource" id="Resource_cq7s3"]
+script = ExtResource("2_ke6dg")
+intent_id = "strike"
+weight = 60
+damage_min = 3
+damage_max = 5
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_0wrer"]
+script = ExtResource("2_ke6dg")
+intent_id = "taunt"
+weight = 20
+max_consecutive = 2
+status_apply = "frenzied"
+status_magnitude = 2
+
+[sub_resource type="Resource" id="Resource_311kd"]
+script = ExtResource("2_ke6dg")
+intent_id = "evade"
+weight = 20
+is_evade = true
+max_consecutive = 2
+
+[resource]
+script = ExtResource("4_h7ohy")
+enemy_id = "low_hp_fanatic"
+display_name = "Low HP Fanatic"
+max_hp = 8
+damage_type = "physical"
+enemy_tags = Array[String](["fanatic"])
+post_elite_count = 2
+omen_contributions = Array[String](["sacred_ground", "mending"])
+intent_weights = Array[ExtResource("2_ke6dg")]([SubResource("Resource_cq7s3"), SubResource("Resource_0wrer"), SubResource("Resource_311kd")])

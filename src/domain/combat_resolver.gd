@@ -51,6 +51,12 @@ var _content
 var _pipeline
 var _signal_bus
 
+## Debug override (LLD-ARCH-014): when non-empty, every enemy that owns an intent
+## with this id selects it, overriding conditionals and the weighted roll. Set only
+## via DebugHooks.force_enemy_intent (itself GameConfig.DEBUG-gated); "" in normal
+## play, so this is inert unless debug tooling sets it. No autoload access here.
+var debug_forced_intent: String = ""
+
 
 # rng: RNGService; content: provider with get_vessel(id)/get_ability(id);
 # pipeline: AbilityPipeline; signal_bus: SignalBus (the one autoload the resolver
@@ -393,11 +399,15 @@ func _enemy_card_contributions(game_state: GameState) -> Array:
 	var types_seen: Dictionary = {}
 	for enemy in game_state.combat_state.enemies:
 		var data = _content.get_enemy(enemy.enemy_id) if _content != null else null
-		if data == null or data.omen_contributions.is_empty():
+		if data == null:
 			continue
-		ids.append(str(data.omen_contributions[0]))  # Tier 1: per instance
-		if data.omen_contributions.size() > 1 and not types_seen.has(enemy.enemy_id):
-			ids.append(str(data.omen_contributions[1]))  # Tier 2: per type
+		if not data.omen_contributions.is_empty():
+			ids.append(str(data.omen_contributions[0]))  # Tier 1: per instance
+			if data.omen_contributions.size() > 1 and not types_seen.has(enemy.enemy_id):
+				ids.append(str(data.omen_contributions[1]))  # Tier 2: per type
+		# Fixed per-instance contributions outside the two-tier model (Judge's Repent).
+		for direct in data.direct_omen_contributions:
+			ids.append(str(direct))
 		types_seen[enemy.enemy_id] = true
 	return ids
 
@@ -780,6 +790,12 @@ func _select_intent(enemy: EnemyState, game_state: GameState) -> IntentWeight:
 	if data == null:
 		return null
 
+	# Debug override (LLD-ARCH-014): force a specific intent if this enemy owns it.
+	if debug_forced_intent != "":
+		var forced := _find_intent(enemy, debug_forced_intent, game_state)
+		if forced != null:
+			return forced
+
 	var pool: Array = data.intent_weights
 	for cond in data.intent_conditionals:
 		if not _condition_met(cond.condition, enemy, game_state):
@@ -1112,11 +1128,18 @@ func _resolve_standard_action(action: Dictionary, game_state: GameState) -> Game
 		push_error("resolve_player_action: unknown content id '%s'" % content_id)
 		return game_state
 
-	# Run the handler chain over a shared context.
+	# Run the handler chain over a shared context. Inject the current omen cycle's
+	# remaining ticks so status-applying handlers (e.g. Spoiled Potion → Poisoned)
+	# last the cycle duration rather than expiring at the next tick — mirrors the
+	# enemy-intent path (_execute_intent). Handlers that ignore remaining_ticks
+	# (deal_damage, restore_item_charges, …) are unaffected.
 	var ctx := AbilityContext.new(game_state, "player", str(action.get("target_id", "")))
 	ctx.content = _content
 	ctx.rng = _rng
 	if _pipeline != null:
+		var ticks := _cycle_remaining_ticks(game_state)
+		for config in data.handlers:
+			config.params["remaining_ticks"] = ticks
 		_pipeline.execute(data.handlers, ctx)
 
 	_emit_results(action, ctx.results)

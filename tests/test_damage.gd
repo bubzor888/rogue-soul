@@ -16,10 +16,11 @@ class StubRng:
 		return value
 
 
-func _enemy_data(id: String, resistances: Array) -> EnemyData:
+func _enemy_data(id: String, resistances: Array, vulnerabilities: Array = []) -> EnemyData:
 	var e := EnemyData.new()
 	e.enemy_id = id
 	e.resistances.assign(resistances)
+	e.vulnerabilities.assign(vulnerabilities)
 	return e
 
 
@@ -48,6 +49,100 @@ func _gs(enemy_id: String, enemy_hp: int) -> GameState:
 
 func _enemy(gs: GameState) -> EnemyState:
 	return gs.combat_state.enemies[0]
+
+
+# --- deal_damage arc mode (Arc Wand: 9 primary + 4 arc) ---------------------
+
+func test_deal_damage_arc_uses_arc_damage_for_secondary() -> void:
+	var gs := _gs("skeleton", 50)
+	var e2 := EnemyState.new()
+	e2.enemy_id = "skeleton"
+	e2.instance_id = "enemy_1"
+	e2.hp = 50
+	e2.max_hp = 50
+	gs.combat_state.enemies.append(e2)
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [])
+	var ctx := AbilityContext.new(gs, "player", "enemy_0")
+	ctx.content = content
+	ctx.params = {"base_damage": 9, "damage_type": "lightning", "mode": "arc", "arc_targets": 1, "arc_damage": 4}
+	DealDamageHandler.new().apply(ctx)
+	assert_int(gs.combat_state.enemies[0].hp).is_equal(41)  # primary 9
+	assert_int(gs.combat_state.enemies[1].hp).is_equal(46)  # arc 4
+
+
+# --- Innate (enemy) vulnerability -------------------------------------------
+
+# A Skeleton's innate Fire vulnerability amplifies fire damage ×1.5 with no
+# status applied. @Spec: HLD-COMBAT-007, LLD-ENEMIES-004
+func test_innate_vulnerability_amplifies() -> void:
+	var gs := _gs("skeleton", 50)
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [], ["fire"])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 10, "fire", content, null)
+	assert_int(r["damage"]).is_equal(15)  # 10 × 1.5
+
+
+# Innate vulnerability + the Vulnerable status of the same type do NOT double-stack
+# (still ×1.5, not ×2.25). @Spec: HLD-COMBAT-007
+func test_innate_and_status_vulnerability_do_not_stack() -> void:
+	var gs := _gs("skeleton", 50)
+	_enemy(gs).active_statuses.assign([_status("vulnerable", "fire")])
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [], ["fire"])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 10, "fire", content, null)
+	assert_int(r["damage"]).is_equal(15)  # ×1.5 once
+
+
+# Innate vulnerability cancels with same-type resistance → ×1.0. @Spec: HLD-COMBAT-007
+func test_innate_vulnerability_cancels_with_resistance() -> void:
+	var gs := _gs("weird", 50)
+	var content := StubContent.new()
+	content.enemies["weird"] = _enemy_data("weird", ["fire"], ["fire"])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 10, "fire", content, null)
+	assert_int(r["damage"]).is_equal(10)  # ×0.5 and ×1.5 cancel
+
+
+# Innate vulnerability is type-specific: ice damage to a fire-vulnerable enemy is unaffected.
+func test_innate_vulnerability_wrong_type_unaffected() -> void:
+	var gs := _gs("skeleton", 50)
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [], ["fire"])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 10, "ice", content, null)
+	assert_int(r["damage"]).is_equal(10)  # ice not amplified
+
+
+# --- Frenzied (composite Vulnerable Physical + Emboldened Physical) ----------
+
+# A Frenzied attacker adds its magnitude as a flat physical bonus (like Emboldened
+# Physical). @Spec: HLD-COMBAT-006, LLD-ENEMIES-008
+func test_frenzied_attacker_adds_physical_flat() -> void:
+	var gs := _gs("skeleton", 50)
+	gs.vessel_state.active_statuses.assign([_status("frenzied", "", 2)])
+	var content := StubContent.new()
+	content.enemies["skeleton"] = _enemy_data("skeleton", [])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 6, "physical", content, null)
+	assert_int(r["damage"]).is_equal(8)  # 6 + 2
+
+
+# A Frenzied target takes ×1.5 physical (like Vulnerable Physical). @Spec: HLD-COMBAT-006
+func test_frenzied_target_amplifies_physical() -> void:
+	var gs := _gs("bear", 50)
+	_enemy(gs).active_statuses.assign([_status("frenzied", "", 2)])
+	var content := StubContent.new()
+	content.enemies["bear"] = _enemy_data("bear", [])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 6, "physical", content, null)
+	assert_int(r["damage"]).is_equal(9)  # 6 × 1.5
+
+
+# Frenzied only affects physical, not elemental, damage.
+func test_frenzied_does_not_affect_elemental() -> void:
+	var gs := _gs("bear", 50)
+	_enemy(gs).active_statuses.assign([_status("frenzied", "", 2)])
+	var content := StubContent.new()
+	content.enemies["bear"] = _enemy_data("bear", [])
+	var r := DamageCalculator.resolve_hit(gs, "player", "enemy_0", 6, "fire", content, null)
+	assert_int(r["damage"]).is_equal(6)  # unaffected
 
 
 # --- Worked scenarios -------------------------------------------------------

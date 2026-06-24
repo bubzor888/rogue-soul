@@ -361,6 +361,38 @@ func test_unlimited_ability_no_charge_change() -> void:
 	assert_int(gs.vessel_state.ability_states[0].remaining_charges).is_equal(0)
 
 
+# --- Status handlers get the cycle timer ------------------------------------
+
+func _apply_status(status_id: String, magnitude: int) -> HandlerConfig:
+	var hc := HandlerConfig.new()
+	hc.handler_id = "apply_status"
+	hc.params = {"status_id": status_id, "magnitude": magnitude, "target": "target"}
+	return hc
+
+
+# A player status-applying item (e.g. Spoiled Potion → Poisoned) authored WITHOUT
+# remaining_ticks must inherit the current omen cycle's remaining ticks, mirroring
+# enemy intents — otherwise the status would expire at the next tick before doing
+# anything. @Spec: HLD-COMBAT-006, LLD-ITEMS-004
+func test_player_status_inherits_cycle_remaining_ticks() -> void:
+	var content := StubContent.new()
+	content.abilities["spoiled_potion"] = _ability("spoiled_potion", "consumable", [_apply_status("poisoned", 2)], 1, true)
+	var gs := _gs(content)
+	gs.combat_state.current_cycle = OmenCycleState.new()
+	gs.combat_state.current_cycle.ticks_remaining = 3
+	var item := ItemInstance.new()
+	item.item_id = "spoiled_potion"
+	item.remaining_charges = 1
+	gs.inventory.assign([item])
+	_resolver(content).resolve_player_action(
+		{"type": "USE_ITEM", "slot_index": 0, "target_id": "enemy_0"}, gs)
+	var statuses := _enemy(gs).active_statuses
+	assert_int(statuses.size()).is_equal(1)
+	assert_str(statuses[0].status_id).is_equal("poisoned")
+	assert_int(statuses[0].magnitude).is_equal(2)
+	assert_int(statuses[0].remaining_ticks).is_equal(3)  # inherited from the cycle
+
+
 # --- CHOOSE_OMEN dispatch ---------------------------------------------------
 
 # resolve_player_action routes CHOOSE_OMEN to the omen-choice resolution (T5.4).

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_niwso"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_e26ld"]
+
+[sub_resource type="Resource" id="Resource_8wwpc"]
+script = ExtResource("1_niwso")
+handler_id = "deal_damage"
+params = {
+"base_damage": 6,
+"damage_type": "physical",
+"mode": "all"
+}
+
+[resource]
+script = ExtResource("2_e26ld")
+ability_id = "spiked_chain"
+display_name = "Spiked Chain"
+action_bucket = "attack"
+max_charges = 8
+breaks_at_zero = true
+score = 74
+handlers = Array[ExtResource("1_niwso")]([SubResource("Resource_8wwpc")])

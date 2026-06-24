@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="OmenCardData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_7mbif"]
+[ext_resource type="Script" path="res://src/domain/omen_card_data.gd" id="2_vrme2"]
+
+[resource]
+script = ExtResource("2_vrme2")
+card_id = "shocked"
+display_name = "Shocked"
+status_id = "shocked"

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_6fx07"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_jw2ua"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_dkejv"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_y3kop"]
+
+[sub_resource type="Resource" id="Resource_ui5ms"]
+script = ExtResource("2_jw2ua")
+intent_id = "bite"
+weight = 70
+damage_min = 1
+damage_max = 3
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_ly2wk"]
+script = ExtResource("2_jw2ua")
+intent_id = "evade"
+weight = 30
+is_evade = true
+max_consecutive = 2
+
+[resource]
+script = ExtResource("4_y3kop")
+enemy_id = "plague_rat"
+display_name = "Plague Rat"
+max_hp = 3
+damage_type = "physical"
+enemy_tags = Array[String](["beast"])
+pre_elite_count = 3
+post_elite_count = 3
+omen_contributions = Array[String](["thick_hide", "exposed"])
+intent_weights = Array[ExtResource("2_jw2ua")]([SubResource("Resource_ui5ms"), SubResource("Resource_ly2wk")])
+on_death_apply_to_player = "poisoned"
+on_death_apply_magnitude = 2

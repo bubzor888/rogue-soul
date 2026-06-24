@@ -355,8 +355,8 @@ Implement the handlers MVP1 content needs (each `@Spec`-tagged to the requiremen
   - `tests/test_handlers.gd` — 14 cases green. Full suite 90/90.
 - ⏳ **Sequenced (flagged), each blocked by later work whose core logic it *is*:**
   - ✅ `deal_damage` → **done in T5.2** (the 7-step `DamageCalculator` + multi-target/arc handler).
-  - `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → needs per-item `max_charges` content lookup
-    (injected like ChargeManager's Callable) — wire when the resolver gets ContentRegistry access.
+  - ✅ `restore_item_charges` (Good as New, `LLD-ABILITIES-003`) → **done in T8.1** (`RestoreItemChargesHandler`,
+    `max_charges` looked up via `ctx.content`).
   - Omen-card non-status handlers (Elemental Synergy/Sacred Ground `LLD-OMEN-CARD-013/-014`, Combustible Oil
     branch `LLD-ITEMS-007`) → **T5.4** omen mechanics + Phase-8 content.
   > These are **not** registered yet, so Phase-8 content referencing them would (correctly) abort boot via
@@ -720,10 +720,10 @@ maintains `item_burden_score`; wires loot selection. Communicates only via Signa
   `SaveType` enum (BACKGROUND/CHECKPOINT) is owned by RunController (it has a `class_name`, unlike the
   no-`class_name` autoloads); **SaveManager (T6.5)** consumes `RunController.SaveType` rather than redefining it. (3) **MVP1 single floor** — `_floor_transition` (HP restore +
   temp-companion departure + `floor_transitioned`, HLD-RUN-006) is implemented and unit-tested but only fired
-  by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ⚠️ **One enemy per encounter** — EnemyData
-  has no encounter-count and FloorProfile no boss composition, so a combat spawns a single enemy. Multi-enemy
-  encounters (3 Wolves; the Judge + 2 Witnesses, `LLD-ENEMIES-021/-022`) need an encounter-composition schema
-  — flagged for a deliberate decision before content tuning (T8). The round loop is roster-size agnostic. (5)
+  by multi-floor runs (MVP3+); the Judge's defeat ends the run. (4) ✅ **One enemy per encounter — RESOLVED
+  in T8.3:** `EnemyData.pre_elite_count`/`post_elite_count` + `RunController._encounter_count` now spawn N
+  same-type enemies (3 Plague Rats, 2–3 Wolves, …). *Mixed*-composition encounters (the Judge + 2 Witnesses)
+  are still pending — that's **T8.4** (boss composition). The round loop is roster-size agnostic. (5)
   **unit_died for status-tick kills** isn't emitted (only the resolver's damage-path emits it); minor logging
   gap, state is correct. (6) `NON_COMBAT_EVENT` is unused in MVP1 (MF/WS deferred); the Worn Map single-door
   beat is **T6.6**. (7) **Rest-on-elite-path** (room 6, `LLD-FLOOR-BEATS-006`) still not modelled — the door
@@ -867,52 +867,261 @@ with it (`restore_item_charges`, `elemental_synergy`/`sacred_ground`, the Combus
 > (Phase 2) carry the annotations. Each task's DoD includes "discovered by registry; handler ids
 > resolve at startup; AIPlayerAgent run exercises it."
 
-### T8.1 — The Pilgrim vessel + abilities
+### T8.1 — The Pilgrim vessel + abilities  ✅ **Done**
 `pilgrim.tres` (`LLD-VESSELS-001`), Throw Rock (`LLD-ABILITIES-004`), Read the Road
 (`LLD-ABILITIES-005`), Good as New (`LLD-ABILITIES-003`), Stillness vessel omen card
 (`LLD-OMEN-CARD-006`).
+- ✅ Five `.tres` authored (via `ResourceSaver` for guaranteed-valid format, then the one-off
+  generator removed — the `.tres` are the source of truth): `data/vessels/pilgrim.tres` (HP 24,
+  `default_strike_id="throw_rock"`, abilities `[read_the_road, good_as_new]`, no companion, **2 copies
+  of Stillness** in `omen_contributions`, 3 starting items per `LLD-ITEMS-004`); `data/abilities/
+  throw_rock.tres` (attack, unlimited, `deal_damage{base_damage:3}`); `data/abilities/read_the_road.tres`
+  (**passive** — auto-fires at combat start via the existing `_run_passive_omen_handlers` pass,
+  `peek_omen_deck`); `data/abilities/good_as_new.tres` (support, 1 charge, `floor_start` replenish,
+  `restore_item_charges`); `data/omen_cards/stillness.tres` (no status, no handlers — does nothing on
+  either side, number-only timer).
+- ✅ **Unblocked the T4.2 deferral:** `restore_item_charges` (`RestoreItemChargesHandler`) is now
+  implemented + registered — Good as New refills one item to max via `ctx.content` (the `AbilityContext`
+  content provider added in T5.2). An explicit `target_slot` restores that slot (player choice, MVP2 UI);
+  with none given it auto-targets the most-depleted eligible item, matching the engine's "support actions
+  are a single non-targeted action" model so the MVP1 random agent exercises a real effect. Single-use
+  items are never affected. `tests/test_restore_item_charges.gd` — 5 cases (TDD).
+- ✅ `tests/test_pilgrim_content.gd` — 6 cases reading the **shipped** `.tres` through the live
+  `ContentRegistry` autoload (vessel/ability shapes match the specs; every Pilgrim handler resolves in
+  the pipeline). The real ContentRegistry boots cleanly with the new content (boot-time handler
+  validation passes). Full suite **295/295**.
+- **Decisions / flags:** (1) **Targeting** — true per-item-slot enumeration for Good as New (and any
+  targeted support ability) is an MVP2 UI concern; MVP1 uses the auto-target. Flagged on the handler.
+  (2) `starting_item_ids` references `walking_staff`/`spoiled_potion`/`worn_map` whose `.tres` land in
+  **T8.2** — until then they resolve to `null` (no boot error; `_build_initial_state` already tolerates
+  null item data). A full real-content `AIPlayerAgent` run is only completable once T8.2–T8.4 (items,
+  Floor-3 enemies, the Judge) land; T8.1's "run exercises it" is satisfied by the boot validation +
+  content-load tests.
 
-### T8.2 — Pilgrim starting items
+### T8.2 — Pilgrim starting items  ✅ **Done**
 **Three** starting items per `LLD-ITEMS-004`: Walking Staff (attack durability), Spoiled Potion
 (consumable, Poisoned), Worn Map (support durability / encounter-countdown), each with precomputed
 `score` per `LLD-ITEMS-011`.
 - ✅ **Resolved** (change `fix-pilgrim-burden-init`): `LLD-ARCH-017`'s burden-init scenario now agrees
   with `LLD-ITEMS-004` — the Pilgrim has **3** starting items → `item_burden_score` initializes to **3**
-  (1 per starting item per `HLD-RUN-007`). Use 3 when setting the initial value in T6.4.
+  (1 per starting item per `HLD-RUN-007`). Used in T6.4 (`_build_initial_state` sets burden =
+  `starting_item_ids.size()`, now 3 for the real Pilgrim).
+- ✅ Three item `.tres` in `data/items/` (items are `AbilityData` with `breaks_at_zero` — scanned into the
+  shared ability index): `walking_staff.tres` (attack, 6 charges, `deal_damage{base_damage:6}`, **score
+  42**); `spoiled_potion.tres` (consumable, 1 charge, `apply_status{poisoned, magnitude:2}` — X=2, **score
+  15**); `worn_map.tres` (support, 3 charges, `is_encounter_countdown`, `triggered_room_type="companion"`,
+  no active handler, **score 28**). Scores per `LLD-IR-011`.
+- ✅ **Engine gap fixed (TDD):** player status-applying actions now inherit the current omen cycle's
+  `remaining_ticks` (Spoiled Potion authored without `remaining_ticks` per spec would otherwise expire at
+  the next tick before dealing damage). `_resolve_standard_action` injects `_cycle_remaining_ticks` into
+  the handler params before executing, mirroring the enemy-intent path (`_execute_intent`); handlers that
+  ignore it (deal_damage, restore_item_charges, …) are unaffected. `tests/test_player_action.gd` +1.
+- ✅ `tests/test_pilgrim_items_content.gd` — 4 cases reading the shipped `.tres` through `ContentRegistry`
+  (shapes/effects/scores; all three Pilgrim starting items now resolve and their handlers are known to
+  the pipeline). Full suite **300/300**. The Pilgrim run now builds with 3 real items + burden 3.
 
-### T8.3 — Floor 3 enemies (non-boss)
+### T8.3 — Floor 3 enemies (non-boss)  ✅ **Done**
 Skeleton, Zombie, Plague Rat, Wolf, Bear, Fire/Ice/Lightning Elementals, Low/High HP Fanatics,
 Buff/Absorption Totems (`LLD-ENEMIES-004`–`-008`, `-014`–`-020`), plus encounter structure
 (`LLD-ENEMIES-009`).
+- ✅ **13 enemy `.tres`** in `data/enemies/` (generated via `ResourceSaver`, generator removed): skeleton,
+  zombie, plague_rat, wolf, bear, fire_elemental, ice_elemental, lightning_elemental, lightning_spark,
+  low_hp_fanatic, high_hp_fanatic, buff_totem, absorption_totem — HP/damage type/resistances/
+  vulnerabilities/tags/encounter counts/intents/conditionals/on-death all per the LLD-ENEMIES tables
+  (Zombie Slam charge→release, Wolf pack/lone `ally_count` conditionals + Howl summon, Bear `turn_number:1`
+  sleeping + 2-hit swipe + self-frenzy, the two-phase Lightning Elemental → 2 Sparks with turn-gated
+  escalation, Totem `status_target:"allies"` buffs).
+- ✅ **Two approved engine additions (both TDD):**
+  - **Innate elemental vulnerability** — `EnemyData.vulnerabilities: Array[String]` (mirrors `resistances`);
+    `DamageCalculator` OR-combines innate + status Vulnerable (single ×1.5, no double-stack, cancels with
+    resistance). Reconciled `HLD-COMBAT-007` via OpenSpec change `add-innate-enemy-vulnerability`
+    (archived `2026-06-22`); `EnemyData` schema field added to `LLD-ARCH-018` by direct consistency edit
+    (T5.5 precedent). `tests/test_damage.gd` +4.
+  - **Multi-enemy encounters** (resolves the T6.4 "one enemy per encounter" flag) — `EnemyData.
+    pre_elite_count`/`post_elite_count` (`LLD-ENEMIES-002`, added to `LLD-ARCH-018`); `RunController.
+    _enter_combat` spawns N distinct instances (`<id>_<i>`) via `_encounter_count` (elite-gate/boss → 1;
+    normal rooms → pre/post count by whether the elite gate is passed). The round loop was already
+    roster-agnostic. `tests/test_run_controller.gd` +3.
+  - **Frenzied composite** (needed by Bear, in the elite pool; also Fanatics) — `DamageCalculator` now
+    treats a `frenzied` status as both Emboldened (Physical) flat (attacker) and Vulnerable (Physical) ×1.5
+    (target); added to `StatusRules.MAX_WINS`. This implements the existing `HLD-COMBAT-006` Frenzied
+    definition (no spec change). `tests/test_damage.gd` +3.
+- ✅ `tests/test_floor3_enemies_content.gd` — 10 cases reading the shipped `.tres` through `ContentRegistry`
+  (per-enemy spec fidelity + every Floor 3 pool enemy resolves; boss correctly still null pending T8.4).
+  ContentRegistry boots clean with all 13. Full suite **320/320**.
+- **Decisions / flags:** (1) **Fanatics/Totems authored but not yet in the Floor 3 pool** — pool
+  finalization is **T8.6**; the Totems additionally need *mixed-composition* encounters (Fanatic+Totem),
+  which is `[OPEN·MVP3]` (current multi-enemy support spawns N of the *same* type). (2) **Plague Rat poison
+  immunity** (`LLD-ENEMIES-006`) is not modelled — `EnemyData` has no immunity field; flagged (low impact —
+  rats die in 1–2 hits; the only MVP1 poison source is the Spoiled Potion). (3) **Bear frenzy magnitude**
+  set to 2 (spec omits it; needed for the Emboldened-physical half of Frenzied) — flagged for tuning.
+  (4) The boss + Witnesses (mixed composition) are **T8.4**. (5) ✅ **RESOLVED** — the pre-existing
+  `hld-combat-system` strict-validation error (and the wider SHALL/MUST + Purpose lint debt across 10 specs)
+  was cleared in a 2026-06-24 spec-hygiene pass; all 23 specs now pass `openspec validate --strict`, so
+  archive no longer needs `--no-validate`.
 
-### T8.4 — The Judge boss + Witnesses
+### T8.4 — The Judge boss + Witnesses  ✅ **Done**
 `the_judge.tres` (`LLD-ENEMIES-010`) — the fixed final-floor boss (`HLD-RUN-004`), Witness of Mercy /
 Vengeance (`LLD-ENEMIES-021/-022`), Repent card (`LLD-OMEN-CARD-020`). Verifies burden-tier handler
 (T4.2) and Pass Judgment phase trigger.
+- ✅ **4 `.tres`** authored (generator removed): `data/enemies/the_judge.tres` (HP 30, physical, `judge`
+  tag; strike 50% / suffer→Bleed +3 30% / ponder→evade 20%; **Pass Judgment** `pass_judgment`
+  charge→release forced by `hp_percent_lte:30` conditional), `witness_of_mercy.tres` + `witness_of_vengeance.tres`
+  (HP 10, `judge_witness`), `data/omen_cards/repent.tres`.
+- ✅ **Engine additions (all TDD):**
+  - **Mixed-composition encounters** — `EnemyData.accompanied_by` (the Judge spawns its two Witnesses,
+    primary first so the Witnesses' `allies` intents target the Judge) + `ends_combat_on_death` (the Judge
+    is the only required kill — `RunController._required_kill_dead` ends combat in victory regardless of
+    living Witnesses). `RunController._enter_combat` now spawns primary + escorts via `_spawn_into`.
+    `tests/test_run_controller.gd` +2.
+  - **Direct omen contributions** — `EnemyData.direct_omen_contributions` injects cards verbatim per
+    instance, bypassing the two-tier model (the Judge's Repent ×3, `LLD-OMEN-CARD-020`).
+    `CombatResolver._enemy_card_contributions` appends them. `tests/test_omen_system.gd` +1.
+  - **Burden-tier handler generalized** — `apply_mending_by_burden_tier` gained an optional `status_id`
+    param (default `mending`): Mercy applies tier-based Mending (1/3/5), Vengeance tier-based
+    Emboldened (Physical) (1/2/3) via the same handler. The handler id is unchanged (the spec names it for
+    Mercy). `tests/test_handlers.gd` +1.
+  - The Witnesses' kill consequences use `on_death_apply_to_player` (Mercy → `vulnerable:physical`,
+    Vengeance → `frenzied` mag 2). Pass Judgment's charge→release rides the existing intent engine (no
+    new code). All four new `EnemyData` fields added to `LLD-ARCH-018` by direct consistency edit.
+- ✅ `tests/test_judge_content.gd` — 6 cases (composition/required-kill, Repent ×3, intents + Pass
+  Judgment conditional, both Witnesses' tier handlers, boss now resolves). The earlier T8.3 "boss is null"
+  assertion updated to "resolves". ContentRegistry boots clean; full suite **330/330**.
+- **Decisions / flags:** (1) `accompanied_by` + `ends_combat_on_death` generalise mixed composition —
+  reusable for the MVP3 Fanatic+Totem pairing. (2) Vengeance's tier handler reuses the Mercy-named handler
+  with a `status_id` param (spec leaves Vengeance's handler unnamed); the name is a slight misnomer for the
+  Emboldened case — documented on the handler. (3) Bear frenzy / Witness-of-Vengeance Frenzied magnitudes
+  both 2 (consistent with the Fanatic taunt; spec omits explicit values) — flagged for tuning.
 
-### T8.5 — Omen cards (floor / enemy / shared)
+### T8.5 — Omen cards (floor / enemy / shared)  ✅ **Done**
 Floor 3 default deck (`LLD-OMEN-CARD-008`), Exposed floor card (`-019`), enemy family/type cards
 (`-011` Grave Knit, `-012` Thick Hide, `-013` Elemental Synergy, `-014` Sacred Ground), status
 cards (Burning, Shocked, Chilled, Emboldened ×2, Vulnerable ×3, Mending — `-001`..`-005`, `-015`..`-018`),
 number distribution (`LLD-OMEN-MECH-008`).
+- ✅ **18 omen-card `.tres`** in `data/omen_cards/` (generator removed): status cards `burning`(mag 5),
+  `shocked`, `chilled`(mag 2), `mending`(mag 3), `emboldened_physical`(mag 2), `emboldened_{fire,lightning,ice}`,
+  `vulnerable_{fire,lightning,ice}`, `exposed`; enemy cards `grave_knit`(mending 5, tag undead),
+  `thick_hide`(hardened 3, tag beast), `elemental_synergy_{fire,ice,lightning}`(type_convert), `sacred_ground`.
+  All effects ride existing engine mechanics (StatusRules + DamageCalculator + the shift/tick resolvers) —
+  **no new handlers** (Stillness/Repent were done in T8.1/T8.4).
+- ✅ **Floor ambient deck wired** — `FloorProfile.ambient_omen_cards` (the 12 `LLD-OMEN-CARD-008` cards) +
+  `RunController._omen_sources` now shuffles the floor's ambient cards into every combat deck alongside the
+  vessel/companion/enemy sources (`HLD-OMEN-004`). `floor_3.tres` updated with the 12 ambient ids.
+  `tests/test_run_controller.gd` +1.
+- ✅ **Number distribution** (`LLD-OMEN-MECH-008`) was already implemented (`_timer_value_pool` 25/50/25) and
+  is covered by `test_omen_system.gd` — timers are assigned at deck assembly, not authored on cards.
+- ✅ `tests/test_omen_cards_content.gd` — 7 cases reading the shipped `.tres` (status/magnitude/tag/
+  type-convert fidelity, the 12-card ambient deck resolves, and **every** Floor 3 enemy + Judge omen
+  contribution now resolves to a real card). ContentRegistry boots clean. Full suite **338/338**.
+- **Decisions / flags:** (1) **Thick Hide → `hardened`** — the spec names a distinct "Thick Hide" status but
+  its mechanic (−3 per hit) is identical to Hardened, so the card applies `hardened` (mag 3) to beasts,
+  reusing the tested absorption path. No functional difference in MVP1 (nothing distinguishes them); a
+  dedicated status would only matter if a future cleanse/interaction must tell them apart. (2) **Chilled
+  per-tick step** — card authored with starting magnitude 2 (`LLD-OMEN-CARD-003` wants 2→4 across ticks),
+  but the engine increments by the `CHILLED_TICK_STEP=1` const (the T5.3 single-field limitation), so it
+  escalates 2→3 not 2→4. Functional (reduction increases, never to 0) but not the exact cadence — flagged;
+  exact per-card steps need a `StatusInstance` step field. (3) **Sacred Ground** authored as an **inert
+  placeholder** (no status/handler) — its Totem-aura doubling needs the `sacred_ground` handler + totem
+  auras, both MVP3; no totems are in the MVP1 Floor 3 pool, so it never meaningfully fires. Keeps boot clean
+  (no unregistered handler) and lets the Fanatic family-card reference resolve.
 
-### T8.6 — Item drop pools + Floor 3 profile
+### T8.6 — Item drop pools + Floor 3 profile  ✅ **Done**
 Normal/elite durability and consumable pools (`LLD-ITEMS-005`–`-008`) and the Floor 3 `FloorProfile`
 data (`lld-floor`). Confirm LootGenerator draws the right tiers.
+- ✅ **22 loot-item `.tres`** in `data/items/` (generator removed): normal/elite durability weapons
+  (Cracked Cudgel, Rope Flail [all], Battered Sword, Ember Shard, Spark Rod, Frost Sliver / Iron Maul,
+  Spiked Chain [all], Soldier's Blade, Smoldering Brand, Arc Wand [arc], Glacial Brand), the two Amethysts
+  (cleanse), and the consumables (Fire Bomb, Ointment, Combustible Oil, Hardening Resin, Frost Shard /
+  Poultice, Brittle Charm, Fulminating Powder). Buckets/charges/effects per `LLD-ITEMS-005..-008`,
+  authored `score` per `LLD-IR-011`. The Floor 3 loot pools were already on `floor_3.tres` (T6.3); every id
+  now resolves.
+- ✅ **Enemy pool finalized** (resolves the T8.3 flag) — added Low/High HP Fanatic to `normal_enemy_pool`
+  per the authoritative `LLD-ENEMIES-002` normal table (they're standalone-capable; their inert Sacred
+  Ground + Mending cards resolve). Totems stay out — they require mixed-composition Fanatic+Totem pairing
+  (`[OPEN·MVP3]`). The real-content run still completes deterministically with Fanatics in rotation.
+- ✅ **Engine additions (all TDD):**
+  - **Offensive-consumable targeting** — `ApplyStatusHandler` auto-targets the first living enemy when the
+    action is non-targeted (Fire Bomb / Frost Shard / Brittle Charm / Fulminating Powder are single
+    non-targeted actions; real per-target choice is MVP2 UI). `tests/test_handlers.gd` +1.
+  - **`combustible_oil` handler** (the last deferred MVP1 handler) — branching: Vulnerable (Fire), or a
+    6-fire burst if the target is already Burning. Registered. `tests/test_combustible_oil.gd` (4 cases).
+  - **Arc damage** — `deal_damage` gained an `arc_damage` param (Arc Wand: 9 primary + 4 arc); defaults to
+    `base_damage` so other modes are unchanged. `tests/test_damage.gd` +1.
+- ✅ `tests/test_floor3_loot_content.gd` — 6 cases (every pool item resolves + handlers known; weapon/
+  consumable/Amethyst/Arc-Wand fidelity; **LootGenerator draws one durability + one consumable from the
+  correct tier** against real content).
+- ✅ **MVP1 integration capstone** — `tests/test_mvp1_real_run.gd` (3 cases): `AIPlayerAgent` drives a full
+  Pilgrim Floor 3 run against the **real** `ContentRegistry` + `RNGService`, start → Judge → `RUN_END`,
+  deterministically (the stub-free `SCOPE-001` gate). A 30-seed progress check confirms rooms are cleared
+  (enemies take damage and die, loot/navigation advance). `RunResult` gained `rooms_cleared` for this.
+  Full suite **352/352**.
+- **Decisions / flags:** (1) **Random agent doesn't win the floor** — across 30 seeds, runs clear ~2 rooms
+  then die (diagnostics confirmed enemies die / the loop advances; not a bug). A purely random policy can't
+  clear 9 rooms + the Judge with the Pilgrim's low damage; winnability needs a smarter agent — the MVP1
+  gate is *deterministic completion*, not random victory. (2) **Frost Shard → Chilled** per `LLD-ITEMS-007`
+  (its explicit scenario). ✅ **Resolved** (2026-06-24): removed the stale Frost Shard → Vulnerable (Ice)
+  example from `HLD-COMBAT-007` and dropped Frost Shard from the Vulnerable (Ice) "pairs with" list in
+  `LLD-OMEN-CARD-016` — Chilled no longer co-applies Vulnerable, and Frost Shard only applies Chilled.
+  (3) **Small/Medium
+  Amethyst** are Support (durability) so they auto-decrement per encounter (1/2 charges) — a single-
+  encounter cleanse window, consistent with `LLD-ITEMS-002`. (4) Offensive-consumable auto-targeting is an
+  MVP1 simplification (MVP2 adds real target selection).
 
-### T8.7 — Item score table sanity pass
+### T8.7 — Item score table sanity pass  ✅ **Done**
 Verify every MVP1 item's authored `score` matches `LLD-ITEMS-011` / `LLD-IR` formulas.
 - **@Spec (schema/validator):** `LLD-ARCH-018`, `HLD-ITEMS-006`/`-007`/`-008`, `LLD-ITEMS-011`
+- ✅ `tests/test_item_scores.gd` — 3 cases pinning all **25** MVP1 items' shipped `score` (read via
+  ContentRegistry) to the canonical `LLD-IR-011` values, asserting every item is `breaks_at_zero`, and that
+  the three vessel abilities (throw_rock / read_the_road / good_as_new) carry `score` 0 and are not items.
+  All authored scores match the spec table (no drift). Full suite **355/355**.
+
+---
+
+**Phase 8 complete.** ✅ All MVP1 content authored and validated: the Pilgrim + abilities (T8.1), starting
+items (T8.2), 13 Floor 3 enemies (T8.3), the Judge + Witnesses (T8.4), 18 omen cards (T8.5), 22 loot items
++ pool finalization (T8.6), and the score sanity pass (T8.7). The **MVP1 definition of done is met**:
+`AIPlayerAgent.run_to_completion(seed, "pilgrim")` executes a full, deterministic, headless Floor 3 run
+against the real content registry (`tests/test_mvp1_real_run.gd`). Remaining: the light **Phase 9** debug
+hooks. Outstanding flags (none block MVP1): Chilled per-tick step cadence (T5.3/T8.5), Sacred Ground /
+Totem aura doubling + Fanatic-Totem mixed encounters (MVP3), offensive-consumable + Good-as-New target
+selection (MVP2 UI), and a smarter (non-random) agent for winnability. *(The spec-hygiene SHALL/MUST +
+Purpose lint debt was cleared 2026-06-24 — all 23 specs pass `openspec validate --strict`.)*
 
 ---
 
 ## Phase 9 — MVP1 Debug Affordances (light)
 
-### T9.1 — Headless debug hooks gated on `GameConfig.DEBUG`
+### T9.1 — Headless debug hooks gated on `GameConfig.DEBUG`  ✅ **Done**
 Minimal for headless: seed display/override, RNG stream call-count monitor, force-enemy-intent,
 force-loot-drop, set-HP — exposed as code-path hooks (no UI yet). All gated on `DEBUG`.
 - **@Spec:** `LLD-ARCH-014`
 - **DoD:** hooks active only when `DEBUG`; off by default; no separate build.
+- ✅ `src/application/debug_hooks.gd` (`DebugHooks`, static toolkit, Application layer) — every method is a
+  no-op unless `GameConfig.DEBUG`: `set_unit_hp` (force-set HP on **any** unit — player or enemy, clamped),
+  `keep_player_alive` (full-restore the vessel), `force_enemy_intent`, `force_loot_offers`,
+  `rng_stream_counts` (the RNG monitor, via `RNGService.get_call_count`), `active_seed` (seed display). The
+  toolkit is called by the harness / a future debug UI; the engine never calls into it, so normal play is
+  unaffected.
+- ✅ Supporting changes: `GameConfig.DEBUG` is now a settable `var` (still the single flag — the spec's
+  "set … for export" wording implies settable; also lets tests toggle debug paths). `CombatResolver` gained
+  an inert `debug_forced_intent` field (set only via the DEBUG-gated `force_enemy_intent`) honored at the top
+  of `_select_intent` — Domain stays autoload-free.
+- ✅ `tests/test_debug_hooks.gd` — 7 cases (inert when DEBUG off; set-HP player+enemy+clamp; keep-alive;
+  force-loot; force-intent overrides the roll; RNG counts + seed). Plus `test_mvp1_real_run.gd`
+  `test_invincible_run_clears_whole_floor`: with `keep_player_alive` each turn the random agent traverses
+  all 9 rooms and **beats the Judge** (`outcome == "completion"`) — the "keep the player alive to exercise
+  every room" use case, proving the whole floor is reachable/clearable. Full suite **363/363**.
+
+---
+
+**Phase 9 complete — MVP1 is done.** ✅ `AIPlayerAgent.run_to_completion(seed, "pilgrim")` executes a full,
+deterministic, headless Floor 3 run start → Judge → `RUN_END` on the real content registry, all systems
+(combat, omen, status, loot, navigation, burden, companion, debug) functional and unit-tested (363 green).
+This satisfies the MVP1 definition of done (`SCOPE-001`). Carry-forward (none block MVP1; MVP2/MVP3 + a
+spec-hygiene pass): Chilled per-tick step cadence, Sacred Ground/Totem doubling + Fanatic-Totem mixed
+encounters, item/ability target *selection* UI, and a non-random agent for unaided winnability. *(The
+SHALL/MUST + Purpose spec-lint debt was cleared 2026-06-24 — all 23 specs pass `openspec validate
+--strict`.)*
 
 ---
 

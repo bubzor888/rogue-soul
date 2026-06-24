@@ -47,6 +47,10 @@ extends Resource
 ## Map encounter-countdown trigger, LLD-FLOOR-BEATS-003 / LLD-MF-009).
 @export var temporary_companion_pool: Array[String] = []
 
+## The floor's ambient omen cards — shuffled into every combat's deck regardless of
+## which enemies appear (LLD-OMEN-CARD-008). card_ids resolved via ContentRegistry.
+@export var ambient_omen_cards: Array[String] = []
+
 
 # Total navigable rooms before the boss: pre-elite + the Elite Gate + post-elite
 # (LLD-FLOOR-STRUCT-006). @Spec: LLD-FLOOR-STRUCT-001, LLD-FLOOR-STRUCT-006

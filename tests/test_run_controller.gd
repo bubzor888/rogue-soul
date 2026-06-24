@@ -72,12 +72,14 @@ func _strike_intent(min_d: int, max_d: int) -> IntentWeight:
 	return w
 
 
-func _enemy_data(id: String, hp: int, min_d: int = 0, max_d: int = 0) -> EnemyData:
+func _enemy_data(id: String, hp: int, min_d: int = 0, max_d: int = 0, pre_count: int = 1, post_count: int = 1) -> EnemyData:
 	var e := EnemyData.new()
 	e.enemy_id = id
 	e.max_hp = hp
 	e.damage_type = "physical"
 	e.omen_contributions.assign(["%s_card" % id])
+	e.pre_elite_count = pre_count
+	e.post_elite_count = post_count
 	if max_d > 0:
 		e.intent_weights.assign([_strike_intent(min_d, max_d)])
 	return e
@@ -96,6 +98,7 @@ func _floor(pre: int = 4, post: int = 4) -> FloorProfile:
 	p.normal_consumable_pool.assign(["bomb"])
 	p.elite_durability_pool.assign(["maul"])
 	p.elite_consumable_pool.assign(["poultice"])
+	p.ambient_omen_cards.assign(["floor_ambient"])
 	return p
 
 
@@ -201,6 +204,101 @@ func test_combat_entry_offers_choose_omen_then_turn() -> void:
 	assert_bool(rc.game_state.combat_state.current_cycle.sides_assigned).is_true()
 	assert_bool(rc.game_state.combat_state.is_action_used).is_false()
 	assert_bool("EVADE" in _action_types(rc.get_legal_actions())).is_true()
+
+
+# --- Multi-enemy encounters (LLD-ENEMIES-002/-009) --------------------------
+
+# A pre-elite combat room spawns pre_elite_count copies of the drawn enemy, each a
+# distinct instance. @Spec: LLD-ENEMIES-002, LLD-ENEMIES-009
+func test_pre_elite_spawns_pre_count_enemies() -> void:
+	var content := _content()
+	content.enemies["skeleton"] = _enemy_data("skeleton", 12, 0, 0, 3, 2)  # 3 pre / 2 post
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	rc.submit_action(rc.get_legal_actions()[0])  # CHOOSE_DOOR → first (pre-elite) room
+	assert_int(rc.game_state.combat_state.enemies.size()).is_equal(3)
+	var ids: Array = []
+	for e in rc.game_state.combat_state.enemies:
+		ids.append(e.instance_id)
+	assert_int(ids.size()).is_equal(3)
+	# Distinct instance ids.
+	assert_bool(ids[0] != ids[1] and ids[1] != ids[2] and ids[0] != ids[2]).is_true()
+
+
+# Post-elite rooms use post_elite_count. Drive to a post-elite room by completing
+# the floor up to the gate.
+func test_post_elite_uses_post_count() -> void:
+	var content := _content()
+	content.enemies["skeleton"] = _enemy_data("skeleton", 12, 0, 0, 1, 3)  # 1 pre / 3 post
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	# Jump to "all pre-elite + gate done": room 6 entry has rooms_completed = 5 = gate.
+	rc.game_state.navigation_state.rooms_completed_this_floor = 5
+	rc._enter_combat("skeleton", NavigationModel.ROOM_COMBAT)
+	assert_int(rc.game_state.combat_state.enemies.size()).is_equal(3)
+
+
+# The elite gate spawns a single elite enemy regardless of its count fields.
+func test_elite_gate_spawns_one() -> void:
+	var content := _content()
+	content.enemies["bear"] = _enemy_data("bear", 22, 0, 0, 5, 5)
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	rc._enter_combat("bear", NavigationModel.ROOM_ELITE_COMBAT)
+	assert_int(rc.game_state.combat_state.enemies.size()).is_equal(1)
+
+
+# The floor's ambient omen cards (LLD-OMEN-CARD-008) are shuffled into every
+# combat deck alongside vessel/enemy cards. @Spec: HLD-OMEN-004, LLD-OMEN-CARD-008
+func test_floor_ambient_cards_in_deck() -> void:
+	var content := _content()
+	content.enemies["skeleton"] = _enemy_data("skeleton", 12)
+	var rc := _rc(content)
+	rc.start_run(42, "pilgrim")
+	rc.submit_action(rc.get_legal_actions()[0])  # CHOOSE_DOOR → combat (deck assembled)
+	var pile := rc.game_state.combat_state.omen_deck.draw_pile
+	var found := false
+	for card in pile:
+		if card.get("card_id", "") == "floor_ambient":
+			found = true
+	assert_bool(found).is_true()
+
+
+# --- Boss mixed composition (LLD-ENEMIES-010) -------------------------------
+
+func _judge_content() -> StubContent:
+	var content := _content()
+	var judge := _enemy_data("the_judge", 30, 3, 5)
+	judge.accompanied_by.assign(["witness_mercy", "witness_vengeance"])
+	judge.ends_combat_on_death = true
+	content.enemies["the_judge"] = judge
+	content.enemies["witness_mercy"] = _enemy_data("witness_mercy", 10)
+	content.enemies["witness_vengeance"] = _enemy_data("witness_vengeance", 10)
+	return content
+
+
+# The boss encounter spawns the Judge plus its two Witnesses, with the Judge first.
+func test_boss_spawns_judge_and_witnesses() -> void:
+	var rc := _rc(_judge_content())
+	rc.start_run(42, "pilgrim")
+	rc._enter_combat("the_judge", "boss")
+	var enemies := rc.game_state.combat_state.enemies
+	assert_int(enemies.size()).is_equal(3)
+	assert_str(enemies[0].enemy_id).is_equal("the_judge")          # primary first
+	assert_str(enemies[1].enemy_id).is_equal("witness_mercy")
+	assert_str(enemies[2].enemy_id).is_equal("witness_vengeance")
+
+
+# Killing the Judge ends the fight in victory even with both Witnesses alive.
+func test_judge_death_ends_combat_with_living_witnesses() -> void:
+	var rc := _rc(_judge_content())
+	rc.start_run(42, "pilgrim")
+	rc._enter_boss()                                               # _in_boss + judge+witnesses
+	var enemies := rc.game_state.combat_state.enemies
+	enemies[0].hp = 0                                              # Judge dies; Witnesses alive
+	rc._process_deaths()
+	assert_bool(rc._check_combat_end()).is_true()
+	assert_str(rc.outcome).is_equal("completion")                 # boss victory completes the run
 
 
 # --- Combat victory → loot --------------------------------------------------

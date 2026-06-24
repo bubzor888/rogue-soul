@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/intent_conditional.gd" id="1_6e0iy"]
+[ext_resource type="Script" path="res://src/domain/intent_weight.gd" id="2_6xmi0"]
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="3_s7qy5"]
+[ext_resource type="Script" path="res://src/domain/enemy_data.gd" id="4_2765a"]
+
+[sub_resource type="Resource" id="Resource_wix1q"]
+script = ExtResource("2_6xmi0")
+intent_id = "strike"
+weight = 70
+damage_min = 4
+damage_max = 6
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_7swr6"]
+script = ExtResource("2_6xmi0")
+intent_id = "chill_touch"
+weight = 30
+max_consecutive = 2
+status_apply = "chilled"
+status_magnitude = 1
+
+[resource]
+script = ExtResource("4_2765a")
+enemy_id = "skeleton"
+display_name = "Skeleton"
+max_hp = 12
+damage_type = "physical"
+vulnerabilities = Array[String](["fire"])
+enemy_tags = Array[String](["undead"])
+post_elite_count = 2
+omen_contributions = Array[String](["grave_knit", "emboldened_physical"])
+intent_weights = Array[ExtResource("2_6xmi0")]([SubResource("Resource_wix1q"), SubResource("Resource_7swr6")])

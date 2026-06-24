@@ -17,9 +17,16 @@ extends AbilityHandler
 func apply(ctx: AbilityContext) -> void:
 	var base_damage := int(ctx.params.get("base_damage", 0))
 	var damage_type := str(ctx.params.get("damage_type", "physical"))
-	for target_id in _resolve_targets(ctx):
+	var mode := str(ctx.params.get("mode", "single"))
+	# Arc weapons (Arc Wand) deal full damage to the primary and a smaller arc_damage
+	# to each secondary target (HLD-COMBAT-016 / LLD-ITEMS-006). arc_damage defaults to
+	# base_damage so other modes are unaffected.
+	var arc_damage := int(ctx.params.get("arc_damage", base_damage))
+	var targets := _resolve_targets(ctx)
+	for i in targets.size():
+		var dmg := arc_damage if (mode == "arc" and i > 0) else base_damage
 		ctx.results.append(DamageCalculator.resolve_hit(
-			ctx.game_state, ctx.source_id, target_id, base_damage, damage_type, ctx.content, ctx.rng))
+			ctx.game_state, ctx.source_id, targets[i], dmg, damage_type, ctx.content, ctx.rng))
 
 
 # Targets per mode: single → the action target; all → every living enemy; arc →

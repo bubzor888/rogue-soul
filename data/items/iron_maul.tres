@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_ry83q"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_iwd5q"]
+
+[sub_resource type="Resource" id="Resource_w27bc"]
+script = ExtResource("1_ry83q")
+handler_id = "deal_damage"
+params = {
+"base_damage": 10,
+"damage_type": "physical"
+}
+
+[resource]
+script = ExtResource("2_iwd5q")
+ability_id = "iron_maul"
+display_name = "Iron Maul"
+action_bucket = "attack"
+max_charges = 6
+breaks_at_zero = true
+score = 70
+handlers = Array[ExtResource("1_ry83q")]([SubResource("Resource_w27bc")])

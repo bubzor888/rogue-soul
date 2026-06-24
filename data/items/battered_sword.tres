@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_ad7le"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_1xjjs"]
+
+[sub_resource type="Resource" id="Resource_dy5vu"]
+script = ExtResource("1_ad7le")
+handler_id = "deal_damage"
+params = {
+"base_damage": 7,
+"damage_type": "physical"
+}
+
+[resource]
+script = ExtResource("2_1xjjs")
+ability_id = "battered_sword"
+display_name = "Battered Sword"
+action_bucket = "attack"
+max_charges = 8
+breaks_at_zero = true
+score = 57
+handlers = Array[ExtResource("1_ad7le")]([SubResource("Resource_dy5vu")])

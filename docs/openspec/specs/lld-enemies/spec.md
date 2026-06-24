@@ -52,6 +52,8 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 ---
 
 ### Requirement: [LLD-ENEMIES-004] Floor 3 Enemy — Skeleton
+The Skeleton SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Undead. **Tags:** `undead`. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
 **HP:** 12. **Vulnerability:** Fire (×1.5 fire damage, see `HLD-COMBAT-007`).
 
@@ -92,6 +94,8 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 ---
 
 ### Requirement: [LLD-ENEMIES-005] Floor 3 Enemy — Zombie
+The Zombie SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Undead. **Tags:** `undead`. Shared family omen card: see `LLD-OMEN-CARD-011` (Grave Knit).
 **HP:** 16. **Vulnerability:** Physical (×1.5 with Brittle Charm only, per `HLD-COMBAT-005`).
 
@@ -146,6 +150,8 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 ---
 
 ### Requirement: [LLD-ENEMIES-006] Floor 3 Enemy — Plague Rat
+The Plague Rat SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
 **HP:** 3 per rat. **Encounter:** Always 3 simultaneously in pre-elite.
 **Immunity:** Poisoned. **No vulnerability.**
@@ -184,6 +190,8 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 ---
 
 ### Requirement: [LLD-ENEMIES-007] Floor 3 Enemy — Wolf
+The Wolf SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
 **HP:** 6. **Attack:** 4–6 physical (pack: 2+ wolves alive); 2–4 physical (lone: last wolf alive). **Encounter:** 2 Wolves pre-elite, 3 Wolves post-elite. **No vulnerability.**
 
@@ -240,6 +248,8 @@ Undead and Fanatic families do not have a dedicated Floor 3 elite by design.
 ---
 
 ### Requirement: [LLD-ENEMIES-008] Floor 3 Enemy — Bear
+The Bear SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Beast. **Tags:** `beast`. Shared family omen card: see `LLD-OMEN-CARD-012` (Thick Hide).
 **HP:** 22. **Encounter:** 1 Bear — elite only. **No vulnerability.**
 
@@ -322,7 +332,7 @@ Encounter sizes (number of enemies per room) are determined by the pre-elite and
 ---
 
 ### Requirement: [LLD-ENEMIES-010] Floor 3 Boss — The Judge
-The Judge is the guardian at the threshold of Solace. It judges need, not worthiness (see HLD-NAR-002). The fight consists of three entities: The Judge (center) and two passive Witnesses (Witness of Mercy, Witness of Vengeance — see LLD-ENEMIES-021 and LLD-ENEMIES-022). The fight ends when The Judge dies. The Witnesses are optional kills whose effects scale with the player's burden score tier (see HLD-RUN-007 for score accumulation rules; tier brackets defined below).
+The Judge is the guardian at the threshold of Solace. It judges need, not worthiness (see HLD-NAR-002). The fight SHALL consist of three entities: The Judge (center) and two passive Witnesses (Witness of Mercy, Witness of Vengeance — see LLD-ENEMIES-021 and LLD-ENEMIES-022). The fight ends when The Judge dies. The Witnesses are optional kills whose effects scale with the player's burden score tier (see HLD-RUN-007 for score accumulation rules; tier brackets defined below).
 
 **Tags:** `judge`. **HP:** 30. **All damage type:** Physical.
 
@@ -409,7 +419,7 @@ When the `hp_percent_lte:30` condition is met, `pass_judgment` is the only avail
 ---
 
 ### Requirement: [LLD-ENEMIES-021] Judge Witness — Witness of Mercy
-The Witness of Mercy is a passive support entity that sustains The Judge through healing. It never attacks the player. Its Mending magnitude scales with the player's burden score tier (see LLD-ENEMIES-010 tier bracket table).
+The Witness of Mercy is a passive support entity that SHALL sustain The Judge through healing. It never attacks the player. Its Mending magnitude scales with the player's burden score tier (see LLD-ENEMIES-010 tier bracket table).
 
 **Family:** Judge. **Tags:** `judge_witness`. **HP:** 10. **No vulnerability.**
 
@@ -467,7 +477,7 @@ The tier is evaluated at the moment `testify_mercy` resolves each turn. Max-wins
 ---
 
 ### Requirement: [LLD-ENEMIES-022] Judge Witness — Witness of Vengeance
-The Witness of Vengeance is a passive support entity that empowers The Judge's strikes. It never attacks the player. Its Emboldened (Physical) magnitude scales with the player's burden score tier (see LLD-ENEMIES-010 tier bracket table).
+The Witness of Vengeance is a passive support entity that SHALL empower The Judge's strikes. It never attacks the player. Its Emboldened (Physical) magnitude scales with the player's burden score tier (see LLD-ENEMIES-010 tier bracket table).
 
 **Family:** Judge. **Tags:** `judge_witness`. **HP:** 10. **No vulnerability.**
 
@@ -521,6 +531,8 @@ Max-wins rules (HLD-COMBAT-019) apply to Emboldened (Physical) reapplication.
 ---
 
 ### Requirement: [LLD-ENEMIES-014] Floor 3 Enemy — Fire Elemental
+The Fire Elemental SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Elemental. **Tags:** `elemental`, `elemental_fire`. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Fire). Resistance/vulnerability table: see `LLD-OMEN-CARD-013`.
 **HP:** 14. **Resistance:** Fire ×0.5. **Vulnerability:** Ice ×1.5.
 
@@ -570,6 +582,8 @@ Max-wins rules (HLD-COMBAT-019) apply to Emboldened (Physical) reapplication.
 ---
 
 ### Requirement: [LLD-ENEMIES-015] Floor 3 Enemy — Ice Elemental
+The Ice Elemental SHALL use the stats, intents, and omen contributions defined below.
+
 **Family:** Elemental. **Tags:** `elemental`, `elemental_ice`. Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Ice).
 **HP:** 14. **Resistance:** Ice ×0.5. **Vulnerability:** Fire ×1.5.
 
@@ -623,6 +637,8 @@ Max-wins rules (HLD-COMBAT-019) apply to Emboldened (Physical) reapplication.
 ---
 
 ### Requirement: [LLD-ENEMIES-016] Floor 3 Enemy — Lightning Elemental
+The Lightning Elemental SHALL use the stats, two-phase behaviour, intents, and omen contributions defined below.
+
 **Family:** Elemental. **Elite** (see LLD-ENEMIES-002 Elite Enemies table). **Tags:** `elemental`, `elemental_lightning` (both phases — Sparks inherit the same tags). Shared family omen card: see `LLD-OMEN-CARD-013` (Elemental Synergy — Lightning).
 **HP (Phase 1):** 18. **Resistance:** Lightning ×0.5. **Vulnerability:** None.
 

@@ -21,8 +21,10 @@ const HEADLESS: bool = true
 
 # @Spec: LLD-ARCH-014
 # The single switch for all debug UI and debug code paths. No separate debug
-# build exists — every build ships the debug tooling gated behind this flag.
-const DEBUG: bool = false
+# build exists — every build ships the debug tooling gated behind this flag. A
+# `var` (not `const`) so it can be set for export / toggled by tooling and tests
+# at runtime — it remains the *single* debug flag (no other debug switches exist).
+var DEBUG: bool = false
 
 ## Save / persistence ---------------------------------------------------------
 

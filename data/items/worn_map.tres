@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_14wb7"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_gghd0"]
+
+[resource]
+script = ExtResource("2_gghd0")
+ability_id = "worn_map"
+display_name = "Worn Map"
+action_bucket = "support"
+max_charges = 3
+breaks_at_zero = true
+score = 28
+is_encounter_countdown = true
+triggered_room_type = "companion"

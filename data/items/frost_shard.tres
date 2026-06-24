@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_xwur0"]
+[ext_resource type="Script" path="res://src/domain/ability_data.gd" id="2_d865a"]
+
+[sub_resource type="Resource" id="Resource_ichln"]
+script = ExtResource("1_xwur0")
+handler_id = "apply_status"
+params = {
+"magnitude": 2,
+"status_id": "chilled"
+}
+
+[resource]
+script = ExtResource("2_d865a")
+ability_id = "frost_shard"
+display_name = "Frost Shard"
+action_bucket = "consumable"
+max_charges = 1
+breaks_at_zero = true
+score = 12
+handlers = Array[ExtResource("1_xwur0")]([SubResource("Resource_ichln")])

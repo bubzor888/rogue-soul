@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="OmenCardData" format=3]
+
+[ext_resource type="Script" path="res://src/domain/handler_config.gd" id="1_lm0h5"]
+[ext_resource type="Script" path="res://src/domain/omen_card_data.gd" id="2_ajxl8"]
+
+[resource]
+script = ExtResource("2_ajxl8")
+card_id = "thick_hide"
+display_name = "Thick Hide"
+status_id = "hardened"
+status_magnitude = 3
+requires_tag = "beast"
