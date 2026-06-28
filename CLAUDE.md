@@ -85,7 +85,7 @@ func build_anomaly_outcome() -> EncounterResult:
 ## Spec Conventions
 
 - All `[OPEN]` items must be tagged with an MVP target: `[OPEN·MVP1]`, `[OPEN·MVP2]`, `[OPEN·MVP3]`, or `[OPEN·MVP4]`. An untagged `[OPEN]` means the MVP assignment is pending. See `docs/openspec/specs/project-scope/spec.md` for milestone definitions.
-- HLD specs use requirement IDs like `HLD-COMBAT-001`. LLD specs use IDs like `LLD-ITEMS-004`. Project scope uses `SCOPE-001`.
+- HLD specs use requirement IDs like `HLD-COMBAT-001`. LLD specs use IDs like `LLD-ITEMS-004`. UI specs use IDs like `UI-COMBAT-001` and live in `ui-`-prefixed folders (e.g. `ui-combat-screen`, `ui-loot-screen`, `ui-global-conventions`). Project scope uses `SCOPE-001`.
 - When a spec references another spec's details, use a cross-reference (`see LLD-ITEMS-004`) rather than duplicating the content.
 - Items, enemies, and vessels are LLD concerns. Don't add their specific values or names to HLD specs.
 

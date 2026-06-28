@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Loot Wireframe — Post-Combat Reward</title>
+<style>
+  :root{
+    --ink:#3a4a5a;
+    --line:#7c8fa3;
+    --bg:#eef1f4;
+    --card:#ffffff;
+    --hp:#c0596b;
+    --prog:#5b86b3;
+    --status:#c9a24a;
+    --intent:#9a5fb8;
+    --dmg:#c0596b;          /* damage number hero — borrows HP red */
+    --skip:#7c8fa3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#1d2630;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .screen{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    min-height:100dvh;
+    margin:0 auto;
+    background:var(--bg);
+    overflow:hidden;
+    padding:env(safe-area-inset-top) 4% calc(env(safe-area-inset-bottom) + 14px) 4%;
+    display:flex;
+    flex-direction:column;
+  }
+  .label{
+    font-size:9px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.65;
+    text-align:center;
+  }
+  .dashed{
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:var(--card);
+  }
+
+  .zone-caption{
+    font-size:8px;
+    color:var(--ink);
+    opacity:.4;
+    letter-spacing:.05em;
+    margin:6px 0 2px 2px;
+  }
+
+  /* ---------- Top: inventory count strip ---------- */
+  .count-strip{
+    display:flex;
+    gap:6px;
+    margin-top:4px;
+    margin-bottom:14px;
+  }
+  .count-cell{
+    flex:1;
+    padding:7px 4px;
+    text-align:center;
+  }
+  .count-cell .num{
+    font-size:18px;
+    font-weight:700;
+    color:var(--ink);
+    line-height:1;
+    margin-bottom:3px;
+  }
+
+  /* ---------- Loot image band (static reward visual) ---------- */
+  .loot-image{
+    flex:0 0 auto;
+    height:118px;
+    margin:4px 0 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    color:var(--ink);
+    opacity:.55;
+  }
+  .loot-image .glyph{ font-size:26px; }
+  .loot-image .cap{
+    font-size:9px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+
+  /* ---------- Screen heading ---------- */
+  .heading{
+    text-align:center;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin-bottom:11px;
+  }
+
+  /* ---------- Card shared ---------- */
+  .cards{
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    flex:0 0 auto;
+  }
+  .card{
+    padding:14px 16px 15px;
+    position:relative;
+  }
+  .card-tag{
+    position:absolute;
+    top:10px;
+    right:12px;
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:3px 7px;
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    opacity:.8;
+    background:#f4f7fa;
+  }
+  .card-name{
+    font-size:15px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:2px;
+  }
+  .card-kind{
+    font-size:9px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.55;
+    margin-bottom:10px;
+  }
+  /* Identity row with leading icon (shared slot, both cards) */
+  .id-row{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    margin-bottom:10px;
+  }
+  .card-icon{
+    flex:0 0 auto;
+    width:42px; height:42px;
+    border-radius:8px;
+    border:1.5px dashed var(--line);
+    background:#f4f7fa;
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px;
+    color:var(--ink);
+    opacity:.7;
+    text-transform:uppercase;
+  }
+  .id-row .card-name{ margin-bottom:1px; }
+  .id-row .card-kind{ margin-bottom:0; }
+
+  /* ---------- Durability card (stat-dense) ---------- */
+  .stat-grid{
+    display:flex;
+    gap:10px;
+    align-items:stretch;
+  }
+  .stat-hero{
+    flex:0 0 auto;
+    min-width:80px;
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    padding:11px 12px;
+    text-align:center;
+    background:#f0f1f3;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .stat-hero .glyph{
+    font-size:17px;
+    color:#2b333c;
+    opacity:.9;
+    line-height:1;
+    margin-bottom:5px;
+  }
+  .stat-hero .dmg{
+    font-size:27px;
+    font-weight:800;
+    color:#2b333c;
+    line-height:1;
+  }
+  .stat-side{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:7px;
+  }
+  .stat-line{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+  }
+  .stat-line .k{
+    font-size:9px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.55;
+    min-width:54px;
+  }
+  .stat-line .v{
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .charge-dots{
+    display:inline-flex;
+    gap:4px;
+    align-items:center;
+  }
+  .charge-dots .dot{
+    width:9px; height:9px;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    background:var(--card);
+  }
+  .charge-dots .dot.spent{
+    background:var(--hp-track,#e3dcdc);
+    opacity:.5;
+  }
+  .prop-line{
+    margin-top:10px;
+    padding-top:9px;
+    border-top:1px dashed var(--line);
+    font-size:11px;
+    color:var(--ink);
+    opacity:.8;
+  }
+  .prop-line .tw{ font-weight:700; opacity:1; }
+
+  /* ---------- Consumable card (effect-forward) ---------- */
+  .effect-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:8px 0 4px;
+    min-height:54px;
+  }
+  .effect-icon{
+    width:38px; height:38px;
+    border-radius:50%;
+    border:1.5px dashed var(--intent);
+    background:#f6eefa;
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px;
+    color:var(--intent);
+    text-transform:uppercase;
+    margin-bottom:9px;
+  }
+  .effect-text{
+    font-size:18px;
+    font-weight:400;
+    color:var(--ink);
+    line-height:1.2;
+  }
+  /* Status keyword: battle status icon + bold word, no explanation */
+  .status-kw{
+    font-weight:800;
+  }
+  .status-ic{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:16px; height:16px;
+    border-radius:3px;
+    border:1.5px dashed var(--status);
+    background:#fbf3e2;
+    font-size:8px;
+    color:var(--status);
+    vertical-align:-2px;
+    margin-right:3px;
+  }
+  .target-line{
+    font-size:11px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.65;
+    margin-top:7px;
+  }
+  .effect-sub{
+    font-size:11px;
+    color:var(--ink);
+    opacity:.7;
+    margin-top:5px;
+  }
+  .use-note{
+    margin-top:11px;
+    text-align:center;
+    font-size:9px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.5;
+  }
+
+  /* ---------- Bottom: leave both ---------- */
+  .leave-bar{
+    margin-top:12px;           /* small protective gap, not a lake */
+    padding:13px;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--skip);
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:transparent;
+  }
+  .leave-bar .sub{
+    display:block;
+    font-size:8px;
+    font-weight:400;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-top:3px;
+    text-transform:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="zone-caption">FLOOR 3 · ROOM 5/9 · WIREFRAME — POST-COMBAT LOOT</div>
+
+  <!-- Top: neutral inventory counts (also the comparison context) -->
+  <div class="count-strip">
+    <div class="count-cell dashed">
+      <div class="num">3</div>
+      <div class="label">weapons</div>
+    </div>
+    <div class="count-cell dashed">
+      <div class="num">1</div>
+      <div class="label">support</div>
+    </div>
+    <div class="count-cell dashed">
+      <div class="num">2</div>
+      <div class="label">consumables</div>
+    </div>
+  </div>
+
+  <!-- Static loot reward visual -->
+  <div class="loot-image dashed" style="background:transparent;">
+    <div class="glyph">▣</div>
+    <div class="cap">loot reward image</div>
+  </div>
+
+  <div class="heading">Take one</div>
+
+  <div class="cards">
+
+    <!-- Durability card: stat-dense -->
+    <div class="card dashed">
+      <div class="card-tag">tap to take</div>
+      <div class="id-row">
+        <div class="card-icon">item<br>art</div>
+        <div>
+          <div class="card-name">Rope Flail</div>
+          <div class="card-kind">Attack · Durability weapon</div>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-hero">
+          <div class="glyph">◆</div>
+          <div class="dmg">4</div>
+        </div>
+        <div class="stat-side">
+          <div class="stat-line">
+            <span class="k">Hits</span>
+            <span class="v">All enemies</span>
+          </div>
+          <div class="stat-line">
+            <span class="k">Charges</span>
+            <span class="v charge-dots">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-line"><span class="tw">AoE.</span> 4 damage to every enemy each use.</div>
+    </div>
+
+    <!-- Consumable card: effect-forward -->
+    <div class="card dashed">
+      <div class="card-tag">tap to take</div>
+      <div class="id-row">
+        <div class="card-icon" style="border-color:var(--intent);background:#f6eefa;color:var(--intent);">fx</div>
+        <div>
+          <div class="card-name">Spoiled Potion</div>
+          <div class="card-kind">Consumable</div>
+        </div>
+      </div>
+
+      <div class="effect-wrap">
+        <div class="effect-text">Apply <span class="status-ic">Po</span><span class="status-kw">Poisoned</span></div>
+        <div class="target-line">Target: one enemy</div>
+      </div>
+
+      <div class="use-note">One use · free action</div>
+    </div>
+
+  </div>
+
+  <!-- Bottom: leave both (confirms) -->
+  <div class="leave-bar">
+    Leave both
+    <span class="sub">tap, then confirm</span>
+  </div>
+
+</div>
+</body>
+</html>
