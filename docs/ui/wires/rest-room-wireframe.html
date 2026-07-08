@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Memory Fragment Wireframe — Companion Encounter</title>
+<title>Rest Room Wireframe</title>
 <style>
   :root{
     --ink:#3a4a5a;
     --line:#7c8fa3;
     --bg:#eef1f4;
     --card:#ffffff;
-    --intent:#9a5fb8;
+    --hp:#c0596b;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;background:#1d2630;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
@@ -63,7 +63,7 @@
   }
 
   /* ---------- Center stage: fills the full screen, vertically centers the
-       presence card + accept bar ---------- */
+       rest card + continue bar ---------- */
   .center-stage{
     flex:1;
     display:flex;
@@ -83,32 +83,16 @@
     margin:0 0 14px;
   }
 
-  /* ---------- Companion presence card ---------- */
-  .presence-card{
-    padding:22px 20px;
+  /* ---------- Rest card: flavour + heal amount, no sprite ---------- */
+  .rest-card{
+    padding:26px 20px;
     text-align:center;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:14px;
+    gap:16px;
   }
-  .presence-sprite{
-    width:96px; height:96px;
-    border-radius:10px;
-    border:1.5px dashed var(--intent);
-    background:#f6eefa;
-    display:flex; align-items:center; justify-content:center;
-    font-size:10px;
-    letter-spacing:.04em;
-    text-transform:uppercase;
-    color:var(--intent);
-  }
-  .presence-name{
-    font-size:15px;
-    font-weight:700;
-    color:var(--ink);
-  }
-  .presence-flavour{
+  .rest-flavour{
     font-size:12px;
     font-style:italic;
     line-height:1.6;
@@ -116,16 +100,28 @@
     opacity:.85;
     max-width:320px;
   }
-  .presence-note{
+  .heal-amount{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  .heal-amount .num{
+    font-size:28px;
+    font-weight:800;
+    color:var(--hp);
+    line-height:1;
+  }
+  .heal-amount .label{
     font-size:9px;
-    letter-spacing:.05em;
+    letter-spacing:.06em;
     text-transform:uppercase;
     color:var(--ink);
-    opacity:.5;
+    opacity:.6;
   }
 
-  /* ---------- Mandatory accept: no decline option exists (HLD-MF-004) ---------- */
-  .accept-bar{
+  /* ---------- Continue: single action, no choice to make ---------- */
+  .continue-bar{
     margin-top:16px;
     padding:14px;
     text-align:center;
@@ -133,19 +129,10 @@
     font-weight:600;
     letter-spacing:.04em;
     text-transform:uppercase;
-    color:var(--intent);
-    border:1.5px dashed var(--intent);
+    color:var(--hp);
+    border:1.5px dashed var(--hp);
     border-radius:6px;
-    background:#f6eefa;
-  }
-  .accept-bar .sub{
-    display:block;
-    font-size:8px;
-    font-weight:400;
-    letter-spacing:.04em;
-    opacity:.7;
-    margin-top:3px;
-    text-transform:none;
+    background:#faf0f1;
   }
 </style>
 </head>
@@ -153,7 +140,7 @@
 
 <div class="screen">
 
-  <div class="zone-caption">FLOOR 3 · ROOM 3/9 · WIREFRAME — MEMORY FRAGMENT (COMPANION ENCOUNTER)</div>
+  <div class="zone-caption">FLOOR 3 · ROOM 6/9 · WIREFRAME — REST (POST-ELITE)</div>
 
   <!-- Ghost hamburger, top-right, matches combat/room-select screens -->
   <div class="menu-ghost dashed">
@@ -162,23 +149,22 @@
   </div>
 
   <div class="center-stage">
-    <div class="heading">Something arrives</div>
+    <div class="heading">A much needed rest</div>
 
-    <!-- Companion presence: flavour text only, no mechanics disclosed (HLD-MF-004) -->
-    <div class="presence-card dashed">
-      <div class="presence-sprite">companion<br>sprite</div>
-      <div class="presence-name">The Raven</div>
-      <div class="presence-flavour">
-        "A dark shape lands on your shoulder. It watches the road ahead with sharp,
-        knowing eyes — waiting for you to point it somewhere."
+    <!-- Rest presence: flavour text + heal amount, no sprite -->
+    <div class="rest-card dashed">
+      <div class="rest-flavour">
+        "For a moment, the weight of the road lifts. You let yourself breathe."
       </div>
-      <div class="presence-note">no mechanics shown — flavour only</div>
+      <div class="heal-amount">
+        <div class="num">+15 HP</div>
+        <div class="label">heal amount — placeholder, TBD</div>
+      </div>
     </div>
 
-    <!-- Mandatory — no walk-away option exists for this category -->
-    <div class="accept-bar">
-      It settles in
-      <span class="sub">companion encounters cannot be declined</span>
+    <!-- Single action — no choice, just continue -->
+    <div class="continue-bar">
+      Keep going...
     </div>
   </div>
 
