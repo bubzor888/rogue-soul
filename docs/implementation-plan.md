@@ -1298,3 +1298,16 @@ encounter, Category C unfair trade. All **MVP2**. (Note: HLD-MF-004 companion en
    `LLD-ARCH-017` now matches `LLD-ITEMS-004` (Pilgrim: 3 starting items → burden init 3). `HLD-RUN-007`
    was already correct (its 2-item scenario is a generic illustration).
 3. **HLD-COMBAT-005 `[OPEN·MVP4]`** additional damage types — out of MVP1–3 scope.
+
+---
+
+## Appendix B — Technical Debt
+
+Spec changes (via the OpenSpec propose/apply/archive cycle) that alter behavior already
+represented in code, or that a not-yet-written system must account for once built. Each entry
+notes what changed, what code is or will be affected, and whether it's actionable now or blocked
+on a future task. Remove an entry once its code sync lands.
+
+| Change | Spec(s) touched | Code impact | Status |
+|---|---|---|---|
+| `remove-companion-swap` | `hld-memory-fragments` (`HLD-MF-004`), `lld-floor` (`LLD-FLOOR-BEATS-003`) | No code to fix today — the swap fallback was never implemented (T6.6 only ever coded the Worn Map's *after-the-fact* `companion_offered_this_floor` flag in `navigation_state.gd`/`run_controller.gd`; no Memory Fragment generator exists yet to have coded the swap itself). Forward-looking: when the MVP2 Memory Fragment generator (`HLD-MF-002` category draw) is built, it MUST exclude the Companion Encounter category whenever the player holds an unfired Worn Map, not only after `companion_offered_this_floor` is true. | Blocked on Memory Fragment generator task (MVP2) — implement the exclusion check there directly; no separate follow-up task needed. |
