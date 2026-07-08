@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Memory Fragment Wireframe — Category A (Fair Trade)</title>
+<style>
+  :root{
+    --ink:#3a4a5a;
+    --line:#7c8fa3;
+    --bg:#eef1f4;
+    --card:#ffffff;
+    --hp:#c0596b;
+    --status:#c9a24a;
+    --intent:#9a5fb8;
+    --skip:#7c8fa3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#1d2630;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .screen{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    min-height:100dvh;
+    margin:0 auto;
+    background:var(--bg);
+    overflow:hidden;
+    padding:env(safe-area-inset-top) 4% calc(env(safe-area-inset-bottom) + 14px) 4%;
+    display:flex;
+    flex-direction:column;
+  }
+  .label{
+    font-size:9px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.65;
+    text-align:center;
+  }
+  .dashed{
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:var(--card);
+  }
+  .zone-caption{
+    font-size:8px;
+    color:var(--ink);
+    opacity:.4;
+    letter-spacing:.05em;
+    margin:6px 0 2px 2px;
+  }
+
+  /* ---------- Ghost hamburger menu (copied verbatim from combat/room-select wireframes) ---------- */
+  .menu-ghost{
+    position:absolute;
+    top:3%;
+    right:4%;
+    width:28%;
+    padding:5px 4px;
+    text-align:center;
+    opacity:.4;
+    z-index:5;
+  }
+  .menu-ghost .glyph{
+    font-size:16px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .menu-ghost .label{
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+
+  /* ---------- Scene stage: blank for now, reserved for fragment art;
+       fills the space above the bottom-anchored choices ---------- */
+  .scene-stage{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:0;
+    gap:10px;
+    padding:8px 2%;
+  }
+  .scene-placeholder{
+    width:100%;
+    max-width:340px;
+    aspect-ratio:3/2;
+    max-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.4;
+    text-align:center;
+  }
+  .flavour-caption{
+    max-width:320px;
+    text-align:center;
+    font-size:12px;
+    font-style:italic;
+    line-height:1.5;
+    color:var(--ink);
+    opacity:.85;
+  }
+
+  .heading{
+    text-align:center;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin:14px 0 11px;
+  }
+
+  /* ---------- Trade card: give -> receive ---------- */
+  .cards{
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    flex:0 0 auto;
+  }
+  .card{
+    padding:14px 16px 15px;
+    position:relative;
+  }
+  .card-tag{
+    position:absolute;
+    top:10px;
+    right:12px;
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:3px 7px;
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    opacity:.8;
+    background:#f4f7fa;
+  }
+  .card-name{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.7;
+    margin-bottom:10px;
+  }
+  .trade-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .trade-side{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    padding:10px 6px;
+    border-radius:6px;
+    background:#f4f7fa;
+  }
+  .trade-side .k{
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    opacity:.55;
+  }
+  .trade-side .icon{
+    width:38px; height:38px;
+    border-radius:8px;
+    border:1.5px dashed var(--line);
+    background:var(--card);
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px;
+    color:var(--ink);
+    opacity:.7;
+    text-transform:uppercase;
+  }
+  .trade-side .item-name{
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink);
+    text-align:center;
+  }
+  .trade-arrow{
+    flex:0 0 auto;
+    font-size:18px;
+    color:var(--ink);
+    opacity:.5;
+  }
+  .card.give-side .trade-side.give{ background:#f6e9e9; }
+  .card.give-side .trade-side.receive{ background:#eaf3ec; }
+
+  /* ---------- Bottom: walk away ---------- */
+  .leave-bar{
+    margin-top:12px;
+    padding:13px;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--skip);
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:transparent;
+  }
+  .leave-bar .sub{
+    display:block;
+    font-size:8px;
+    font-weight:400;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-top:3px;
+    text-transform:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="zone-caption">FLOOR 3 · ROOM 3/9 · WIREFRAME — MEMORY FRAGMENT (CATEGORY A · FAIR TRADE)</div>
+
+  <!-- Ghost hamburger, top-right, matches combat/room-select screens -->
+  <div class="menu-ghost dashed">
+    <div class="glyph">&#8801;</div>
+    <div class="label">menu</div>
+  </div>
+
+  <!-- Scene stage: blank until fragment art direction lands. Flavour text
+       (UI-layer wrapper around the generated trade, per LLD-MF-008) sits
+       below it, still centered in the space above the choices. -->
+  <div class="scene-stage">
+    <div class="scene-placeholder dashed">fragment scene art — TBD</div>
+    <div class="flavour-caption">
+      "A fragment of someone else's certainty. It offers you a choice, plainly, and waits."
+    </div>
+  </div>
+
+  <div class="heading">A fair exchange</div>
+
+  <div class="cards">
+
+    <!-- Option 1: take the deal, both sides revealed -->
+    <div class="card dashed give-side">
+      <div class="card-tag">tap to accept</div>
+      <div class="card-name">Option 1 — Take the deal</div>
+      <div class="trade-row">
+        <div class="trade-side give">
+          <div class="k">Give</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Rope Flail</div>
+        </div>
+        <div class="trade-arrow">&#8594;</div>
+        <div class="trade-side receive">
+          <div class="k">Receive</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Iron Pendant</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Option 2: walk away, no cost, no reward -->
+  <div class="leave-bar">
+    Option 2 — Walk away
+    <span class="sub">no cost, no reward</span>
+  </div>
+
+</div>
+</body>
+</html>

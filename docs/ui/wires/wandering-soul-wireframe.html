@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Wandering Soul Wireframe</title>
+<style>
+  :root{
+    --ink:#3a4a5a;
+    --line:#7c8fa3;
+    --bg:#eef1f4;
+    --card:#ffffff;
+    --hp:#c0596b;
+    --skip:#7c8fa3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#1d2630;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .screen{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    min-height:100dvh;
+    margin:0 auto;
+    background:var(--bg);
+    overflow:hidden;
+    padding:env(safe-area-inset-top) 4% calc(env(safe-area-inset-bottom) + 14px) 4%;
+    display:flex;
+    flex-direction:column;
+  }
+  .dashed{
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:var(--card);
+  }
+  .zone-caption{
+    font-size:8px;
+    color:var(--ink);
+    opacity:.4;
+    letter-spacing:.05em;
+    margin:6px 0 2px 2px;
+  }
+
+  /* ---------- Ghost hamburger menu (copied verbatim from combat/room-select wireframes) ---------- */
+  .menu-ghost{
+    position:absolute;
+    top:3%;
+    right:4%;
+    width:28%;
+    padding:5px 4px;
+    text-align:center;
+    opacity:.4;
+    z-index:5;
+  }
+  .menu-ghost .glyph{
+    font-size:16px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .menu-ghost .label{
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+
+  /* ---------- Merchant stage: fills the space above the bottom-anchored
+       cards, centering the sprite+bubble so the background shows around it ---------- */
+  .merchant-stage{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:0;
+    padding:0 2%;
+  }
+  .merchant-band{
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .merchant-sprite{
+    flex:0 0 auto;
+    width:30%;
+    max-width:120px;
+    aspect-ratio:1/1.1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.55;
+    text-align:center;
+  }
+  .speech-bubble{
+    flex:1;
+    position:relative;
+    padding:11px 13px;
+    font-size:11px;
+    font-style:italic;
+    line-height:1.5;
+    color:var(--ink);
+    opacity:.9;
+    align-self:center;
+  }
+  /* CSS-triangle tail pointing at the merchant sprite */
+  .speech-bubble::after{
+    content:"";
+    position:absolute;
+    left:-8px;
+    bottom:14px;
+    width:0; height:0;
+    border-top:6px solid transparent;
+    border-bottom:6px solid transparent;
+    border-right:8px solid var(--card);
+  }
+  .speech-bubble::before{
+    content:"";
+    position:absolute;
+    left:-10.5px;
+    bottom:12.5px;
+    width:0; height:0;
+    border-top:7.5px solid transparent;
+    border-bottom:7.5px solid transparent;
+    border-right:9.5px solid var(--line);
+  }
+  .speech-bubble .sub{
+    display:block;
+    margin-top:6px;
+    font-size:9px;
+    font-style:normal;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.6;
+  }
+
+  /* ---------- Offer cards: all revealed, independently acceptable ---------- */
+  .cards{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    flex:0 0 auto;
+  }
+  .card{
+    padding:12px 14px 13px;
+    position:relative;
+  }
+  .card-tag{
+    position:absolute;
+    top:9px;
+    right:11px;
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:3px 7px;
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    color:var(--ink);
+    opacity:.8;
+    background:#f4f7fa;
+  }
+  .card-name{
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.6;
+    margin-bottom:8px;
+  }
+  .trade-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .trade-side{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    padding:8px 6px;
+    border-radius:6px;
+  }
+  .trade-side.give{ background:#f6e9e9; }
+  .trade-side.receive{ background:#eaf3ec; }
+  .trade-side .k{
+    font-size:8px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    opacity:.55;
+  }
+  .trade-side .icon{
+    width:34px; height:34px;
+    border-radius:7px;
+    border:1.5px dashed var(--line);
+    background:var(--card);
+    display:flex; align-items:center; justify-content:center;
+    font-size:7px;
+    color:var(--ink);
+    opacity:.7;
+    text-transform:uppercase;
+  }
+  .trade-side .item-name{
+    font-size:10px;
+    font-weight:600;
+    color:var(--ink);
+    text-align:center;
+  }
+  .trade-arrow{
+    flex:0 0 auto;
+    font-size:16px;
+    color:var(--ink);
+    opacity:.5;
+  }
+
+  /* Multi-give: consumables-for-item can have 2 give slots */
+  .give-pair{
+    display:flex;
+    gap:4px;
+    flex:1;
+  }
+  .give-pair .trade-side{ flex:1; }
+
+  .hp-guarantee-note{
+    margin-top:9px;
+    text-align:center;
+    font-size:8px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.5;
+  }
+
+  /* ---------- Bottom: done trading (not a binary leave-both — offers are independent) ---------- */
+  .leave-bar{
+    margin-top:12px;
+    padding:13px;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--skip);
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:transparent;
+  }
+  .leave-bar .sub{
+    display:block;
+    font-size:8px;
+    font-weight:400;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-top:3px;
+    text-transform:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="zone-caption">FLOOR 3 · ROOM 7/9 · WIREFRAME — WANDERING SOUL</div>
+
+  <!-- Ghost hamburger, top-right, matches combat/room-select screens -->
+  <div class="menu-ghost dashed">
+    <div class="glyph">&#8801;</div>
+    <div class="label">menu</div>
+  </div>
+
+  <!-- Merchant sprite + speech bubble, centered in the space above the cards
+       so the background shows around him, per feedback -->
+  <div class="merchant-stage">
+    <div class="merchant-band">
+      <div class="merchant-sprite dashed">wandering<br>soul<br>sprite</div>
+      <div class="speech-bubble dashed">
+        "It carries what it no longer needs, and wants what you no longer need."
+        <span class="sub">take any, all, or none</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cards">
+
+    <!-- Offer 1: item-for-item -->
+    <div class="card dashed">
+      <div class="card-tag">tap to accept</div>
+      <div class="card-name">Offer 1 · Item for item</div>
+      <div class="trade-row">
+        <div class="trade-side give">
+          <div class="k">Give</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Rope Flail</div>
+        </div>
+        <div class="trade-arrow">&#8594;</div>
+        <div class="trade-side receive">
+          <div class="k">Receive</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Glacial Brand</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offer 2: consumables-for-item (multi-give) -->
+    <div class="card dashed">
+      <div class="card-tag">tap to accept</div>
+      <div class="card-name">Offer 2 · Consumables for item</div>
+      <div class="trade-row">
+        <div class="give-pair">
+          <div class="trade-side give">
+            <div class="k">Give</div>
+            <div class="icon">item<br>art</div>
+            <div class="item-name">Spoiled Potion</div>
+          </div>
+          <div class="trade-side give">
+            <div class="k">Give</div>
+            <div class="icon">item<br>art</div>
+            <div class="item-name">Firebomb</div>
+          </div>
+        </div>
+        <div class="trade-arrow">&#8594;</div>
+        <div class="trade-side receive">
+          <div class="k">Receive</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Iron Pendant</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offer 3: HP-for-item — always present, guaranteed by HLD-WS-003 -->
+    <div class="card dashed">
+      <div class="card-tag">tap to accept</div>
+      <div class="card-name">Offer 3 · HP for item</div>
+      <div class="trade-row">
+        <div class="trade-side give">
+          <div class="k">Give</div>
+          <div class="icon">HP</div>
+          <div class="item-name">6 HP</div>
+        </div>
+        <div class="trade-arrow">&#8594;</div>
+        <div class="trade-side receive">
+          <div class="k">Receive</div>
+          <div class="icon">item<br>art</div>
+          <div class="item-name">Lucky Paw</div>
+        </div>
+      </div>
+      <div class="hp-guarantee-note">always offered — never absent (HLD-WS-003)</div>
+    </div>
+
+  </div>
+
+  <!-- Not a binary "leave both" like loot — each offer above is accepted
+       independently, so this just closes out the room -->
+  <div class="leave-bar">
+    Done trading
+    <span class="sub">unaccepted offers vanish; nothing else is lost</span>
+  </div>
+
+</div>
+</body>
+</html>

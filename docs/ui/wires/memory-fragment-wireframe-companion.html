@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Memory Fragment Wireframe — Companion Encounter</title>
+<style>
+  :root{
+    --ink:#3a4a5a;
+    --line:#7c8fa3;
+    --bg:#eef1f4;
+    --card:#ffffff;
+    --intent:#9a5fb8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:#1d2630;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .screen{
+    position:relative;
+    width:100%;
+    max-width:460px;
+    min-height:100dvh;
+    margin:0 auto;
+    background:var(--bg);
+    overflow:hidden;
+    padding:env(safe-area-inset-top) 4% calc(env(safe-area-inset-bottom) + 14px) 4%;
+    display:flex;
+    flex-direction:column;
+  }
+  .dashed{
+    border:1.5px dashed var(--line);
+    border-radius:6px;
+    background:var(--card);
+  }
+  .zone-caption{
+    font-size:8px;
+    color:var(--ink);
+    opacity:.4;
+    letter-spacing:.05em;
+    margin:6px 0 2px 2px;
+  }
+
+  .heading{
+    text-align:center;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin:18px 0 14px;
+  }
+
+  /* ---------- Companion presence card ---------- */
+  .presence-card{
+    padding:22px 20px;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+  .presence-sprite{
+    width:96px; height:96px;
+    border-radius:10px;
+    border:1.5px dashed var(--intent);
+    background:#f6eefa;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--intent);
+  }
+  .presence-name{
+    font-size:15px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .presence-flavour{
+    font-size:12px;
+    font-style:italic;
+    line-height:1.6;
+    color:var(--ink);
+    opacity:.85;
+    max-width:320px;
+  }
+  .presence-note{
+    font-size:9px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.5;
+  }
+
+  /* ---------- Mandatory accept: no decline option exists (HLD-MF-004) ---------- */
+  .accept-bar{
+    margin-top:16px;
+    padding:14px;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--intent);
+    border:1.5px dashed var(--intent);
+    border-radius:6px;
+    background:#f6eefa;
+  }
+  .accept-bar .sub{
+    display:block;
+    font-size:8px;
+    font-weight:400;
+    letter-spacing:.04em;
+    opacity:.7;
+    margin-top:3px;
+    text-transform:none;
+  }
+
+  /* ---------- Swap-case note (if a companion is already active) ---------- */
+  .swap-note-wrap{
+    margin-top:20px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+  .swap-note-wrap .swap-heading{
+    font-size:9px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+    opacity:.5;
+    text-align:center;
+    margin-bottom:8px;
+  }
+  .swap-row{
+    display:flex;
+    gap:10px;
+  }
+  .swap-choice{
+    flex:1;
+    padding:10px;
+    text-align:center;
+    font-size:10px;
+    color:var(--ink);
+    opacity:.75;
+  }
+  .swap-choice .sprite-mini{
+    width:44px; height:44px;
+    margin:0 auto 6px;
+    border-radius:8px;
+    border:1.5px dashed var(--intent);
+    background:#f6eefa;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="zone-caption">FLOOR 3 · ROOM 3/9 · WIREFRAME — MEMORY FRAGMENT (COMPANION ENCOUNTER)</div>
+
+  <div class="heading">Something arrives</div>
+
+  <!-- Companion presence: flavour text only, no mechanics disclosed (HLD-MF-004) -->
+  <div class="presence-card dashed">
+    <div class="presence-sprite">companion<br>sprite</div>
+    <div class="presence-name">The Raven</div>
+    <div class="presence-flavour">
+      "A dark shape lands on your shoulder. It watches the road ahead with sharp,
+      knowing eyes — waiting for you to point it somewhere."
+    </div>
+    <div class="presence-note">no mechanics shown — flavour only</div>
+  </div>
+
+  <!-- Mandatory — no walk-away option exists for this category -->
+  <div class="accept-bar">
+    It settles in
+    <span class="sub">companion encounters cannot be declined</span>
+  </div>
+
+  <!-- Secondary state: shown instead of the single accept-bar above, only when
+       the player already has a temporary companion (HLD-MF-004 swap rule) -->
+  <div class="swap-note-wrap">
+    <div class="swap-heading">Alternate state — player already has a companion</div>
+    <div class="swap-row">
+      <div class="swap-choice dashed">
+        <div class="sprite-mini"></div>
+        Keep current<br>(The Shadow)
+      </div>
+      <div class="swap-choice dashed">
+        <div class="sprite-mini"></div>
+        Accept new<br>(The Raven)
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
