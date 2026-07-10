@@ -12,9 +12,12 @@
 # SAVE_VERSION. It must NOT depend on EventLog (EventLog depends on this), so
 # internal failures are surfaced via push_error/push_warning, never via EventLog.
 #
-# Web note (LLD-PLATFORM-005, deferred to MVP4): a localStorage/IndexedDB backend
-# may replace the FileAccess calls here; keeping all file I/O behind this service
-# is what makes that swap a single-file change.
+# Web note (LLD-PLATFORM-005): Godot's Web export already persists user:// to the
+# browser's IndexedDB, so the FileAccess calls here are expected to work unmodified.
+# The one open web concern is that the IndexedDB sync is asynchronous — an explicit
+# flush (e.g. an OS.has_feature("web") branch here) may be needed so saves survive a
+# reload; verified in the MVP2 presentation plan (PU4.2). Keeping all file I/O behind
+# this service is what makes that fix, if needed, a single-file change.
 extends Node
 
 ## Standard directories (under user://, writable in all build configs incl. export).

@@ -1,6 +1,5 @@
-## Purpose
-Defines the platform and presentation constraints — layout, resolution, input, and cross-platform parity — for the UI layer.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: [LLD-PLATFORM-001] Portrait-First Layout
 The game SHALL use a single portrait layout as its one and only presentation. There is no separate desktop variant: the touch-first mobile presentation — action bar anchored at the bottom of the screen, with option/target selection surfaced via slide-up sheets — IS the presentation on every platform. The core play area (enemy positions, vessel and companion positions) MUST be preserved on any screen size; wider displays center and cap the portrait content rather than reflowing to a different layout.
 
@@ -28,33 +27,6 @@ A distinct large-screen/desktop presentation (e.g. a permanently docked side pan
 - **WHEN** the game runs on a display wider than the portrait reference width
 - **THEN** the portrait content is centered and width-capped, and the core play area remains visually identical; no right-docked panel or alternate layout appears
 
-### Requirement: [LLD-PLATFORM-002] Abstract Input
-All input SHALL be handled via abstract Godot input actions — never raw device events. Every interaction is defined as a named action (e.g. `ui_confirm`, `action_attack`, `item_use`). Physical inputs (touch, mouse, keyboard, controller) are mapped to actions separately.
-
-#### Scenario: Touch and keyboard parity
-- **WHEN** a player taps the screen (mobile) or presses a key (desktop)
-- **THEN** both trigger the same named input action; the game code never distinguishes between input devices
-
----
-
-### Requirement: [LLD-PLATFORM-003] Anchor-Based UI
-All UI MUST be built with anchors and Container nodes — no fixed pixel positions. All UI sizing uses relative units. Design to the reference resolution; Godot's anchor system handles scaling.
-
-#### Scenario: Resolution independence
-- **WHEN** the game runs at a non-reference resolution
-- **THEN** UI elements scale and reposition via anchors; no UI element has a hardcoded pixel coordinate
-
----
-
-### Requirement: [LLD-PLATFORM-004] Visual-First Events
-Every meaningful game event SHALL have a visual representation. Audio is supplementary — nothing important may rely on audio feedback alone.
-
-#### Scenario: Silent mode gameplay
-- **WHEN** a player's device is in silent mode
-- **THEN** all game outcomes (damage, status effects, item breaks) remain fully communicated through visual feedback alone
-
----
-
 ### Requirement: [LLD-PLATFORM-005] Web-First, Engine-Agnostic Development
 The primary release target SHALL be mobile, delivered first as a **web export** playable in a mobile browser. Web export is an MVP2-era deliverable, not a deferred (MVP4) concern. Native iOS/Android and/or desktop remain viable **second targets (TBD)** and SHALL NOT be excluded.
 
@@ -71,4 +43,3 @@ To keep any second-target port a minimal-rewrite effort, the engine SHALL remain
 #### Scenario: Web save survives reload
 - **WHEN** a save is written in the web build and the browser tab is reloaded
 - **THEN** the save is still readable via `PersistenceService`, because the IndexedDB `user://` sync was flushed
-
