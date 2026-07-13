@@ -1127,7 +1127,9 @@ SHALL/MUST + Purpose spec-lint debt was cleared 2026-06-24 — all 23 specs pass
 
 # MVP2 — Playable with UI (`SCOPE-002`) — *outline*
 
-All MVP1 systems plus the full Presentation layer on desktop. Detail in a later pass. Major epics:
+All MVP1 systems plus the full Presentation layer, single portrait touch-first layout, shipped first as
+a mobile web export (`LLD-PLATFORM-001`, `-005`; a native iOS/Android or desktop port is a potential
+second target, TBD). Detailed in `docs/implementation-plan-mvp2.md`. Major epics:
 
 - **P-UI.1 Presentation foundation** — portrait-first layout, anchor/Container-based UI, abstract
   input actions, `ScreenManager` real scene transitions, headless self-disable on all nodes.
@@ -1168,8 +1170,10 @@ All MVP1 systems plus the full Presentation layer on desktop. Detail in a later 
   starting items, vessel omen cards; possible additional damage types (`HLD-COMBAT-005` `[OPEN·MVP4]`).
 - **Floor 1 origin floors:** Crypt/Catacomb and Contested Wilderness.
 - **Run structure:** three-floor runs (Floor 1 → 2 → 3); extended unlock tree.
-- **Web export prep:** resolve PersistenceService localStorage/IndexedDB backend
-  (`LLD-PLATFORM-005` `[OPEN·MVP4]`).
+- **Second-target port (if pursued):** native iOS/Android or desktop, TBD (`LLD-PLATFORM-005` — no
+  longer an MVP4 gate; web export shipped at MVP2. `PersistenceService`'s web IndexedDB flush was
+  verified at MVP2; a second-target port needs export config + presentation scaling only, no engine
+  rewrite).
 - **DoD:** full 3-floor run completable with any of the seven vessels (`SCOPE-004`).
 
 ---
