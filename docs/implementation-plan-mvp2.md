@@ -93,6 +93,11 @@ MVP2 (`SCOPE-002`) was split into **two plans** by decision on 2026-07-10:
 - **No content-by-name in the engine (`LLD-ARCH-005`):** the UI may map ids → asset paths in a
   **data-driven `ArtPaths` table**, but no gameplay branch keys off a specific vessel/item/enemy id.
 - **Add/extend the GdUnit4 suite in the same task as the view-model it covers.**
+- **On the `godot-gdscript-patterns` skill:** treat it as an optional Godot-4 scene-tree primer for the
+  view/UI work only. Where it conflicts with this project's rules it loses — never use direct `FileAccess`
+  (use `PersistenceService`, `LLD-ARCH-007`), never model gameplay as `Node` components or Node state
+  machines (Domain is Node-free `Resource`s + `CombatResolver`/`RunController`), and there is no
+  `_physics_process` loop. The existing code and `CLAUDE.md` are the authority.
 
 ### Target new directory layout (created incrementally by the tasks below)
 

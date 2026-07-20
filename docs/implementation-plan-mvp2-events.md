@@ -77,6 +77,12 @@ Each is tagged `# @Spec: LLD-IR-009 [OPEN·MVP2] — playtest guess` (etc.) in `
 - **Add/extend the GdUnit4 suite in the same task** as the code it covers; the five mandated core systems
   stay TDD. Run the determinism gate (`test_headless_determinism.gd`) after any RNG/generator/controller
   change.
+- **On the `godot-gdscript-patterns` skill:** treat it as an optional Godot-4 scene-tree primer for the
+  Part B view/UI work only — it barely applies to Part A (pure `RefCounted` domain/application logic).
+  Where it conflicts with this project's rules it loses — never use direct `FileAccess` (use
+  `PersistenceService`, `LLD-ARCH-007`), never model gameplay as `Node` components or Node state machines
+  (Domain is Node-free `Resource`s + `CombatResolver`/`RunController`), and there is no `_physics_process`
+  loop. The existing code and `CLAUDE.md` are the authority.
 
 ---
 
