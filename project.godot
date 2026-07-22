@@ -12,7 +12,16 @@ config_version=5
 
 config/name="rogue-soul"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+run/main_scene="res://src/presentation/screens/main.tscn"
 config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=390
+window/size/viewport_height=844
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation="portrait"
 
 [autoload]
 
@@ -29,6 +38,25 @@ ScreenManager="*res://src/application/screen_manager.gd"
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
 
+[input]
+
+; Abstract input actions (LLD-PLATFORM-002). Touch is the primary binding on the
+; mobile/web target; mouse/keyboard are a dev-only fallback. Bind concrete events
+; (LMB + touch for ui_primary, Esc for ui_cancel) in Project Settings -> Input Map;
+; declared here so the named actions exist even before bindings are added.
+ui_primary={
+"deadzone": 0.5,
+"events": []
+}
+ui_cancel={
+"deadzone": 0.5,
+"events": []
+}
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
@@ -38,3 +66,4 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0

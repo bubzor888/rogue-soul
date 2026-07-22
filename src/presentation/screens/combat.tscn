@@ -1,0 +1,215 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/presentation/screens/combat.gd" id="1"]
+[ext_resource type="PackedScene" path="res://src/presentation/components/ghost_menu.tscn" id="2"]
+
+[node name="Combat" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Board" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="GhostMenu" parent="Board" instance=ExtResource("2")]
+
+[node name="OmenBadge" type="Label" parent="Board"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 0.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 220.0
+offset_bottom = 36.0
+text = "Omen draw in: -"
+
+[node name="EnemyArea" type="Control" parent="Board"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VesselStack" type="VBoxContainer" parent="Board"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -230.0
+offset_right = 60.0
+offset_bottom = -120.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="ActionBar" type="HBoxContainer" parent="Board"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -72.0
+offset_right = -8.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="SupportBtn" type="Button" parent="Board/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Support"
+
+[node name="ActionBtn" type="Button" parent="Board/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Action"
+
+[node name="ConsumableBtn" type="Button" parent="Board/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Consumable"
+
+[node name="EndTurnBtn" type="Button" parent="Board/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "End Turn"
+
+[node name="FxLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Sheet" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -360.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="SheetBox" type="VBoxContainer" parent="Sheet"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SheetHeader" type="Button" parent="Sheet/SheetBox"]
+layout_mode = 2
+text = "Cancel"
+
+[node name="SheetScroll" type="ScrollContainer" parent="Sheet/SheetBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SheetList" type="VBoxContainer" parent="Sheet/SheetBox/SheetScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="OmenOverlay" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="OmenPromptMain" type="Label" parent="OmenOverlay"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 136.0
+offset_right = 160.0
+offset_bottom = 160.0
+grow_horizontal = 2
+text = "Choose an Omen"
+horizontal_alignment = 1
+
+[node name="OmenPromptSub" type="Label" parent="OmenOverlay"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 162.0
+offset_right = 160.0
+offset_bottom = 182.0
+grow_horizontal = 2
+modulate = Color(1, 1, 1, 0.4)
+text = "Tap a card to select it"
+horizontal_alignment = 1
+
+[node name="EnemyZone" type="Button" parent="OmenOverlay"]
+visible = false
+layout_mode = 1
+anchor_left = 0.2
+anchor_top = 0.06
+anchor_right = 0.8
+anchor_bottom = 0.5
+text = "ENEMY SIDE"
+
+[node name="VesselZone" type="Button" parent="OmenOverlay"]
+visible = false
+layout_mode = 1
+anchor_left = 0.33
+anchor_top = 0.6
+anchor_right = 0.67
+anchor_bottom = 0.88
+text = "ALLY SIDE"
+
+[node name="OmenCards" type="VBoxContainer" parent="OmenOverlay"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 115.0
+offset_right = -10.0
+offset_bottom = -120.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="StagedCard" type="PanelContainer" parent="OmenOverlay"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -45.0
+offset_right = 150.0
+offset_bottom = 45.0
+grow_horizontal = 2
+grow_vertical = 2

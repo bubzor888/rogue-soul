@@ -30,3 +30,16 @@ func test_headless_phase_change_is_safe() -> void:
 	assert_bool(GameConfig.HEADLESS).is_true()  # MVP1 dev default
 	bus.phase_changed.emit(RunPhase.RUN_END, RunPhase.COMBAT)
 	assert_int(sm.current_phase).is_equal(RunPhase.RUN_END)
+
+
+# MVP2: the phase->scene-path registry stores and resolves a registered path.
+func test_registers_and_resolves_phase_scene_path() -> void:
+	var sm = auto_free(ScreenManagerScript.new())
+	sm.register_phase_scene(RunPhase.COMBAT, "res://src/presentation/screens/combat.tscn")
+	assert_str(sm.scene_path_for_phase(RunPhase.COMBAT)).is_equal("res://src/presentation/screens/combat.tscn")
+
+
+# An unregistered phase resolves to the empty string (transitional phases have no screen).
+func test_unregistered_phase_returns_empty() -> void:
+	var sm = auto_free(ScreenManagerScript.new())
+	assert_str(sm.scene_path_for_phase(RunPhase.RUN_END)).is_equal("")

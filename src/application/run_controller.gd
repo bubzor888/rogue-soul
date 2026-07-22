@@ -74,9 +74,13 @@ func start_run(seed: int, vessel_id: String) -> void:
 	if _rng != null and _rng.has_method("seed_run"):
 		_rng.seed_run(seed)
 	game_state = _build_initial_state(seed, vessel_id)
-	_set_phase(RunPhase.NAVIGATION)
 	_fire_replenish(ReplenishEvents.FLOOR_START)
 	_generate_doors()
+	# Announce NAVIGATION only after doors_ahead is populated, so observers of
+	# phase_changed (the UI) see complete navigation state (mirrors _enter_combat,
+	# which sets combat_state before _set_phase(COMBAT)). _set_phase draws no RNG,
+	# so ordering it after _generate_doors preserves the determinism gate.
+	_set_phase(RunPhase.NAVIGATION)
 
 
 # The agent/UI surface: the legal actions for the current phase (via ActionInjector).
@@ -206,8 +210,8 @@ func _enter_companion_beat(companion_id: String) -> void:
 	if _nav.is_boss_next(game_state, _profile()):
 		_enter_boss()
 	else:
+		_generate_doors()  # populate doors before announcing NAVIGATION (see start_run)
 		_set_phase(RunPhase.NAVIGATION)
-		_generate_doors()
 
 
 # Per-encounter bookkeeping run after any completed non-boss encounter (HLD-ITEMS-003):
@@ -250,14 +254,16 @@ func _enter_combat(encounter_id: String, room_type: String) -> void:
 	game_state.combat_state = combat
 
 	_fire_replenish(ReplenishEvents.ENCOUNTER_START)
+	# Assemble the deck and open the first omen cycle (pauses for CHOOSE_OMEN) BEFORE
+	# announcing COMBAT, so observers of phase_changed (the UI) see a ready cycle rather
+	# than stale pre-turn state (mirrors the NAVIGATION doors ordering). _set_phase draws
+	# no RNG, so ordering it after the omen setup preserves the determinism gate.
+	_resolver.assemble_omen_deck(_omen_sources(), game_state)
+	_resolver.resolve_omen_cycle_start(game_state)
 	if _signal_bus != null:
 		_signal_bus.room_entered.emit(room_type, encounter_id)
 		_signal_bus.combat_started.emit(combat)
 	_set_phase(RunPhase.COMBAT)
-
-	# Assemble the deck and open the first omen cycle (pauses for CHOOSE_OMEN).
-	_resolver.assemble_omen_deck(_omen_sources(), game_state)
-	_resolver.resolve_omen_cycle_start(game_state)
 
 
 # Spawn one enemy instance at full HP into the combat roster.
@@ -439,8 +445,8 @@ func _post_loot(_action: Dictionary) -> void:
 	if _nav.is_boss_next(game_state, _profile()):
 		_enter_boss()
 	else:
+		_generate_doors()  # populate doors before announcing NAVIGATION (see start_run)
 		_set_phase(RunPhase.NAVIGATION)
-		_generate_doors()
 
 
 func _enter_boss() -> void:

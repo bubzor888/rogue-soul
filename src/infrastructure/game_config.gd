@@ -16,8 +16,10 @@ extends Node
 
 # @Spec: LLD-ARCH-002
 # True ⇒ no rendering/input; the AIPlayerAgent drives a full run with no scene
-# tree (MVP1 is headless-only). Presentation nodes self-disable on this flag.
-const HEADLESS: bool = true
+# tree. Presentation nodes self-disable on this flag. A `var` (not `const`) so a
+# played on-screen run (GameSession.begin) can flip it to false at boot; the
+# headless determinism gate keeps the default `true` and only reads the flag.
+var HEADLESS: bool = true
 
 # @Spec: LLD-ARCH-014
 # The single switch for all debug UI and debug code paths. No separate debug
